@@ -1,0 +1,30 @@
+.review-container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+.review-title {
+  text-align: center;
+  font-size: 28px;
+  margin-bottom: 25px;
+}
+
+.review-card {
+  background: #f0f4ff;
+  border-left: 6px solid #4b7bec;
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.review-question {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.review-answer {
+  font-size: 16px;
+  color: #333;
+}
