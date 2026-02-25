@@ -1,0 +1,21 @@
+name: Mirror to Azure Repos
+
+on:
+  push:
+    branches:
+      - master   # đổi nếu bạn dùng branch khác
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Azure Repos
+        run: |
+          git remote add azure https://$(echo ${{ secrets.AZURE_PAT }})@dev.azure.com/nhattuyen1945/EduAssess/_git/EduAssess
+          git push azure master --force
