@@ -3,6 +3,7 @@ import axios from "axios";
 import "./ExamPage.css";
 import { useNavigate } from "react-router-dom";
 import { Question } from "../../types";
+import { API_BASE_URL } from "../../config/env";
 
 const ExamPage: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -34,7 +35,7 @@ const ExamPage: React.FC = () => {
     const fetchQuestions = async () => {
       try {
         const res = await axios.get<Question[]>(
-          "http://localhost:5188/questions?pageNumber=1&pageSize=10"
+          `${API_BASE_URL}/questions?pageNumber=1&pageSize=10`
         );
         setQuestions(res.data);
       } catch (err) {

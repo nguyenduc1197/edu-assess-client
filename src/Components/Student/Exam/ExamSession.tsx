@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { AnswerState, Assignment, Question } from '../../../types';
 import ExamReview from './ExamReview';
 import ExamTaking from './ExamTaking';
+import { API_BASE_URL } from '../../../config/env';
+import { fetchClient } from '../../../api/fetchClient';
 
 
 interface ExamSessionProps {
@@ -24,9 +26,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const response = await fetch(`http://localhost:5188/questions?pageNumber=1&examId=${examId}&pageSize=20`, {
-          headers: { 'accept': '*/*' }
-        });
+        const response = await fetchClient(`/questions?pageNumber=1&examId=${examId}&pageSize=20`);
+        
         if (response.ok) {
           const data = await response.json();
           const items = Array.isArray(data) ? data : (data.items || data.data || []);
@@ -72,14 +73,15 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
         }))
       };
 
-      const response = await fetch(`http://localhost:5188/exams/${assignment.id}/submit`, {
-        method: 'POST',
-        headers: {
-          'accept': '*/*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+    const response = await fetchClient(`/exams/${assignment.id}/submit`,
+    {
+      method: "POST",
+      headers: {
+      "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }
+);
 
       if (response.ok) {
         alert("Đã nộp bài thành công!");

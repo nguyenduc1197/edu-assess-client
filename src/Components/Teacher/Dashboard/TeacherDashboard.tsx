@@ -1,30 +1,34 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, PlusCircle, ChevronDown, Menu } from 'lucide-react';
-import { Assignment, AssignmentStatus, SubjectLabel, User } from '../../../types';
+import { Assignment, AssignmentStatus, LoginProps, SubjectLabel, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import AssignmentTable from '../../Common/AssignmentTable/AssignmentTable';
 import CreateExamModal from '../Exam/CreateExamModal';
+import { API_BASE_URL } from '../../../config/env';
+import { fetchClient } from '../../../api/fetchClient';
 
-const mockUser: User = {
+let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
-  name: "An Nguyen",
+  name: `An Nguyen`,
   email: "an.nguyen@school.edu",
   avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj"
 };
 
-const TeacherDashboard: React.FC = () => {
+const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
   const fetchAssignments = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:5188/exams?pageNumber=1&pageSize=100', {
-        headers: {
-          'accept': '*/*'
-        }
-      });
+      const response = await fetchClient(
+  `/exams?pageNumber=1&pageSize=100`,
+  {
+    headers: {
+      accept: "*/*",
+    },
+  }
+);
       
       if (response.ok) {
         const data = await response.json();
@@ -85,12 +89,11 @@ const TeacherDashboard: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5188/exams/${examId}`, {
-        method: 'DELETE',
-        headers: {
-          'accept': '*/*'
-        }
-      });
+    const response = await fetchClient(`/exams/${examId}`,
+    {
+      method: "DELETE"
+    }
+);
 
       if (response.ok) {
         // Refresh the list
@@ -125,6 +128,7 @@ const TeacherDashboard: React.FC = () => {
         user={mockUser} 
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
+        onLogout={onLogout}
       />
 {/* Create Exam Modal */}
       {isCreateModalOpen && (

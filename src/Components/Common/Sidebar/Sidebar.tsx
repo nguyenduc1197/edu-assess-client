@@ -16,9 +16,10 @@ interface SidebarProps {
   user: User;
   isOpen: boolean;
   onClose: () => void;
+  onLogout?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout }) => {
   const navItems = [
     { icon: LayoutDashboard, label: 'Tổng quan', active: true, href: 'teacherdashboard' },
     //{ icon: Calculator, label: 'Toán học', active: false, href: '#' },
@@ -54,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose }) => {
               />
               <div className="flex flex-col overflow-hidden">
                 <h1 className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                  {user.name}
+                  {`${localStorage.getItem('name')}`}
                 </h1>
                 <p className="truncate text-xs text-gray-500 dark:text-gray-400">
                   {user.email}
@@ -102,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose }) => {
               Cài đặt
             </a>
             <button
-              onClick={() => alert('Đăng xuất thành công!')}
+              onClick={onLogout}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/10 transition-colors"
             >
               <LogOut size={20} />

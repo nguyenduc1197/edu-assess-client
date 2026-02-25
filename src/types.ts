@@ -60,3 +60,8 @@ export interface User {
   email: string;
   avatarUrl: string;
 }
+
+export interface LoginProps {
+  onLogin?: (role: string) => void;
+  onLogout?: () => void;
+}

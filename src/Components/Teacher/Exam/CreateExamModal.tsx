@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Class, Question, Subject, SubjectLabel } from '../../../types';
+import { API_BASE_URL } from '../../../config/env';
+import { fetchClient } from '../../../api/fetchClient';
 
 interface CreateExamModalProps {
   onClose: () => void;
@@ -29,12 +31,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
     const fetchQuestions = async () => {
       setIsFetchingQuestions(true);
       try {
-        const response = await fetch('http://localhost:5188/questions?pageNumber=1&pageSize=100', {
-          method: 'GET',
-          headers: {
-            'accept': '*/*'
-          }
-        });
+        const response = await fetchClient("/questions?pageNumber=1&pageSize=100");
 
         if (response.ok) {
           const data = await response.json();
@@ -62,12 +59,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
     const fetchClasses = async () => {
       setIsFetchingClasses(true);
       try {
-        const response = await fetch('http://localhost:5188/Classes?pageNumber=1&pageSize=100', {
-          method: 'GET',
-          headers: {
-            'accept': '*/*'
-          }
-        });
+        const response = await fetchClient("/Classes?pageNumber=1&pageSize=100");
 
         if (response.ok) {
           const data = await response.json();
@@ -125,14 +117,14 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
     };
 
     try {
-      const response = await fetch('http://localhost:5188/exams', {
-        method: 'POST',
-        headers: {
-          'accept': '*/*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+    const response = await fetchClient("/exams",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
       if (!response.ok) {
         throw new Error(`Error: ${response.statusText}`);
