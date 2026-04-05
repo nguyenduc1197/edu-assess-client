@@ -4,6 +4,7 @@ import { User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import AddQuestionMenu from '../Exam/AddQuestionMenu';
 import { Question } from '../../../types';
+import { fetchClient } from '../../../api/fetchClient';
 
 interface QuestionManagementProps {
   onLogout?: () => void;
@@ -13,25 +14,60 @@ let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
   name: `An Nguyen`,
   email: "an.nguyen@school.edu",
-  avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev535[...]",
+  avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj"
 };
 
 const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [questions, setQuestions] = useState<Question[]>([
-    {
-      id: '1',
-      content: 'Thủ đô của Việt Nam là?',
-      choices: [
-        { id: 'c1', content: 'Hà Nội', isCorrect: true },
-        { id: 'c2', content: 'TP HCM', isCorrect: false },
-        { id: 'c3', content: 'Đà Nẵng', isCorrect: false },
-        { id: 'c4', content: 'Hải Phòng', isCorrect: false }
-      ]
-    }
-  ]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const fetchQuestions = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const response = await fetchClient(
+        `/questions?pageNumber=1&pageSize=100`,
+        {
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // Handle array response directly
+        const items = Array.isArray(data) ? data : (data.data || []);
+        
+        const mappedQuestions: Question[] = items.map((item: any) => ({
+          id: item.id,
+          content: item.content,
+          choices: (item.choices || []).map((choice: any) => ({
+            id: choice.id,
+            content: choice.content,
+            isCorrect: choice.isCorrect || false
+          }))
+        }));
+
+        setQuestions(mappedQuestions);
+      } else {
+        setError('Không thể tải danh sách câu hỏi');
+      }
+    } catch (err) {
+      console.error("Failed to fetch questions", err);
+      setError('Lỗi khi tải danh sách câu hỏi');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchQuestions();
+  }, [fetchQuestions]);
 
   const filteredQuestions = useMemo(() => {
     return questions.filter(q =>
@@ -39,14 +75,46 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
     );
   }, [questions, searchQuery]);
 
-  const handleAddQuestion = (newQuestion: Question) => {
-    setQuestions([...questions, newQuestion]);
-    setIsAddModalOpen(false);
+  const handleAddQuestion = async (newQuestion: Question) => {
+    try {
+      // Call API to create question
+      const response = await fetchClient('/questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newQuestion)
+      });
+
+      if (response.ok) {
+        // Refresh list
+        fetchQuestions();
+        setIsAddModalOpen(false);
+      } else {
+        alert('Thêm câu hỏi thất bại. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      console.error("Error adding question:", err);
+      alert('Đã xảy ra lỗi khi thêm câu hỏi.');
+    }
   };
 
-  const handleDeleteQuestion = (id: string) => {
+  const handleDeleteQuestion = async (id: string) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa câu hỏi này không?")) {
-      setQuestions(questions.filter(q => q.id !== id));
+      try {
+        const response = await fetchClient(`/questions/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          fetchQuestions();
+        } else {
+          alert('Xóa câu hỏi thất bại. Vui lòng thử lại.');
+        }
+      } catch (err) {
+        console.error("Error deleting question:", err);
+        alert('Đã xảy ra lỗi khi xóa câu hỏi.');
+      }
     }
   };
 
@@ -106,6 +174,13 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
             </button>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
+              {error}
+            </div>
+          )}
+
           {/* Toolbar & Filters */}
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             
@@ -126,7 +201,11 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
 
           {/* Questions Table */}
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-            {filteredQuestions.length > 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-gray-500 dark:text-gray-400">Đang tải...</p>
+              </div>
+            ) : filteredQuestions.length > 0 ? (
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
