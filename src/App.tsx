@@ -5,6 +5,7 @@ import StudentDashboard from './Components/Student/Dashboard/StudentDashboard';
 import TeacherDashboard from './Components/Teacher/Dashboard/TeacherDashboard';
 import Login from './Components/Common/Login/Login';
 import { useEffect, useState } from 'react';
+import QuestionManagement from './Components/Teacher/Question/QuestionManagement';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -65,6 +66,7 @@ useEffect(() => {
           <> 
             <Route path="/" element={<TeacherDashboard onLogout={handleLogout} />} />
             <Route path="/teacherdashboard" element={<TeacherDashboard onLogout={handleLogout} />} />
+            <Route path="/teacher/questions" element={<QuestionManagement onLogout={handleLogout} />} />
           </>
         }
         {

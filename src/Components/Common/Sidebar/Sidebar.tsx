@@ -22,6 +22,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout }) => {
   const navItems = [
     { icon: LayoutDashboard, label: 'Tổng quan', active: true, href: 'teacherdashboard' },
+    { icon: BookOpen, label: 'Câu Hỏi', active: false, href: 'teacher/questions' },
     //{ icon: Calculator, label: 'Toán học', active: false, href: '#' },
     //{ icon: BookOpen, label: 'Văn học', active: false, href: '#' },
     //{ icon: History, label: 'Lịch sử', active: false, href: '#' },
