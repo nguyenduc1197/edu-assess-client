@@ -29,14 +29,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
     try {
       setIsLoading(true);
       setError('');
-      const response = await fetchClient(
-        `/questions?pageNumber=1&pageSize=100`,
-        {
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
+      const response = await fetchClient("/questions/without-exam?pageNumber=1&pageSize=100");
 
       if (response.ok) {
         const data = await response.json();
@@ -50,7 +43,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
             id: choice.id,
             content: choice.content,
             isCorrect: choice.isCorrect || false
-          }))
+          })),
+          dateCreated: new Date(item.dateCreated).toLocaleDateString("vi-VN")
         }));
 
         setQuestions(mappedQuestions);
@@ -236,7 +230,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                         {question.choices?.length} đáp án
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {new Date().toLocaleDateString('vi-VN')}
+                        {question.dateCreated}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">

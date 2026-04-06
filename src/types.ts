@@ -8,6 +8,7 @@ export interface Question {
   id: string;        
   content: string;
   choices?: Choice[];
+  dateCreated?: string;
 }
 
 export interface Subject {
