@@ -8,7 +8,7 @@ import { API_BASE_URL } from '../../../config/env';
 import { fetchClient } from '../../../api/fetchClient';
 
 const mockUser: User = {
-  id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
+  id: "81114DB7-EF7C-4CEC-97B1-4428AA7AACA6",
   name: `An Nguyen`,
   email: "an.nguyen@school.edu",
   avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj"
