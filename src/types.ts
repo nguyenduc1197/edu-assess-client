@@ -1,5 +1,6 @@
 export interface Choice {
-  id: string;        
+  id?: string;        
+  optionLabel: string;
   content: string;
   isCorrect?: boolean; 
 }

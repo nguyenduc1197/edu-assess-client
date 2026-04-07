@@ -108,7 +108,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                       name={`question-${currentQuestion.id}`}
                       value={option.content}
                       checked={isSelected}
-                      onChange={() => onAnswer(currentQuestion.id, option.id, option.content)}
+                      onChange={() => onAnswer(currentQuestion.id, option.optionLabel || option.content, option.content)}
                       className="h-5 w-5 border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
                     />
                     <span className="ml-4 font-medium text-gray-700 dark:text-gray-200">

@@ -40,7 +40,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
           id: item.id,
           content: item.content,
           choices: (item.choices || []).map((choice: any) => ({
-            id: choice.id,
+            optionLabel: choice.optionLabel || choice.id,
             content: choice.content,
             isCorrect: choice.isCorrect || false
           })),
@@ -71,7 +71,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
 
   const handleAddQuestion = async (newQuestion: Question) => {
     try {
-      // Call API to create question
+      // Call API to create single question (for backward compatibility)
       const response = await fetchClient('/questions', {
         method: 'POST',
         headers: {
@@ -85,11 +85,62 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         fetchQuestions();
         setIsAddModalOpen(false);
       } else {
-        alert('Thêm câu hỏi thất bại. Vui lòng thử lại.');
+        setError('Thêm câu hỏi thất bại. Vui lòng thử lại.');
       }
     } catch (err) {
       console.error("Error adding question:", err);
-      alert('Đã xảy ra lỗi khi thêm câu hỏi.');
+      setError('Đã xảy ra lỗi khi thêm câu hỏi.');
+    }
+  };
+
+  const handleAddQuestions = async (newQuestions: Question[]) => {
+    if (newQuestions.length === 0) return;
+    
+    try {
+      setError('');
+      let successCount = 0;
+      let failedCount = 0;
+
+      // Submit each question to the API
+      for (const question of newQuestions) {
+        try {
+          const response = await fetchClient('/questions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(question)
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            failedCount++;
+            console.error(`Failed to add question: ${question.content}`);
+          }
+        } catch (err) {
+          failedCount++;
+          console.error(`Error adding question: ${question.content}`, err);
+        }
+      }
+
+      // Show result message
+      if (failedCount === 0) {
+        // All questions added successfully
+        fetchQuestions();
+        setIsAddModalOpen(false);
+      } else if (successCount > 0) {
+        // Some questions added, some failed
+        setError(`Thêm ${successCount} câu hỏi thành công, ${failedCount} câu hỏi thất bại.`);
+        fetchQuestions();
+        setIsAddModalOpen(false);
+      } else {
+        // All failed
+        setError('Thêm câu hỏi thất bại. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      console.error("Error adding questions:", err);
+      setError('Đã xảy ra lỗi khi thêm câu hỏi.');
     }
   };
 
@@ -141,6 +192,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         <AddQuestionMenu 
           onClose={() => setIsAddModalOpen(false)}
           onAddQuestion={handleAddQuestion}
+          onAddQuestions={handleAddQuestions}
         />
       )}
 
