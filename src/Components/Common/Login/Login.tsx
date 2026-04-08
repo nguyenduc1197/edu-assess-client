@@ -6,6 +6,7 @@ interface LoginData {
   name: string;
   role: string;
   token: string;
+  email: string;
   accesstoken:string;
 }
 
@@ -57,6 +58,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         localStorage.setItem('token', token);
         localStorage.setItem('name', data.loginResponse.name);
         localStorage.setItem('role', data.loginResponse.role);
+        localStorage.setItem('email', data.loginResponse.email);
         if (onLogin)
             onLogin(data.loginResponse.role);
       } else {

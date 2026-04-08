@@ -1,11 +1,10 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
-  Calculator, 
   BookOpen, 
-  History, 
-  CalendarDays, 
   GraduationCap, 
+  Users,
+  UserCog,
   Settings,
   X,
   LogOut
@@ -17,18 +16,27 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout?: () => void;
+  role?: 'Teacher' | 'Student';
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout }) => {
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Tổng quan', active: true, href: 'teacherdashboard' },
-    { icon: BookOpen, label: 'Câu Hỏi', active: false, href: 'teacher/questions' },
-    //{ icon: Calculator, label: 'Toán học', active: false, href: '#' },
-    //{ icon: BookOpen, label: 'Văn học', active: false, href: '#' },
-    //{ icon: History, label: 'Lịch sử', active: false, href: '#' },
-    //{ icon: CalendarDays, label: 'Lịch học', active: false, href: '#' },
-    //{ icon: GraduationCap, label: 'Điểm số', active: false, href: '#' },
+const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role }) => {
+  const currentPath = window.location.pathname;
+  const isTeacher = role === 'Teacher' || localStorage.getItem('role') === 'Teacher';
+
+  const teacherNavItems = [
+    { icon: LayoutDashboard, label: 'Tổng quan', href: '/teacherdashboard' },
+    { icon: BookOpen, label: 'Câu Hỏi', href: '/teacher/questions' },
+    { icon: UserCog, label: 'Giáo Viên', href: '/teacher/teachers' },
+    { icon: Users, label: 'Học Sinh', href: '/teacher/students' },
   ];
+
+  const studentNavItems = [
+    { icon: LayoutDashboard, label: 'Tổng quan', href: '/studentdashboard' },
+  ];
+
+  const navItems = isTeacher ? teacherNavItems : studentNavItems;
+  const email = localStorage.getItem('email');
+  const displayEmail = isTeacher ? (email || user.email) : (email || 'Chưa cài đặt');
 
   return (
     <>
@@ -56,10 +64,10 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout }) =>
               />
               <div className="flex flex-col overflow-hidden">
                 <h1 className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                  {`${localStorage.getItem('name')}`}
+                  {localStorage.getItem('name') || user.name}
                 </h1>
                 <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                  {user.email}
+                  {displayEmail}
                 </p>
               </div>
             </div>
@@ -83,12 +91,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout }) =>
                 key={item.label}
                 href={item.href}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors
-                  ${item.active 
+                  ${currentPath === item.href
                     ? 'bg-blue-50 text-primary dark:bg-primary/10 dark:text-primary' 
                     : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5'
                   }`}
               >
-                <item.icon size={20} className={item.active ? 'text-primary' : 'text-gray-500 dark:text-gray-400'} />
+                <item.icon size={20} className={currentPath === item.href ? 'text-primary' : 'text-gray-500 dark:text-gray-400'} />
                 {item.label}
               </a>
             ))}

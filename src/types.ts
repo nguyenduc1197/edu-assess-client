@@ -63,6 +63,26 @@ export interface User {
   avatarUrl: string;
 }
 
+export interface Teacher {
+  id: string;
+  name: string;
+  dateOfBirth: string;
+  email: string;
+  subject: string;
+  username?: string;
+  dateCreated?: string;
+}
+
+export interface Student {
+  id: string;
+  name: string;
+  dateOfBirth: string;
+  schoolClassId: string;
+  schoolClassName?: string;
+  username?: string;
+  dateCreated?: string;
+}
+
 export interface LoginProps {
   onLogin?: (role: string) => void;
   onLogout?: () => void;
