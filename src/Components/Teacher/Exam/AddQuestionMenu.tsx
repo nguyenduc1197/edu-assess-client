@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
-import { Question } from '../../../types';
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, X, ChevronDown } from 'lucide-react';
+import { Question, CompetencyOption } from '../../../types';
+import { fetchClient } from '../../../api/fetchClient';
 
 interface AddQuestionMenuProps {
   onAddQuestion?: (question: Question) => void;
@@ -14,6 +15,27 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
   const [correctChoice, setCorrectChoice] = useState(0);
   const [error, setError] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
+  const [selectedCompetencyType, setSelectedCompetencyType] = useState('');
+  const [competencyLoading, setCompetencyLoading] = useState(true);
+
+  useEffect(() => {
+    const loadCompetencies = async () => {
+      try {
+        const res = await fetchClient('/questions/competency-types');
+        if (res.ok) {
+          const data: CompetencyOption[] = await res.json();
+          setCompetencyOptions(data);
+          if (data.length > 0) setSelectedCompetencyType(data[0].value);
+        }
+      } catch {
+        // silently ignore; user can still see emptied dropdown
+      } finally {
+        setCompetencyLoading(false);
+      }
+    };
+    loadCompetencies();
+  }, []);
 
   const handleChoiceChange = (index: number, value: string) => {
     const newChoices = [...choices];
@@ -37,6 +59,11 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
     e.preventDefault();
     setError('');
 
+    if (!selectedCompetencyType) {
+      setError('Vui lòng chọn năng lực cần đánh giá');
+      return;
+    }
+
     if (!content.trim()) {
       setError('Vui lòng nhập nội dung câu hỏi');
       return;
@@ -49,10 +76,14 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
 
     // Generate option labels (A, B, C, D, etc.)
     const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
-    
+
+    const competencyLabel = competencyOptions.find(o => o.value === selectedCompetencyType)?.label;
+
     const newQuestion: Question = {
       id: `q-${Date.now()}`,
       content: content.trim(),
+      competencyType: selectedCompetencyType,
+      competencyLabel,
       choices: choices.map((choice, index) => ({
         optionLabel: optionLabels[index] || String(index),
         content: choice.trim(),
@@ -118,6 +149,34 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                 {error}
               </div>
             )}
+
+            {/* Competency selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Năng Lực Cần Đánh Giá
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedCompetencyType}
+                  onChange={(e) => setSelectedCompetencyType(e.target.value)}
+                  disabled={competencyLoading}
+                  className="w-full appearance-none px-4 py-2.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-60"
+                >
+                  {competencyLoading && (
+                    <option value="">Đang tải...</option>
+                  )}
+                  {!competencyLoading && competencyOptions.length === 0 && (
+                    <option value="">Không có dữ liệu</option>
+                  )}
+                  {competencyOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              </div>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -204,12 +263,17 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                           <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
                             Câu {index + 1}:
                           </span>{' '}
                           {question.content}
                         </p>
+                        {question.competencyLabel && (
+                          <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-2">
+                            Năng lực: {question.competencyLabel}
+                          </p>
+                        )}
                         <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                           {question.choices && question.choices.map((choice, cIdx) => (
                             <div key={cIdx} className="flex items-center gap-2">

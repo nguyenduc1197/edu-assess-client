@@ -8,8 +8,15 @@ export interface Choice {
 export interface Question {
   id: string;        
   content: string;
+  competencyType?: string;
+  competencyLabel?: string;
   choices?: Choice[];
   dateCreated?: string;
+}
+
+export interface CompetencyOption {
+  value: string;
+  label: string;
 }
 
 export interface Subject {
@@ -86,4 +93,24 @@ export interface Student {
 export interface LoginProps {
   onLogin?: (role: string) => void;
   onLogout?: () => void;
+}
+
+export interface AssessmentResult {
+  studentExamId: string;
+  examId: string;
+  examName: string;
+  studentId: string;
+  studentName: string;
+  score: number;
+  assessmentStatus: 'Pending' | 'Completed' | 'Failed';
+  behaviorAdjustmentScore: number | null;
+  selfDevelopmentScore: number | null;
+  economicSocialParticipationScore: number | null;
+  overallFeedback: string | null;
+  behaviorAdjustmentFeedback: string | null;
+  selfDevelopmentFeedback: string | null;
+  economicSocialParticipationFeedback: string | null;
+  assessmentError: string | null;
+  finishedAt: string;
+  assessedAt: string | null;
 }

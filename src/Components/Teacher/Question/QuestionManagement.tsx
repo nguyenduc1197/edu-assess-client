@@ -39,6 +39,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         const mappedQuestions: Question[] = items.map((item: any) => ({
           id: item.id,
           content: item.content,
+          competencyType: item.competencyType,
+          competencyLabel: item.competencyLabel,
           choices: (item.choices || []).map((choice: any) => ({
             optionLabel: choice.optionLabel || choice.id,
             content: choice.content,
@@ -104,12 +106,17 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
       // Submit each question to the API
       for (const question of newQuestions) {
         try {
+          const payload = {
+            content: question.content,
+            competencyType: question.competencyType,
+            choices: question.choices
+          };
           const response = await fetchClient('/questions', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(question)
+            body: JSON.stringify(payload)
           });
 
           if (response.ok) {
@@ -259,6 +266,9 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                       Câu Hỏi
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Năng Lực
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
                       Số Đáp Án
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -277,6 +287,9 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                     >
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white max-w-xs truncate">
                         {question.content}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-indigo-600 dark:text-indigo-400">
+                        {question.competencyLabel || question.competencyType || '—'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         {question.choices?.length} đáp án
