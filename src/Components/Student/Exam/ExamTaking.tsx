@@ -92,7 +92,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
             {/* Options */}
             <div className="space-y-3">
               {currentQuestion.choices?.map((option) => {
-                const isSelected = answers[currentQuestion.id]?.content === option.content;
+                const isSelected = answers[currentQuestion.id]?.choiceId === option.id;
 
                 return (
                   <label 
@@ -106,13 +106,14 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                     <input
                       type="radio"
                       name={`question-${currentQuestion.id}`}
-                      value={option.content}
+                      value={option.id ?? ''}
                       checked={isSelected}
-                      onChange={() => onAnswer(currentQuestion.id, option.id, option.content)}
+                      onChange={() => onAnswer(currentQuestion.id, option.id ?? '', option.content)}
                       className="h-5 w-5 border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
                     />
                     <span className="ml-4 font-medium text-gray-700 dark:text-gray-200">
-                       {option.content}
+                      {option.optionLabel && <span className="mr-2 font-bold text-primary">{option.optionLabel}.</span>}
+                      {option.content}
                     </span>
                   </label>
                 );

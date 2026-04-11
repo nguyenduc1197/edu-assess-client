@@ -72,18 +72,21 @@ const ExamPage: React.FC = () => {
             </p>
 
             <div className="choices-container">
-              {q.choices?.map((c) => (
-                <label key={c.id} className="choice-label hover-glow">
-                  <input
-                    type="radio"
-                    name={`question-${q.id}`}
-                    value={c.id}
-                    checked={answers[q.id] === c.id}
-                    onChange={() => handleChange(q.id, c.id)}
-                  />
-                  <span className="choice-text">{c.content}</span>
-                </label>
-              ))}
+              {q.choices?.map((c, idx) => {
+                const choiceId = c.optionLabel || `choice-${idx}`;
+                return (
+                  <label key={choiceId} className="choice-label hover-glow">
+                    <input
+                      type="radio"
+                      name={`question-${q.id}`}
+                      value={choiceId}
+                      checked={answers[q.id] === choiceId}
+                      onChange={() => handleChange(q.id, choiceId)}
+                    />
+                    <span className="choice-text">{c.content}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
         ))}

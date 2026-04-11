@@ -1,5 +1,6 @@
 export interface Choice {
-  id: string;        
+  id?: string;        
+  optionLabel: string;
   content: string;
   isCorrect?: boolean; 
 }
@@ -7,7 +8,15 @@ export interface Choice {
 export interface Question {
   id: string;        
   content: string;
+  competencyType?: string;
+  competencyLabel?: string;
   choices?: Choice[];
+  dateCreated?: string;
+}
+
+export interface CompetencyOption {
+  value: string;
+  label: string;
 }
 
 export interface Subject {
@@ -61,7 +70,47 @@ export interface User {
   avatarUrl: string;
 }
 
+export interface Teacher {
+  id: string;
+  name: string;
+  dateOfBirth: string;
+  email: string;
+  subject: string;
+  username?: string;
+  dateCreated?: string;
+}
+
+export interface Student {
+  id: string;
+  name: string;
+  dateOfBirth: string;
+  schoolClassId: string;
+  schoolClassName?: string;
+  username?: string;
+  dateCreated?: string;
+}
+
 export interface LoginProps {
   onLogin?: (role: string) => void;
   onLogout?: () => void;
+}
+
+export interface AssessmentResult {
+  studentExamId: string;
+  examId: string;
+  examName: string;
+  studentId: string;
+  studentName: string;
+  score: number;
+  assessmentStatus: 'Pending' | 'Completed' | 'Failed';
+  behaviorAdjustmentScore: number | null;
+  selfDevelopmentScore: number | null;
+  economicSocialParticipationScore: number | null;
+  overallFeedback: string | null;
+  behaviorAdjustmentFeedback: string | null;
+  selfDevelopmentFeedback: string | null;
+  economicSocialParticipationFeedback: string | null;
+  assessmentError: string | null;
+  finishedAt: string;
+  assessedAt: string | null;
 }
