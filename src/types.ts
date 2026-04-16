@@ -27,6 +27,19 @@ export interface Subject {
 export interface Class {
   id: string;
   name: string;
+  homeRoomTeacherId?: string;
+  homeRoomTeacherName?: string;
+  schoolYearId?: string;
+  schoolYearStart?: string;
+  schoolYearEnd?: string;
+  isActive?: boolean;
+  isDeleted?: boolean;
+}
+
+export interface SchoolYear {
+  id: string;
+  start: string;
+  end: string;
 }
 
 export type AppView = 'dashboard' | 'exam-session';
@@ -93,6 +106,21 @@ export interface Student {
 export interface LoginProps {
   onLogin?: (role: string) => void;
   onLogout?: () => void;
+}
+
+export interface StudentResultSummary {
+  studentExamId: string;
+  examId: string;
+  examName: string;
+  studentId: string;
+  studentName: string;
+  schoolClassId: string;
+  schoolClassName: string;
+  isSubmitted: boolean;
+  score: number | null;
+  assessmentStatus: 'Pending' | 'Completed' | 'Failed';
+  finishedAt?: string;
+  assessedAt?: string | null;
 }
 
 export interface AssessmentResult {

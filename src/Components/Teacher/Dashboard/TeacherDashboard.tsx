@@ -135,7 +135,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         <CreateExamModal 
           onClose={() => setIsCreateModalOpen(false)} 
           onSuccess={() => {
-            console.log("Exam created successfully");
+            fetchAssignments();
           }}
         />
       )}

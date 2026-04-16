@@ -26,10 +26,10 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
     const fetchClasses = async () => {
       setIsFetchingClasses(true);
       try {
-        const response = await fetchClient('/Classes?pageNumber=1&pageSize=100');
+        const response = await fetchClient('/classes?pageNumber=1&pageSize=100');
         if (response.ok) {
           const data = await response.json();
-          setClasses(Array.isArray(data) ? data : (data.items || []));
+          setClasses(Array.isArray(data) ? data : (data.items || data.data || []));
         }
       } catch (err) {
         console.error('Error fetching classes:', err);

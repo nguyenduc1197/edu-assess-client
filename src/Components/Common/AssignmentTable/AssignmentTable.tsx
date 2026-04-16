@@ -80,9 +80,13 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
                       {onStartExam && (
-                      <a href="#" onClick={() => onStartExam && onStartExam(assignment)} className="text-primary hover:text-primary-dark hover:underline transition-colors">
-                        {getActionText(assignment.status)}
-                      </a>
+                        <button
+                          type="button"
+                          onClick={() => onStartExam(assignment)}
+                          className="text-primary hover:text-primary-dark hover:underline transition-colors"
+                        >
+                          {getActionText(assignment.status)}
+                        </button>
                       )}
                       {onDelete && (
                           <button 

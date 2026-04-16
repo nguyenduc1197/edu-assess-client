@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { API_BASE_URL } from '../../../config/env';
 import { LoginProps } from '../../../types';
+import { decodeJwtPayload } from '../../../api/fetchClient';
 interface LoginData {
   name: string;
   role: string;
@@ -59,6 +60,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         localStorage.setItem('name', data.loginResponse.name);
         localStorage.setItem('role', data.loginResponse.role);
         localStorage.setItem('email', data.loginResponse.email);
+
+        const payload = decodeJwtPayload(token);
+        const userId =
+          payload?.nameid ||
+          payload?.sub ||
+          payload?.userId ||
+          payload?.id ||
+          payload?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+
+        if (typeof userId === 'string' && userId.trim()) {
+          localStorage.setItem('userId', userId);
+        }
+
         if (onLogin)
             onLogin(data.loginResponse.role);
       } else {

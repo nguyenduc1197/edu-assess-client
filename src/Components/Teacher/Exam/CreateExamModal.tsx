@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Class, Question, Subject, SubjectLabel } from '../../../types';
-import { API_BASE_URL } from '../../../config/env';
+import { Class, Question, SubjectLabel } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
 
 interface CreateExamModalProps {
@@ -31,7 +30,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
     const fetchQuestions = async () => {
       setIsFetchingQuestions(true);
       try {
-        const response = await fetchClient("/questions?pageNumber=1&pageSize=100");
+        const response = await fetchClient('/questions/without-exam?pageNumber=1&pageSize=100');
 
         if (response.ok) {
           const data = await response.json();
@@ -59,11 +58,11 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
     const fetchClasses = async () => {
       setIsFetchingClasses(true);
       try {
-        const response = await fetchClient("/Classes?pageNumber=1&pageSize=100");
+        const response = await fetchClient('/classes?pageNumber=1&pageSize=100');
 
         if (response.ok) {
           const data = await response.json();
-          const classList = Array.isArray(data) ? data : (data.items || []);
+          const classList = Array.isArray(data) ? data : (data.items || data.data || []);
           setClasses(classList);
         } else {
           console.error("Failed to fetch classes:", response.status);
@@ -96,14 +95,14 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
     setError(null);
     setIsLoading(true);
 
-    if (!name || !start || !end) {
-      setError("Please fill in all required fields.");
+    if (!name || !start || !end || !selectedClassId) {
+      setError('Vui lòng nhập đầy đủ tên bài thi, thời gian và lớp học.');
       setIsLoading(false);
       return;
     }
 
     if (selectedQuestionIds.length === 0) {
-      setError("Please select at least one question.");
+      setError('Vui lòng chọn ít nhất một câu hỏi.');
       setIsLoading(false);
       return;
     }

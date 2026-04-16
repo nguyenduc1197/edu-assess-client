@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react';
 import QuestionManagement from './Components/Teacher/Question/QuestionManagement';
 import TeacherManagement from './Components/Teacher/Teachers/TeacherManagement';
 import StudentManagement from './Components/Teacher/Students/StudentManagement';
+import ClassManagement from './Components/Teacher/Classes/ClassManagement';
+import TeacherResults from './Components/Teacher/Results/TeacherResults';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,6 +38,7 @@ useEffect(() => {
     localStorage.removeItem('name');
     localStorage.removeItem('role');
     localStorage.removeItem('email');
+    localStorage.removeItem('userId');
     setIsAuthenticated(false);
   };
 
@@ -70,8 +73,10 @@ useEffect(() => {
             <Route path="/" element={<TeacherDashboard onLogout={handleLogout} />} />
             <Route path="/teacherdashboard" element={<TeacherDashboard onLogout={handleLogout} />} />
             <Route path="/teacher/questions" element={<QuestionManagement onLogout={handleLogout} />} />
+            <Route path="/teacher/results" element={<TeacherResults onLogout={handleLogout} />} />
             <Route path="/teacher/teachers" element={<TeacherManagement onLogout={handleLogout} />} />
             <Route path="/teacher/students" element={<StudentManagement onLogout={handleLogout} />} />
+            <Route path="/teacher/classes" element={<ClassManagement onLogout={handleLogout} />} />
           </>
         }
         {
