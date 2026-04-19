@@ -10,29 +10,29 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 
   switch (status) {
     case AssignmentStatus.NEW:
-      styles = 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
+      styles = 'border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
       break;
     case AssignmentStatus.IN_PROGRESS:
-      styles = 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300';
+      styles = 'border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
       break;
     case AssignmentStatus.SUBMITTED:
-      styles = 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
+      styles = 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300';
       break;
     case AssignmentStatus.GRADED:
-      styles = 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300';
+      styles = 'border border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-900/30 dark:text-violet-300';
       break;
     case AssignmentStatus.LATE:
-      styles = 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+      styles = 'border border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300';
       break;
     case AssignmentStatus.RETRY:
-      styles = 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+      styles = 'border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
       break;
     default:
-      styles = 'bg-gray-100 text-gray-800';
+      styles = 'border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300';
   }
 
   return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${styles}`}>
+    <span className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm ${styles}`}>
       {status}
     </span>
   );

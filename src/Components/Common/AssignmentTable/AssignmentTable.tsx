@@ -25,10 +25,10 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
 
   return (
     <div className="w-full @container">
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-background-dark">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg shadow-slate-200/40 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-none">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-            <thead className="bg-gray-50 dark:bg-white/5">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+            <thead className="bg-slate-50/90 dark:bg-slate-800/70">
               <tr>
                 <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   Tên bài tập
@@ -56,7 +56,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                  </tr>
               ) : (
                 assignments.map((assignment) => (
-                  <tr key={assignment.id} className="group transition-colors hover:bg-gray-50 dark:hover:bg-white/5">
+                  <tr key={assignment.id} className="group transition-colors hover:bg-slate-50/80 dark:hover:bg-white/5">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">
@@ -91,7 +91,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                           <button
                             type="button"
                             onClick={() => onStartExam(assignment)}
-                            className="text-primary hover:text-primary-dark hover:underline transition-colors"
+                            className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
                           >
                             {actionLabel || getActionText(assignment.status)}
                           </button>
@@ -99,7 +99,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                         {onDelete && (
                           <button 
                             onClick={() => onDelete(assignment.id)}
-                            className="text-gray-400 hover:text-red-600 transition-colors"
+                            className="rounded-full p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
                             title="Xóa"
                           >
                             <Trash2 size={18} />

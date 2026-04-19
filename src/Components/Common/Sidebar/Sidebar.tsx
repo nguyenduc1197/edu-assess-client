@@ -1,14 +1,16 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  GraduationCap, 
+import {
+  LayoutDashboard,
+  BookOpen,
+  GraduationCap,
   Users,
   UserCog,
   Settings,
   X,
   LogOut,
-  BarChart3
+  BarChart3,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { User } from '../../../types';
 
@@ -43,85 +45,114 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role
 
   return (
     <>
-      {/* Mobile Backdrop */}
-      <div 
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 lg:hidden ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      <div
+        className={`fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <aside 
-        className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-64 flex-col border-r border-gray-200 bg-white shadow-xl transition-transform duration-300 ease-in-out dark:border-gray-800 dark:bg-background-dark lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:shadow-sm lg:translate-x-0 ${
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-72 flex-col border-r border-slate-800 bg-slate-950 text-slate-100 shadow-2xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Sidebar Header: Profile & Close Button */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 lg:border-none">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div 
-                className="aspect-square size-10 shrink-0 rounded-full bg-cover bg-center ring-2 ring-gray-100 dark:ring-gray-700"
-                style={{ backgroundImage: `url("${user.avatarUrl}")` }}
-                aria-label={`Avatar of ${user.name}`}
-              />
-              <div className="flex flex-col overflow-hidden">
-                <h1 className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                  {localStorage.getItem('name') || user.name}
-                </h1>
-                <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                  {displayEmail}
-                </p>
+        <div className="border-b border-white/10 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-violet-500 text-white shadow-lg shadow-cyan-500/20">
+                <Sparkles size={18} />
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">EduAssess</p>
+                <h1 className="text-base font-bold text-white">StudentHub</h1>
               </div>
             </div>
 
-            {/* Close Button (Mobile Only) */}
-            <button 
-                onClick={onClose}
-                className="p-2 -mr-2 text-gray-500 hover:bg-gray-100 rounded-lg lg:hidden dark:text-gray-400 dark:hover:bg-white/10"
-                aria-label="Close sidebar"
-            >
-                <X size={20} />
-            </button>
-        </div>
-
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto p-3">
-          {/* Main Navigation */}
-          <nav className="flex flex-col gap-1">
-            {navItems.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors
-                  ${currentPath === item.href
-                    ? 'bg-blue-50 text-primary dark:bg-primary/10 dark:text-primary' 
-                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5'
-                  }`}
-              >
-                <item.icon size={20} className={currentPath === item.href ? 'text-primary' : 'text-gray-500 dark:text-gray-400'} />
-                {item.label}
-              </a>
-            ))}
-          </nav>
-
-          {/* System Actions (Settings & Logout) - Moved up to be part of flow */}
-          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-1">
             <button
-              type="button"
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
+              onClick={onClose}
+              className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
+              aria-label="Close sidebar"
             >
-              <Settings size={20} className="text-gray-500 dark:text-gray-400" />
-              Cài đặt
-            </button>
-            <button
-              onClick={onLogout}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/10 transition-colors"
-            >
-              <LogOut size={20} />
-              Đăng xuất
+              <X size={20} />
             </button>
           </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur">
+            <div className="flex items-start gap-3 overflow-hidden">
+              <div
+                className="aspect-square size-11 shrink-0 rounded-2xl bg-cover bg-center ring-2 ring-white/10"
+                style={{ backgroundImage: `url("${user.avatarUrl}")` }}
+                aria-label={`Avatar of ${user.name}`}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">
+                  {localStorage.getItem('name') || user.name}
+                </p>
+                <p className="truncate text-xs text-slate-400">{displayEmail}</p>
+                <span className="mt-2 inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
+                  {isTeacher ? 'Giáo viên' : 'Học sinh'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 py-4">
+          <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Điều hướng
+          </p>
+
+          <nav className="flex flex-col gap-1.5">
+            {navItems.map((item) => {
+              const isActive = currentPath === item.href;
+
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/20'
+                      : 'text-slate-300 hover:bg-white/8 hover:text-white'
+                  }`}
+                >
+                  <span className={`rounded-lg p-1.5 ${isActive ? 'bg-white/15' : 'bg-white/5'}`}>
+                    <item.icon size={16} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  </span>
+                  {item.label}
+                </a>
+              );
+            })}
+          </nav>
+
+          <div className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-sm text-slate-300">
+            <div className="mb-2 flex items-center gap-2 text-cyan-300">
+              <ShieldCheck size={16} />
+              <span className="font-semibold">Hệ thống ổn định</span>
+            </div>
+            <p className="text-xs leading-relaxed text-slate-400">
+              Theo dõi bài thi, quản lý người dùng và xem phản hồi AI trong một giao diện thống nhất.
+            </p>
+          </div>
+        </div>
+
+        <div className="border-t border-white/10 p-3">
+          <button
+            type="button"
+            className="mb-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-white/8 hover:text-white"
+          >
+            <Settings size={18} className="text-slate-400" />
+            Cài đặt
+          </button>
+          <button
+            onClick={onLogout}
+            className="flex w-full items-center gap-3 rounded-xl bg-red-500/10 px-3 py-2.5 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/20"
+          >
+            <LogOut size={18} />
+            Đăng xuất
+          </button>
         </div>
       </aside>
     </>

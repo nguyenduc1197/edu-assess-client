@@ -248,15 +248,19 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
 
       <main className="flex-1 px-4 py-8 sm:px-8 lg:p-8 overflow-y-auto h-screen">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                Quản Lý Câu Hỏi
-              </h1>
-              <p className="text-base text-gray-500 dark:text-gray-400">
-                Tổng cộng: {questions.length} câu hỏi chưa gán vào bài thi
-              </p>
-            </div>
+          <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-violet-50 to-fuchsia-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2">
+                <span className="inline-flex w-fit items-center rounded-full bg-fuchsia-100 px-3 py-1 text-xs font-semibold text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300">
+                  Ngân hàng câu hỏi
+                </span>
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                  Quản Lý Câu Hỏi
+                </h1>
+                <p className="text-base text-gray-600 dark:text-gray-400">
+                  Tổng cộng: {questions.length} câu hỏi chưa gán vào bài thi
+                </p>
+              </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
               <button
@@ -276,6 +280,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
               </button>
             </div>
           </div>
+        </div>
 
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">

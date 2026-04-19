@@ -138,18 +138,23 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ onLogout }) => {
       <main className="flex-1 px-4 py-8 sm:px-8 lg:p-8 overflow-y-auto h-screen">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Quản Lý Giáo Viên</h1>
-              <p className="text-base text-gray-500 dark:text-gray-400">Tổng cộng: {teachers.length} giáo viên</p>
+          <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-indigo-50 to-violet-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2">
+                <span className="inline-flex w-fit items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                  Quản trị nhân sự
+                </span>
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Quản Lý Giáo Viên</h1>
+                <p className="text-base text-gray-600 dark:text-gray-400">Tổng cộng: {teachers.length} giáo viên trong hệ thống</p>
+              </div>
+              <button
+                onClick={handleOpenCreate}
+                className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-violet-700 transition-colors"
+              >
+                <PlusCircle size={20} />
+                <span>Thêm Giáo Viên</span>
+              </button>
             </div>
-            <button
-              onClick={handleOpenCreate}
-              className="flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-primary/90 transition-colors dark:bg-blue-700 dark:hover:bg-blue-800"
-            >
-              <PlusCircle size={20} />
-              <span>Thêm Giáo Viên</span>
-            </button>
           </div>
 
           {error && (

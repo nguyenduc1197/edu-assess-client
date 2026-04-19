@@ -156,13 +156,16 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
       <main className="flex-1 px-4 py-8 sm:px-8 lg:p-8 overflow-y-auto h-screen">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-1">
+          <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-cyan-50 to-blue-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-col gap-2">
+              <span className="inline-flex w-fit items-center rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
+                Không gian học tập
+              </span>
               <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
                 Bài Thi Khả Dụng
               </h1>
-              <p className="text-base text-gray-500 dark:text-gray-400">
-                Các bài chưa làm hoặc đánh giá thất bại sẽ hiển thị ở đây để em tiếp tục hoặc làm lại
+              <p className="text-base text-gray-600 dark:text-gray-400">
+                Các bài chưa làm hoặc cần làm lại sẽ hiển thị ở đây để em tiếp tục ngay.
               </p>
             </div>
           </div>

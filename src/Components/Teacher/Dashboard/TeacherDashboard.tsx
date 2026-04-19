@@ -305,20 +305,25 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           
           {/* Page Heading */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                Bài Tập Đã Giao
-              </h1>
-              <p className="text-base text-gray-500 dark:text-gray-400">
-                Đây là danh sách các bài tập bạn đã giao
-              </p>
+          <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-blue-50 to-violet-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2">
+                <span className="inline-flex w-fit items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                  Quản lý bài thi
+                </span>
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                  Bài Tập Đã Giao
+                </h1>
+                <p className="text-base text-gray-600 dark:text-gray-400">
+                  Theo dõi danh sách bài thi, trạng thái học sinh và kết quả ngay trên một màn hình.
+                </p>
+              </div>
+
+              <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-violet-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all">
+                <PlusCircle size={20} />
+                <span>Tạo Mới</span>
+              </button>
             </div>
-            
-            <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all">
-              <PlusCircle size={20} />
-              <span>Tạo Mới</span>
-            </button>
           </div>
 
           {/* Toolbar & Filters */}
