@@ -4,10 +4,10 @@ import { AppView, Assignment, AssignmentStatus, LoginProps, SubjectLabel, User }
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import AssignmentTable from '../../Common/AssignmentTable/AssignmentTable';
 import ExamSession from '../Exam/ExamSession';
-import { fetchClient, getCurrentUserId } from '../../../api/fetchClient';
+import { fetchClient, getCurrentProfileId } from '../../../api/fetchClient';
 
 const mockUser: User = {
-  id: localStorage.getItem('userId') || 'student-user',
+  id: localStorage.getItem('profileId') || 'student-user',
   name: localStorage.getItem('name') || 'Học sinh',
   email: localStorage.getItem('email') || 'student@school.edu',
   avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj'
@@ -23,7 +23,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [error, setError] = useState('');
 
   const fetchAssignments = useCallback(async () => {
-    const studentId = getCurrentUserId();
+    const studentId = getCurrentProfileId();
 
     if (!studentId) {
       setAssignments([]);
@@ -112,8 +112,8 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       <ExamSession
         assignment={selectedExam}
         examId={selectedExam.id}
-        studentId={getCurrentUserId() || ''}
         onExit={handleExitExam}
+        onSubmitted={fetchAssignments}
       />
     );
   }

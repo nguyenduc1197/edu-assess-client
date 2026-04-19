@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, CheckCircle2, Flag } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnswerState, Question } from '../../../types';
 
 interface ExamTakingProps {

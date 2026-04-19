@@ -4,7 +4,6 @@ import { Assignment, AssignmentStatus, LoginProps, SubjectLabel, User } from '..
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import AssignmentTable from '../../Common/AssignmentTable/AssignmentTable';
 import CreateExamModal from '../Exam/CreateExamModal';
-import { API_BASE_URL } from '../../../config/env';
 import { fetchClient } from '../../../api/fetchClient';
 
 let mockUser: User = {

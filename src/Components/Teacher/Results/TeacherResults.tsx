@@ -260,18 +260,24 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Điều chỉnh hành vi</p>
-                      <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{selectedResult.behaviorAdjustmentScore ?? '—'}</p>
-                    </div>
-                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Phát triển bản thân</p>
-                      <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{selectedResult.selfDevelopmentScore ?? '—'}</p>
-                    </div>
-                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">KT-XH</p>
-                      <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{selectedResult.economicSocialParticipationScore ?? '—'}</p>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Các năng lực được đánh giá</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedResult.behaviorAdjustmentScore !== null && (
+                        <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                          Năng lực điều chỉnh hành vi
+                        </span>
+                      )}
+                      {selectedResult.selfDevelopmentScore !== null && (
+                        <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                          Năng lực phát triển bản thân
+                        </span>
+                      )}
+                      {selectedResult.economicSocialParticipationScore !== null && (
+                        <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                          Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội
+                        </span>
+                      )}
                     </div>
                   </div>
                 </>

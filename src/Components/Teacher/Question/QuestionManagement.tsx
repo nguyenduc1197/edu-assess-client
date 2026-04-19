@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, PlusCircle, Menu, Trash2, Edit2 } from 'lucide-react';
+import { Search, PlusCircle, Menu, Trash2, Edit2, Sparkles } from 'lucide-react';
 import { CompetencyOption, Question, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import AddQuestionMenu from '../Exam/AddQuestionMenu';
+import AIQuestionGeneratorModal from './AIQuestionGeneratorModal';
 import { fetchClient } from '../../../api/fetchClient';
 
 interface QuestionManagementProps {
@@ -21,6 +22,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -217,6 +219,18 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         />
       )}
 
+      {isAIModalOpen && (
+        <AIQuestionGeneratorModal
+          competencyOptions={competencyOptions}
+          onClose={() => setIsAIModalOpen(false)}
+          onSaved={(message) => {
+            setError('');
+            setSuccessMessage(message);
+            fetchQuestions();
+          }}
+        />
+      )}
+
       <main className="flex-1 px-4 py-8 sm:px-8 lg:p-8 overflow-y-auto h-screen">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -229,13 +243,23 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
               </p>
             </div>
 
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-primary/90 transition-colors dark:bg-blue-700 dark:hover:bg-blue-800"
-            >
-              <PlusCircle size={20} />
-              <span>Thêm Câu Hỏi</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => setIsAIModalOpen(true)}
+                className="flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-violet-700 transition-colors"
+              >
+                <Sparkles size={18} />
+                <span>Tạo Câu Hỏi Bằng AI</span>
+              </button>
+
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-primary/90 transition-colors dark:bg-blue-700 dark:hover:bg-blue-800"
+              >
+                <PlusCircle size={20} />
+                <span>Thêm Thủ Công</span>
+              </button>
+            </div>
           </div>
 
           {error && (

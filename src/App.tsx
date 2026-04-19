@@ -1,5 +1,5 @@
 import './App.css';
-import { BrowserRouter, Navigate, Route, Router, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import ReviewPage from './Components/ReviewExam/ReviewExam';
 import StudentDashboard from './Components/Student/Dashboard/StudentDashboard';
 import TeacherDashboard from './Components/Teacher/Dashboard/TeacherDashboard';
@@ -22,10 +22,10 @@ useEffect(() => {
       setIsAuthenticated(true);
     }
     const role = localStorage.getItem('role');
-    if (role && role == 'Teacher') {
+    if (role && role === 'Teacher') {
       setIsTeacher(true);
     }
-    else if (role && role == 'Student')
+    else if (role && role === 'Student')
     {
       setIsTeacher(false);
     }
@@ -39,6 +39,8 @@ useEffect(() => {
     localStorage.removeItem('role');
     localStorage.removeItem('email');
     localStorage.removeItem('userId');
+    localStorage.removeItem('accountId');
+    localStorage.removeItem('profileId');
     setIsAuthenticated(false);
   };
 

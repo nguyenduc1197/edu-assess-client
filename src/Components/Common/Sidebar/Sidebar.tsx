@@ -107,13 +107,13 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role
 
           {/* System Actions (Settings & Logout) - Moved up to be part of flow */}
           <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-1">
-            <a
-              href="#"
+            <button
+              type="button"
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
             >
               <Settings size={20} className="text-gray-500 dark:text-gray-400" />
               Cài đặt
-            </a>
+            </button>
             <button
               onClick={onLogout}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/10 transition-colors"

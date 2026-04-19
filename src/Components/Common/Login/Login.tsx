@@ -6,9 +6,11 @@ import { decodeJwtPayload } from '../../../api/fetchClient';
 interface LoginData {
   name: string;
   role: string;
-  token: string;
+  token?: string;
   email: string;
-  accesstoken:string;
+  accesstoken?: string;
+  accountId?: string;
+  profileId?: string;
 }
 
 interface LoginAPIResponse {
@@ -41,40 +43,42 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       if (response.ok) {
         const data: LoginAPIResponse = await response.json();
-        let token = '';
+        const loginResponse = data?.loginResponse;
+        const token = loginResponse?.token || loginResponse?.accesstoken || '';
 
-        if (typeof data === 'string') {
-            token = data;
-        } else if (data.loginResponse.token) {
-            token = data.loginResponse.token;
-        } else if (data.loginResponse.accesstoken) {
-            token = data.loginResponse.accesstoken;
-        } else {
-            // Fallback: maybe the whole object is the payload? 
-            // If the user didn't specify the response format, I'll save the whole thing if it looks like a token, 
-            // or just flag success.
-            // Let's assume data itself is the token if it has no clear structure, or try to find it.
-            token = JSON.stringify(data); 
+        if (!loginResponse || !token) {
+          throw new Error('Phản hồi đăng nhập không hợp lệ.');
         }
+
         localStorage.setItem('token', token);
-        localStorage.setItem('name', data.loginResponse.name);
-        localStorage.setItem('role', data.loginResponse.role);
-        localStorage.setItem('email', data.loginResponse.email);
+        localStorage.setItem('name', loginResponse.name);
+        localStorage.setItem('role', loginResponse.role);
+        localStorage.setItem('email', loginResponse.email);
+
+        if (loginResponse.accountId) {
+          localStorage.setItem('accountId', loginResponse.accountId);
+          localStorage.setItem('userId', loginResponse.accountId);
+        }
+
+        if (loginResponse.profileId) {
+          localStorage.setItem('profileId', loginResponse.profileId);
+        }
 
         const payload = decodeJwtPayload(token);
-        const userId =
+        const fallbackUserId =
           payload?.nameid ||
           payload?.sub ||
           payload?.userId ||
           payload?.id ||
           payload?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
 
-        if (typeof userId === 'string' && userId.trim()) {
-          localStorage.setItem('userId', userId);
+        if (!localStorage.getItem('userId') && typeof fallbackUserId === 'string' && fallbackUserId.trim()) {
+          localStorage.setItem('userId', fallbackUserId);
         }
 
-        if (onLogin)
-            onLogin(data.loginResponse.role);
+        if (onLogin) {
+          onLogin(loginResponse.role);
+        }
       } else {
         setError('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
       }
@@ -175,9 +179,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-primary hover:text-primary-dark">
+              <button type="button" className="font-medium text-primary hover:text-primary-dark">
                 Quên mật khẩu?
-              </a>
+              </button>
             </div>
           </div>
 

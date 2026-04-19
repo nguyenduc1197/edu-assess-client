@@ -8,13 +8,13 @@ import { fetchClient } from '../../../api/fetchClient';
 interface ExamSessionProps {
   assignment: Assignment;
   examId: string;
-  studentId: string;
   onExit: () => void;
+  onSubmitted?: () => void;
 }
 
 type SessionStep = 'taking' | 'review' | 'assessing' | 'result';
 
-const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId, onExit }) => {
+const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, onSubmitted }) => {
   const [step, setStep] = useState<SessionStep>('taking');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
@@ -27,6 +27,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
+        setIsLoading(true);
         const response = await fetchClient(`/questions?pageNumber=1&examId=${examId}&pageSize=20`);
         
         if (response.ok) {
@@ -52,7 +53,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
       }
     };
     fetchQuestions();
-  }, []);
+  }, [examId]);
 
   const handleAnswer = (questionId: string, choiceId: string, content: string) => {
    setAnswers(prev => ({
@@ -67,12 +68,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
   const handleSubmit = async () => {
     try {
       const payload = {
-        studentId: studentId,
         answers: Object.entries(answers).map(([questionId, value]) => ({
           questionId,
           choiceId: value.choiceId ?? null,
           essayAnswer: null,
-        }))
+        })),
       };
 
       const response = await fetchClient(`/exams/${examId}/submit`, {
@@ -84,6 +84,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
       if (response.ok) {
         const submitData = await response.json();
         const studentExamId: string = submitData.studentExamId;
+        onSubmitted?.();
         setStep('assessing');
         startPolling(studentExamId);
       } else {
@@ -123,6 +124,10 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
     };
   }, []);
 
+  if (step === 'taking' && isLoading) {
+    return <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 text-gray-600 dark:text-gray-300">Đang tải câu hỏi...</div>;
+  }
+
   if (step === 'review') {
     return (
       <ExamReview 
@@ -149,18 +154,25 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
   }
 
   if (step === 'result' && assessmentResult) {
-    const { examName, studentName, score, assessmentStatus, assessmentError,
-      behaviorAdjustmentScore, selfDevelopmentScore, economicSocialParticipationScore,
-      overallFeedback, behaviorAdjustmentFeedback, selfDevelopmentFeedback,
-      economicSocialParticipationFeedback } = assessmentResult;
+    const {
+      examName,
+      studentName,
+      score,
+      assessmentStatus,
+      assessmentError,
+      behaviorAdjustmentScore,
+      selfDevelopmentScore,
+      economicSocialParticipationScore,
+      overallFeedback,
+    } = assessmentResult;
 
     const failed = assessmentStatus === 'Failed';
 
     const competencies = [
-      { label: 'Điều chỉnh hành vi', score: behaviorAdjustmentScore, feedback: behaviorAdjustmentFeedback },
-      { label: 'Phát triển bản thân', score: selfDevelopmentScore, feedback: selfDevelopmentFeedback },
-      { label: 'Tham gia hoạt động KT-XH', score: economicSocialParticipationScore, feedback: economicSocialParticipationFeedback },
-    ];
+      { label: 'Năng lực điều chỉnh hành vi', isShown: behaviorAdjustmentScore !== null },
+      { label: 'Năng lực phát triển bản thân', isShown: selfDevelopmentScore !== null },
+      { label: 'Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội', isShown: economicSocialParticipationScore !== null },
+    ].filter((item) => item.isShown);
 
     return (
       <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950 p-4 sm:p-8">
@@ -194,29 +206,21 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
                 </div>
               )}
 
-              {/* Per-competency scores */}
-              <div className="flex flex-col gap-4">
-                {competencies.map((c) => (
-                  c.score !== null && (
-                    <div key={c.label} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{c.label}</span>
-                        <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{c.score?.toFixed(1)}</span>
-                      </div>
-                      {/* Progress bar */}
-                      <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400 transition-all duration-700"
-                          style={{ width: `${((c.score ?? 0) / 10) * 100}%` }}
-                        />
-                      </div>
-                      {c.feedback && (
-                        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{c.feedback}</p>
-                      )}
-                    </div>
-                  )
-                ))}
-              </div>
+              {competencies.length > 0 && (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Các năng lực được đánh giá</p>
+                  <div className="flex flex-wrap gap-2">
+                    {competencies.map((c) => (
+                      <span
+                        key={c.label}
+                        className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-sm font-medium text-indigo-700 dark:text-indigo-300"
+                      >
+                        {c.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
 

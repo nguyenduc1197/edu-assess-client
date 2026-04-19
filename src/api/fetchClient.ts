@@ -16,7 +16,7 @@ export function decodeJwtPayload(token: string): JwtPayload | null {
 }
 
 export function getCurrentUserId(): string | null {
-  const storedUserId = localStorage.getItem("userId");
+  const storedUserId = localStorage.getItem("userId") || localStorage.getItem("accountId");
   if (storedUserId) return storedUserId;
 
   const token = localStorage.getItem("token");
@@ -36,6 +36,13 @@ export function getCurrentUserId(): string | null {
   }
 
   return null;
+}
+
+export function getCurrentProfileId(): string | null {
+  const storedProfileId = localStorage.getItem("profileId");
+  if (storedProfileId) return storedProfileId;
+
+  return getCurrentUserId();
 }
 
 export async function fetchClient(
@@ -59,6 +66,8 @@ export async function fetchClient(
     localStorage.removeItem("name");
     localStorage.removeItem("email");
     localStorage.removeItem("userId");
+    localStorage.removeItem("accountId");
+    localStorage.removeItem("profileId");
 
     window.location.href = "/login";
     return Promise.reject("Unauthorized");
