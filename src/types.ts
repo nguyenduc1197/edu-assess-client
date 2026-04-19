@@ -17,6 +17,9 @@ export interface Question {
   questionFormatLabel?: string;
   difficultyLevel?: DifficultyLevel;
   difficultyLabel?: string;
+  passageText?: string | null;
+  passageGroupKey?: string | null;
+  statementOrder?: number | null;
   sourceEvidence?: string;
   choices?: Choice[];
   dateCreated?: string;
@@ -136,6 +139,20 @@ export interface StudentResultSummary {
   assessedAt?: string | null;
 }
 
+export interface ExamStudentStatusItem {
+  studentId: string;
+  studentName: string;
+  schoolClassId?: string;
+  schoolClassName?: string;
+  studentExamId?: string | null;
+  isSubmitted?: boolean;
+  score?: number | null;
+  assessmentStatus?: 'NotStarted' | 'Pending' | 'Completed' | 'Failed' | string;
+  canViewResult?: boolean;
+  assessmentError?: string | null;
+  finishedAt?: string | null;
+}
+
 export interface WrongAnswerReview {
   questionId: string;
   questionContent: string;
@@ -145,9 +162,14 @@ export interface WrongAnswerReview {
   questionFormatLabel?: string;
   difficultyLevel?: DifficultyLevel;
   difficultyLabel?: string;
+  passageText?: string | null;
+  passageGroupKey?: string | null;
+  statementOrder?: number | null;
   selectedAnswer?: string | null;
   correctAnswer?: string | null;
   sourceEvidence?: string | null;
+  keywordHint?: string | null;
+  errorExplanation?: string | null;
   highlightText?: string | null;
   guidanceNote?: string | null;
 }

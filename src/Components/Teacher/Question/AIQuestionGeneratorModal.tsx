@@ -214,8 +214,42 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
     );
   };
 
+  const updateGroupCompetency = (groupKey: string, value: string) => {
+    const label = competencyOptions.find((item) => item.value === value)?.label;
+
+    setGeneratedQuestions((prev) =>
+      prev.map((question) =>
+        question.passageGroupKey === groupKey
+          ? { ...question, competencyType: value, competencyLabel: label }
+          : question
+      )
+    );
+  };
+
+  const updateGroupDifficulty = (groupKey: string, value: string) => {
+    setGeneratedQuestions((prev) =>
+      prev.map((question) =>
+        question.passageGroupKey === groupKey
+          ? { ...question, difficultyLevel: value as any }
+          : question
+      )
+    );
+  };
+
+  const updatePassageTextForGroup = (groupKey: string, value: string) => {
+    setGeneratedQuestions((prev) =>
+      prev.map((question) =>
+        question.passageGroupKey === groupKey ? { ...question, passageText: value } : question
+      )
+    );
+  };
+
   const removeGeneratedQuestion = (questionIndex: number) => {
     setGeneratedQuestions((prev) => prev.filter((_, index) => index !== questionIndex));
+  };
+
+  const removeGeneratedGroup = (groupKey: string) => {
+    setGeneratedQuestions((prev) => prev.filter((question) => question.passageGroupKey !== groupKey));
   };
 
   const updateChoiceContent = (questionIndex: number, choiceIndex: number, value: string) => {
@@ -277,6 +311,9 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
         competencyType: question.competencyType,
         questionFormat: question.questionFormat,
         difficultyLevel: question.difficultyLevel,
+        passageText: question.passageText?.trim() || undefined,
+        passageGroupKey: question.passageGroupKey?.trim() || undefined,
+        statementOrder: question.statementOrder ?? undefined,
         sourceEvidence: question.sourceEvidence?.trim() || undefined,
         choices: question.choices.map((choice, index) => ({
           optionLabel: choice.optionLabel || OPTION_LABELS[index] || String(index + 1),
@@ -547,94 +584,217 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 )}
               </div>
 
-              {generatedQuestions.map((question, questionIndex) => (
-                <div key={question.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">Câu hỏi {questionIndex + 1}</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                          {competencyOptions.find((option) => option.value === question.competencyType)?.label || question.competencyType || 'Chưa chọn năng lực'}
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-violet-50 dark:bg-violet-900/20 px-3 py-1 text-xs font-medium text-violet-700 dark:text-violet-300">
-                          {FORMAT_LABELS[question.questionFormat || 'SingleChoice'] || question.questionFormat}
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/20 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
-                          {DIFFICULTY_LABELS[question.difficultyLevel || 'Medium'] || question.difficultyLevel}
-                        </span>
+              {generatedQuestions
+                .map((question, originalIndex) => ({ question, originalIndex }))
+                .filter(({ question, originalIndex }) => {
+                  if (question.questionFormat !== 'TrueFalse' || !question.passageGroupKey) return true;
+                  return !generatedQuestions.some(
+                    (other, otherIndex) =>
+                      otherIndex < originalIndex &&
+                      other.questionFormat === 'TrueFalse' &&
+                      other.passageGroupKey === question.passageGroupKey
+                  );
+                })
+                .map(({ question, originalIndex }) => {
+                  if (question.questionFormat === 'TrueFalse' && question.passageGroupKey) {
+                    const groupItems = generatedQuestions
+                      .map((item, index) => ({ item, index }))
+                      .filter(({ item }) => item.passageGroupKey === question.passageGroupKey)
+                      .sort((a, b) => (a.item.statementOrder || 0) - (b.item.statementOrder || 0));
+
+                    return (
+                      <div key={question.passageGroupKey} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">Nhóm câu Đúng / Sai</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                                {competencyOptions.find((option) => option.value === question.competencyType)?.label || question.competencyType || 'Chưa chọn năng lực'}
+                              </span>
+                              <span className="inline-flex items-center rounded-full bg-violet-50 dark:bg-violet-900/20 px-3 py-1 text-xs font-medium text-violet-700 dark:text-violet-300">
+                                {FORMAT_LABELS[question.questionFormat || 'TrueFalse'] || question.questionFormat}
+                              </span>
+                              <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/20 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                {DIFFICULTY_LABELS[question.difficultyLevel || 'Medium'] || question.difficultyLevel}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeGeneratedGroup(question.passageGroupKey || '')}
+                            className="text-sm font-medium text-red-600 hover:text-red-700"
+                          >
+                            Bỏ cả nhóm
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <select
+                            value={question.competencyType || ''}
+                            onChange={(e) => updateGroupCompetency(question.passageGroupKey || '', e.target.value)}
+                            className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
+                          >
+                            <option value="">Chọn năng lực</option>
+                            {competencyOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+
+                          <select
+                            value={question.difficultyLevel || 'Medium'}
+                            onChange={(e) => updateGroupDifficulty(question.passageGroupKey || '', e.target.value)}
+                            className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
+                          >
+                            <option value="Easy">Dễ</option>
+                            <option value="Medium">Trung bình</option>
+                            <option value="Hard">Khó</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Đoạn văn chung
+                          </label>
+                          <textarea
+                            value={question.passageText || ''}
+                            onChange={(e) => updatePassageTextForGroup(question.passageGroupKey || '', e.target.value)}
+                            rows={4}
+                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                          />
+                        </div>
+
+                        <div className="space-y-4">
+                          {groupItems.map(({ item, index }) => (
+                            <div key={item.id || index} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+                              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                Mệnh đề {item.statementOrder ?? index + 1}
+                              </p>
+                              <textarea
+                                value={item.content}
+                                onChange={(e) => updateQuestionContent(index, e.target.value)}
+                                rows={2}
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                              />
+                              <div className="space-y-2">
+                                {item.choices.slice(0, 2).map((choice, choiceIndex) => (
+                                  <div key={choice.id || `${item.id}-${choiceIndex}`} className="flex items-center gap-3">
+                                    <input
+                                      type="radio"
+                                      name={`ai-correct-${item.id}`}
+                                      checked={!!choice.isCorrect}
+                                      onChange={() => setCorrectChoice(index, choiceIndex)}
+                                      className="h-4 w-4 text-green-600"
+                                    />
+                                    <span className="w-8 text-sm font-semibold text-violet-700 dark:text-violet-300">
+                                      {choice.optionLabel || OPTION_LABELS[choiceIndex]}
+                                    </span>
+                                    <input
+                                      type="text"
+                                      value={choice.content}
+                                      onChange={(e) => updateChoiceContent(index, choiceIndex, e.target.value)}
+                                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={question.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">Câu hỏi {originalIndex + 1}</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                              {competencyOptions.find((option) => option.value === question.competencyType)?.label || question.competencyType || 'Chưa chọn năng lực'}
+                            </span>
+                            <span className="inline-flex items-center rounded-full bg-violet-50 dark:bg-violet-900/20 px-3 py-1 text-xs font-medium text-violet-700 dark:text-violet-300">
+                              {FORMAT_LABELS[question.questionFormat || 'SingleChoice'] || question.questionFormat}
+                            </span>
+                            <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/20 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                              {DIFFICULTY_LABELS[question.difficultyLevel || 'Medium'] || question.difficultyLevel}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeGeneratedQuestion(originalIndex)}
+                          className="text-sm font-medium text-red-600 hover:text-red-700"
+                        >
+                          Bỏ câu này
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <select
+                          value={question.competencyType || ''}
+                          onChange={(e) => updateQuestionCompetency(originalIndex, e.target.value)}
+                          className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
+                        >
+                          <option value="">Chọn năng lực</option>
+                          {competencyOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={question.difficultyLevel || 'Medium'}
+                          onChange={(e) => updateQuestionDifficulty(originalIndex, e.target.value)}
+                          className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
+                        >
+                          <option value="Easy">Dễ</option>
+                          <option value="Medium">Trung bình</option>
+                          <option value="Hard">Khó</option>
+                        </select>
+                      </div>
+
+                      <textarea
+                        value={question.content}
+                        onChange={(e) => updateQuestionContent(originalIndex, e.target.value)}
+                        rows={3}
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                      />
+
+                      {question.sourceEvidence && (
+                        <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
+                          Gợi ý ngữ cảnh: {question.sourceEvidence}
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        {question.choices.slice(0, question.questionFormat === 'TrueFalse' ? 2 : question.choices.length).map((choice, choiceIndex) => (
+                          <div key={choice.id || `${question.id}-${choiceIndex}`} className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name={`ai-correct-${question.id}`}
+                              checked={!!choice.isCorrect}
+                              onChange={() => setCorrectChoice(originalIndex, choiceIndex)}
+                              className="h-4 w-4 text-green-600"
+                            />
+                            <span className="w-8 text-sm font-semibold text-violet-700 dark:text-violet-300">
+                              {choice.optionLabel || OPTION_LABELS[choiceIndex] || `${choiceIndex + 1}`}
+                            </span>
+                            <input
+                              type="text"
+                              value={choice.content}
+                              onChange={(e) => updateChoiceContent(originalIndex, choiceIndex, e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeGeneratedQuestion(questionIndex)}
-                      className="text-sm font-medium text-red-600 hover:text-red-700"
-                    >
-                      Bỏ câu này
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <select
-                      value={question.competencyType || ''}
-                      onChange={(e) => updateQuestionCompetency(questionIndex, e.target.value)}
-                      className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
-                    >
-                      <option value="">Chọn năng lực</option>
-                      {competencyOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      value={question.difficultyLevel || 'Medium'}
-                      onChange={(e) => updateQuestionDifficulty(questionIndex, e.target.value)}
-                      className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
-                    >
-                      <option value="Easy">Dễ</option>
-                      <option value="Medium">Trung bình</option>
-                      <option value="Hard">Khó</option>
-                    </select>
-                  </div>
-
-                  <textarea
-                    value={question.content}
-                    onChange={(e) => updateQuestionContent(questionIndex, e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
-                  />
-
-                  {question.sourceEvidence && (
-                    <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
-                      Gợi ý ngữ cảnh: {question.sourceEvidence}
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {question.choices.slice(0, question.questionFormat === 'TrueFalse' ? 2 : question.choices.length).map((choice, choiceIndex) => (
-                      <div key={choice.id || `${question.id}-${choiceIndex}`} className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name={`ai-correct-${question.id}`}
-                          checked={!!choice.isCorrect}
-                          onChange={() => setCorrectChoice(questionIndex, choiceIndex)}
-                          className="h-4 w-4 text-green-600"
-                        />
-                        <span className="w-8 text-sm font-semibold text-violet-700 dark:text-violet-300">
-                          {choice.optionLabel || OPTION_LABELS[choiceIndex] || `${choiceIndex + 1}`}
-                        </span>
-                        <input
-                          type="text"
-                          value={choice.content}
-                          onChange={(e) => updateChoiceContent(questionIndex, choiceIndex, e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
           )}
         </div>

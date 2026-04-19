@@ -73,6 +73,9 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         questionFormatLabel: item.questionFormatLabel,
         difficultyLevel: item.difficultyLevel,
         difficultyLabel: item.difficultyLabel,
+        passageText: item.passageText,
+        passageGroupKey: item.passageGroupKey,
+        statementOrder: item.statementOrder,
         sourceEvidence: item.sourceEvidence,
         choices: (item.choices || []).map((choice: any) => ({
           id: choice.id,
@@ -112,6 +115,9 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
     competencyType: question.competencyType,
     questionFormat: question.questionFormat,
     difficultyLevel: question.difficultyLevel,
+    passageText: question.passageText?.trim() || undefined,
+    passageGroupKey: question.passageGroupKey?.trim() || undefined,
+    statementOrder: question.statementOrder ?? undefined,
     sourceEvidence: question.sourceEvidence?.trim() || undefined,
     choices: (question.choices || []).map((choice) => ({
       optionLabel: choice.optionLabel,

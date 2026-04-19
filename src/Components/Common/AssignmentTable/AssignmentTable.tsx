@@ -7,9 +7,10 @@ interface AssignmentTableProps {
   assignments: Assignment[];
   onStartExam?: (assignment: Assignment) => void;
   onDelete?: (examId: string) => void;
+  actionLabel?: string;
 }
 
-const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartExam, onDelete }) => {
+const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartExam, onDelete, actionLabel }) => {
   const getActionText = (status: AssignmentStatus) => {
     switch (status) {
       case AssignmentStatus.NEW: return 'Làm bài';
@@ -85,16 +86,17 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                       <StatusBadge status={assignment.status} />
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
-                      {onStartExam && (
-                        <button
-                          type="button"
-                          onClick={() => onStartExam(assignment)}
-                          className="text-primary hover:text-primary-dark hover:underline transition-colors"
-                        >
-                          {getActionText(assignment.status)}
-                        </button>
-                      )}
-                      {onDelete && (
+                      <div className="flex items-center gap-4">
+                        {onStartExam && (
+                          <button
+                            type="button"
+                            onClick={() => onStartExam(assignment)}
+                            className="text-primary hover:text-primary-dark hover:underline transition-colors"
+                          >
+                            {actionLabel || getActionText(assignment.status)}
+                          </button>
+                        )}
+                        {onDelete && (
                           <button 
                             onClick={() => onDelete(assignment.id)}
                             className="text-gray-400 hover:text-red-600 transition-colors"
@@ -103,6 +105,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                             <Trash2 size={18} />
                           </button>
                         )}
+                      </div>
                     </td>
                   </tr>
                 ))
