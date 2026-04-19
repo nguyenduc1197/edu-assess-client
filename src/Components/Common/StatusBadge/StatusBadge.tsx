@@ -24,6 +24,9 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     case AssignmentStatus.LATE:
       styles = 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
       break;
+    case AssignmentStatus.RETRY:
+      styles = 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+      break;
     default:
       styles = 'bg-gray-100 text-gray-800';
   }

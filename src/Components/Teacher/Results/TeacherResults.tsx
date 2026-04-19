@@ -260,23 +260,29 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-3">
                     {selectedResult.behaviorAdjustmentScore !== null && (
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Năng lực điều chỉnh hành vi</p>
-                        <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{selectedResult.behaviorAdjustmentScore}</p>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực điều chỉnh hành vi</p>
+                        <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                          <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.behaviorAdjustmentScore / 10) * 100, 100))}%` }} />
+                        </div>
                       </div>
                     )}
                     {selectedResult.selfDevelopmentScore !== null && (
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Năng lực phát triển bản thân</p>
-                        <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{selectedResult.selfDevelopmentScore}</p>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực phát triển bản thân</p>
+                        <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                          <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.selfDevelopmentScore / 10) * 100, 100))}%` }} />
+                        </div>
                       </div>
                     )}
                     {selectedResult.economicSocialParticipationScore !== null && (
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội</p>
-                        <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{selectedResult.economicSocialParticipationScore}</p>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội</p>
+                        <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                          <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.economicSocialParticipationScore / 10) * 100, 100))}%` }} />
+                        </div>
                       </div>
                     )}
                   </div>

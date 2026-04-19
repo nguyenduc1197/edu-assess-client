@@ -62,7 +62,8 @@ export enum AssignmentStatus {
   IN_PROGRESS = 'Đang làm',
   SUBMITTED = 'Đã nộp',
   GRADED = 'Đã chấm điểm',
-  LATE = 'Trễ hạn'
+  LATE = 'Trễ hạn',
+  RETRY = 'Làm lại'
 }
 
 export enum SubjectLabel {
@@ -82,6 +83,10 @@ export interface Assignment {
   status: AssignmentStatus;
   isOverdue?: boolean;
   score?: number | null;
+  assessmentStatus?: 'Pending' | 'Completed' | 'Failed';
+  canRetry?: boolean;
+  assessmentError?: string | null;
+  statusMessage?: string;
 }
 
 export interface User {

@@ -51,7 +51,17 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         const now = new Date();
 
         let status = AssignmentStatus.NEW;
-        if (now >= startDate && now <= endDate) {
+        let statusMessage = '';
+
+        if (item.canRetry === true || item.assessmentStatus === 'Failed') {
+          status = AssignmentStatus.RETRY;
+          statusMessage = item.assessmentError
+            ? `${item.assessmentError} Em có thể làm lại bài này.`
+            : 'Đánh giá thất bại, em có thể làm lại bài này.';
+        } else if (item.assessmentStatus === 'Pending') {
+          status = AssignmentStatus.SUBMITTED;
+          statusMessage = 'Bài đang được đánh giá.';
+        } else if (now >= startDate && now <= endDate) {
           status = AssignmentStatus.IN_PROGRESS;
         } else if (now > endDate) {
           status = AssignmentStatus.LATE;
@@ -72,6 +82,10 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           }),
           status,
           isOverdue: now > endDate,
+          assessmentStatus: item.assessmentStatus,
+          canRetry: !!item.canRetry,
+          assessmentError: item.assessmentError || null,
+          statusMessage,
         };
       });
 
@@ -148,7 +162,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                 Bài Thi Khả Dụng
               </h1>
               <p className="text-base text-gray-500 dark:text-gray-400">
-                Những bài đã nộp sẽ tự động biến mất khỏi danh sách này
+                Các bài chưa làm hoặc đánh giá thất bại sẽ hiển thị ở đây để em tiếp tục hoặc làm lại
               </p>
             </div>
           </div>

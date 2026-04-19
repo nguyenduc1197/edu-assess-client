@@ -17,6 +17,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
       case AssignmentStatus.SUBMITTED: return 'Xem lại';
       case AssignmentStatus.GRADED: return 'Xem điểm';
       case AssignmentStatus.LATE: return 'Nộp bài';
+      case AssignmentStatus.RETRY: return 'Làm lại';
       default: return 'Chi tiết';
     }
   };
@@ -67,6 +68,11 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                         <span className={`mt-0.5 text-xs @md:hidden ${assignment.isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
                           {assignment.deadlineDisplay}
                         </span>
+                        {assignment.statusMessage && (
+                          <span className={`mt-1 text-xs ${assignment.canRetry ? 'text-amber-700 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {assignment.statusMessage}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="hidden px-6 py-4 text-sm text-gray-500 dark:text-gray-400 @lg:table-cell">
