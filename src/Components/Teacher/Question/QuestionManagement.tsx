@@ -69,6 +69,11 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         content: item.content,
         competencyType: item.competencyType,
         competencyLabel: item.competencyLabel,
+        questionFormat: item.questionFormat,
+        questionFormatLabel: item.questionFormatLabel,
+        difficultyLevel: item.difficultyLevel,
+        difficultyLabel: item.difficultyLabel,
+        sourceEvidence: item.sourceEvidence,
         choices: (item.choices || []).map((choice: any) => ({
           id: choice.id,
           optionLabel: choice.optionLabel,
@@ -105,6 +110,9 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
   const mapQuestionPayload = (question: Question) => ({
     content: question.content.trim(),
     competencyType: question.competencyType,
+    questionFormat: question.questionFormat,
+    difficultyLevel: question.difficultyLevel,
+    sourceEvidence: question.sourceEvidence?.trim() || undefined,
     choices: (question.choices || []).map((choice) => ({
       optionLabel: choice.optionLabel,
       content: choice.content.trim(),

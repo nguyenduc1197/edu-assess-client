@@ -260,25 +260,67 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                     </div>
                   )}
 
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {selectedResult.behaviorAdjustmentScore !== null && (
+                      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Năng lực điều chỉnh hành vi</p>
+                        <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{selectedResult.behaviorAdjustmentScore}</p>
+                      </div>
+                    )}
+                    {selectedResult.selfDevelopmentScore !== null && (
+                      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Năng lực phát triển bản thân</p>
+                        <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{selectedResult.selfDevelopmentScore}</p>
+                      </div>
+                    )}
+                    {selectedResult.economicSocialParticipationScore !== null && (
+                      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội</p>
+                        <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{selectedResult.economicSocialParticipationScore}</p>
+                      </div>
+                    )}
+                  </div>
+
                   <div>
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Các năng lực được đánh giá</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedResult.behaviorAdjustmentScore !== null && (
-                        <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                          Năng lực điều chỉnh hành vi
-                        </span>
-                      )}
-                      {selectedResult.selfDevelopmentScore !== null && (
-                        <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                          Năng lực phát triển bản thân
-                        </span>
-                      )}
-                      {selectedResult.economicSocialParticipationScore !== null && (
-                        <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                          Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội
-                        </span>
-                      )}
-                    </div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Danh sách câu cần học lại</p>
+
+                    {(selectedResult.wrongAnswers || []).length === 0 ? (
+                      <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 text-sm text-green-700 dark:text-green-300">
+                        Không có câu sai nào cần xem lại.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {(selectedResult.wrongAnswers || []).map((item) => (
+                          <div key={item.questionId} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.questionContent}</p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                              <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+                                <p className="font-semibold text-red-700 dark:text-red-300">Học sinh đã chọn</p>
+                                <p className="mt-1 text-red-600 dark:text-red-200">{item.selectedAnswer || 'Không có câu trả lời'}</p>
+                              </div>
+                              <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3">
+                                <p className="font-semibold text-green-700 dark:text-green-300">Đáp án đúng</p>
+                                <p className="mt-1 text-green-700 dark:text-green-200">{item.correctAnswer || 'Không có dữ liệu'}</p>
+                              </div>
+                            </div>
+
+                            {(item.highlightText || item.sourceEvidence) && (
+                              <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 dark:text-yellow-200">
+                                <p className="font-semibold mb-1">Đoạn bài cần xem lại</p>
+                                <p>{item.highlightText || item.sourceEvidence}</p>
+                              </div>
+                            )}
+
+                            {item.guidanceNote && (
+                              <p className="text-sm text-gray-600 dark:text-gray-300">
+                                <span className="font-semibold">Gợi ý:</span> {item.guidanceNote}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}

@@ -1,3 +1,6 @@
+export type QuestionFormat = 'SingleChoice' | 'TrueFalse';
+export type DifficultyLevel = 'Easy' | 'Medium' | 'Hard';
+
 export interface Choice {
   id?: string;        
   optionLabel: string;
@@ -10,6 +13,11 @@ export interface Question {
   content: string;
   competencyType?: string;
   competencyLabel?: string;
+  questionFormat?: QuestionFormat;
+  questionFormatLabel?: string;
+  difficultyLevel?: DifficultyLevel;
+  difficultyLabel?: string;
+  sourceEvidence?: string;
   choices?: Choice[];
   dateCreated?: string;
 }
@@ -123,6 +131,22 @@ export interface StudentResultSummary {
   assessedAt?: string | null;
 }
 
+export interface WrongAnswerReview {
+  questionId: string;
+  questionContent: string;
+  competencyType?: string;
+  competencyLabel?: string;
+  questionFormat?: QuestionFormat;
+  questionFormatLabel?: string;
+  difficultyLevel?: DifficultyLevel;
+  difficultyLabel?: string;
+  selectedAnswer?: string | null;
+  correctAnswer?: string | null;
+  sourceEvidence?: string | null;
+  highlightText?: string | null;
+  guidanceNote?: string | null;
+}
+
 export interface AssessmentResult {
   studentExamId: string;
   examId: string;
@@ -138,6 +162,7 @@ export interface AssessmentResult {
   behaviorAdjustmentFeedback: string | null;
   selfDevelopmentFeedback: string | null;
   economicSocialParticipationFeedback: string | null;
+  wrongAnswers?: WrongAnswerReview[];
   assessmentError: string | null;
   finishedAt: string;
   assessedAt: string | null;

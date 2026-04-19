@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, X, ChevronDown } from 'lucide-react';
-import { Question, CompetencyOption } from '../../../types';
+import { Plus, Trash2, X, ChevronDown, Info } from 'lucide-react';
+import { Question, CompetencyOption, DifficultyLevel, QuestionFormat } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
 
 interface AddQuestionMenuProps {
@@ -17,6 +17,9 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
   const [questions, setQuestions] = useState<Question[]>([]);
   const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
   const [selectedCompetencyType, setSelectedCompetencyType] = useState('');
+  const [selectedQuestionFormat, setSelectedQuestionFormat] = useState<QuestionFormat>('SingleChoice');
+  const [selectedDifficultyLevel, setSelectedDifficultyLevel] = useState<DifficultyLevel>('Medium');
+  const [sourceEvidence, setSourceEvidence] = useState('');
   const [competencyLoading, setCompetencyLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +40,17 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
     loadCompetencies();
   }, []);
 
+  useEffect(() => {
+    if (selectedQuestionFormat === 'TrueFalse') {
+      setChoices(['Đúng', 'Sai']);
+      setCorrectChoice((prev) => (prev > 1 ? 0 : prev));
+    } else {
+      setChoices((prev) => (
+        prev.length < 4 ? [...prev, ...Array.from({ length: 4 - prev.length }, () => '')] : prev
+      ));
+    }
+  }, [selectedQuestionFormat]);
+
   const handleChoiceChange = (index: number, value: string) => {
     const newChoices = [...choices];
     newChoices[index] = value;
@@ -44,10 +58,12 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
   };
 
   const handleAddChoice = () => {
+    if (selectedQuestionFormat === 'TrueFalse') return;
     setChoices([...choices, '']);
   };
 
   const handleRemoveChoice = (index: number) => {
+    if (selectedQuestionFormat === 'TrueFalse') return;
     if (choices.length > 2) {
       const newChoices = choices.filter((_, i) => i !== index);
       setChoices(newChoices);
@@ -84,6 +100,9 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
       content: content.trim(),
       competencyType: selectedCompetencyType,
       competencyLabel,
+      questionFormat: selectedQuestionFormat,
+      difficultyLevel: selectedDifficultyLevel,
+      sourceEvidence: sourceEvidence.trim() || undefined,
       choices: choices.map((choice, index) => ({
         optionLabel: optionLabels[index] || String(index),
         content: choice.trim(),
@@ -102,8 +121,9 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
 
     // Reset form for next question
     setContent('');
-    setChoices(['', '', '', '']);
+    setChoices(selectedQuestionFormat === 'TrueFalse' ? ['Đúng', 'Sai'] : ['', '', '', '']);
     setCorrectChoice(0);
+    setSourceEvidence('');
   };
 
   const handleRemoveQuestion = (index: number) => {
@@ -178,6 +198,37 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Định dạng câu hỏi
+                </label>
+                <select
+                  value={selectedQuestionFormat}
+                  onChange={(e) => setSelectedQuestionFormat(e.target.value as QuestionFormat)}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="SingleChoice">Trắc nghiệm một đáp án</option>
+                  <option value="TrueFalse">Đúng / Sai</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Mức độ khó
+                </label>
+                <select
+                  value={selectedDifficultyLevel}
+                  onChange={(e) => setSelectedDifficultyLevel(e.target.value as DifficultyLevel)}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="Easy">Dễ</option>
+                  <option value="Medium">Trung bình</option>
+                  <option value="Hard">Khó</option>
+                </select>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Nội Dung Câu Hỏi
@@ -188,6 +239,19 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                 placeholder="Nhập câu hỏi của bạn..."
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Trích đoạn gợi ý từ bài học (tùy chọn)
+              </label>
+              <textarea
+                value={sourceEvidence}
+                onChange={(e) => setSourceEvidence(e.target.value)}
+                placeholder="Nhập đoạn kiến thức liên quan để hỗ trợ học sinh ôn lại sau này..."
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows={2}
               />
             </div>
 
@@ -231,14 +295,21 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                 );
               })}
 
-              <button
-                type="button"
-                onClick={handleAddChoice}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-              >
-                <Plus size={16} />
-                Thêm đáp án
-              </button>
+              {selectedQuestionFormat === 'TrueFalse' ? (
+                <div className="flex items-center gap-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+                  <Info size={14} />
+                  Câu hỏi Đúng / Sai chỉ gồm 2 lựa chọn.
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleAddChoice}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                >
+                  <Plus size={16} />
+                  Thêm đáp án
+                </button>
+              )}
             </div>
 
             <button
@@ -269,9 +340,26 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                           </span>{' '}
                           {question.content}
                         </p>
-                        {question.competencyLabel && (
-                          <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-2">
-                            Năng lực: {question.competencyLabel}
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {question.competencyLabel && (
+                            <span className="text-xs text-indigo-600 dark:text-indigo-400">
+                              Năng lực: {question.competencyLabel}
+                            </span>
+                          )}
+                          {question.questionFormat && (
+                            <span className="text-xs text-violet-600 dark:text-violet-400">
+                              Dạng: {question.questionFormat === 'TrueFalse' ? 'Đúng / Sai' : 'Một đáp án'}
+                            </span>
+                          )}
+                          {question.difficultyLevel && (
+                            <span className="text-xs text-amber-600 dark:text-amber-400">
+                              Độ khó: {question.difficultyLevel === 'Easy' ? 'Dễ' : question.difficultyLevel === 'Hard' ? 'Khó' : 'Trung bình'}
+                            </span>
+                          )}
+                        </div>
+                        {question.sourceEvidence && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 italic">
+                            Gợi ý học lại: {question.sourceEvidence}
                           </p>
                         )}
                         <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">

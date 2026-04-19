@@ -27,6 +27,16 @@ interface AIQuestionGeneratorModalProps {
 }
 
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
+const DIFFICULTY_LABELS: Record<string, string> = {
+  Easy: 'Dễ',
+  Medium: 'Trung bình',
+  Hard: 'Khó',
+};
+
+const FORMAT_LABELS: Record<string, string> = {
+  SingleChoice: 'Trắc nghiệm một đáp án',
+  TrueFalse: 'Đúng / Sai',
+};
 
 const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   competencyOptions,
@@ -80,17 +90,32 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   const normalizeQuestions = (items: GeneratedQuestion[] = []) => {
     const seed = Date.now();
 
-    return items.map((question, questionIndex) => ({
-      ...question,
-      id: question.id || `ai-${seed}-${questionIndex}`,
-      competencyType: question.competencyType || selectedCompetencies[0] || '',
-      choices: (question.choices || []).map((choice, choiceIndex) => ({
-        id: choice.id || `ai-choice-${seed}-${questionIndex}-${choiceIndex}`,
-        optionLabel: choice.optionLabel || OPTION_LABELS[choiceIndex] || String(choiceIndex + 1),
-        content: choice.content || '',
-        isCorrect: !!choice.isCorrect,
-      })),
-    }));
+    return items.map((question, questionIndex) => {
+      const questionFormat = question.questionFormat || 'SingleChoice';
+      const rawChoices = question.choices || [];
+      const choices = (questionFormat === 'TrueFalse'
+        ? [rawChoices[0], rawChoices[1]].map((choice, choiceIndex) => ({
+            id: choice?.id || `ai-choice-${seed}-${questionIndex}-${choiceIndex}`,
+            optionLabel: OPTION_LABELS[choiceIndex],
+            content: choice?.content || (choiceIndex === 0 ? 'Đúng' : 'Sai'),
+            isCorrect: !!choice?.isCorrect,
+          }))
+        : rawChoices.map((choice, choiceIndex) => ({
+            id: choice.id || `ai-choice-${seed}-${questionIndex}-${choiceIndex}`,
+            optionLabel: choice.optionLabel || OPTION_LABELS[choiceIndex] || String(choiceIndex + 1),
+            content: choice.content || '',
+            isCorrect: !!choice.isCorrect,
+          }))) as Choice[];
+
+      return {
+        ...question,
+        id: question.id || `ai-${seed}-${questionIndex}`,
+        competencyType: question.competencyType || selectedCompetencies[0] || '',
+        questionFormat,
+        difficultyLevel: question.difficultyLevel || 'Medium',
+        choices,
+      };
+    });
   };
 
   const handleGenerate = async () => {
@@ -179,6 +204,18 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
     );
   };
 
+  const updateQuestionDifficulty = (questionIndex: number, value: string) => {
+    setGeneratedQuestions((prev) =>
+      prev.map((question, index) =>
+        index === questionIndex ? { ...question, difficultyLevel: value as any } : question
+      )
+    );
+  };
+
+  const removeGeneratedQuestion = (questionIndex: number) => {
+    setGeneratedQuestions((prev) => prev.filter((_, index) => index !== questionIndex));
+  };
+
   const updateChoiceContent = (questionIndex: number, choiceIndex: number, value: string) => {
     setGeneratedQuestions((prev) =>
       prev.map((question, index) => {
@@ -236,6 +273,8 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
       const payload = generatedQuestions.map((question) => ({
         content: question.content.trim(),
         competencyType: question.competencyType,
+        questionFormat: question.questionFormat,
+        difficultyLevel: question.difficultyLevel,
         sourceEvidence: question.sourceEvidence?.trim() || undefined,
         choices: question.choices.map((choice, index) => ({
           optionLabel: choice.optionLabel || OPTION_LABELS[index] || String(index + 1),
@@ -506,8 +545,31 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
 
               {generatedQuestions.map((question, questionIndex) => (
                 <div key={question.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">Câu hỏi {questionIndex + 1}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">Câu hỏi {questionIndex + 1}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                          {competencyOptions.find((option) => option.value === question.competencyType)?.label || question.competencyType || 'Chưa chọn năng lực'}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-violet-50 dark:bg-violet-900/20 px-3 py-1 text-xs font-medium text-violet-700 dark:text-violet-300">
+                          {FORMAT_LABELS[question.questionFormat || 'SingleChoice'] || question.questionFormat}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/20 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                          {DIFFICULTY_LABELS[question.difficultyLevel || 'Medium'] || question.difficultyLevel}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeGeneratedQuestion(questionIndex)}
+                      className="text-sm font-medium text-red-600 hover:text-red-700"
+                    >
+                      Bỏ câu này
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <select
                       value={question.competencyType || ''}
                       onChange={(e) => updateQuestionCompetency(questionIndex, e.target.value)}
@@ -519,6 +581,16 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                           {option.label}
                         </option>
                       ))}
+                    </select>
+
+                    <select
+                      value={question.difficultyLevel || 'Medium'}
+                      onChange={(e) => updateQuestionDifficulty(questionIndex, e.target.value)}
+                      className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white"
+                    >
+                      <option value="Easy">Dễ</option>
+                      <option value="Medium">Trung bình</option>
+                      <option value="Hard">Khó</option>
                     </select>
                   </div>
 
@@ -536,7 +608,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                   )}
 
                   <div className="space-y-2">
-                    {question.choices.map((choice, choiceIndex) => (
+                    {question.choices.slice(0, question.questionFormat === 'TrueFalse' ? 2 : question.choices.length).map((choice, choiceIndex) => (
                       <div key={choice.id || `${question.id}-${choiceIndex}`} className="flex items-center gap-3">
                         <input
                           type="radio"
