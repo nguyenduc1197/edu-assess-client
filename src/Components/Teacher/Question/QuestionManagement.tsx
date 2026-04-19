@@ -231,9 +231,10 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         <AIQuestionGeneratorModal
           competencyOptions={competencyOptions}
           onClose={() => setIsAIModalOpen(false)}
-          onSaved={(message) => {
+          onSaved={(result) => {
             setError('');
-            setSuccessMessage(message);
+            setSuccessMessage(result.message);
+            setIsAIModalOpen(false);
             fetchQuestions();
           }}
         />

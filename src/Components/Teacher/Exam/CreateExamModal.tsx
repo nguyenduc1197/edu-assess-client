@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Class, Question, SubjectLabel } from '../../../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Sparkles } from 'lucide-react';
+import { Class, CompetencyOption, Question, SubjectLabel } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
+import AIQuestionGeneratorModal from '../Question/AIQuestionGeneratorModal';
 
 interface CreateExamModalProps {
   onClose: () => void;
@@ -12,6 +14,9 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
   
   // State for fetching questions
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -25,33 +30,44 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch questions on mount
-  useEffect(() => {
-    const fetchQuestions = async () => {
-      setIsFetchingQuestions(true);
-      try {
-        const response = await fetchClient('/questions/without-exam?pageNumber=1&pageSize=100');
+  const fetchQuestions = useCallback(async () => {
+    setIsFetchingQuestions(true);
+    try {
+      const response = await fetchClient('/questions/without-exam?pageNumber=1&pageSize=100');
 
-        if (response.ok) {
-          const data = await response.json();
-          // Handle various API response structures (Array, or Paginated Object with items/data)
-          const questionsList = Array.isArray(data) 
-            ? data 
-            : (data.items || data.data || []);
-            
-          setQuestions(questionsList);
-        } else {
-          console.error("Failed to fetch questions:", response.status);
-        }
-      } catch (err) {
-        console.error("Error fetching questions:", err);
-      } finally {
-        setIsFetchingQuestions(false);
+      if (response.ok) {
+        const data = await response.json();
+        const questionsList = Array.isArray(data)
+          ? data
+          : (data.items || data.data || []);
+
+        setQuestions(questionsList);
+      } else {
+        console.error('Failed to fetch questions:', response.status);
       }
-    };
-
-    fetchQuestions();
+    } catch (err) {
+      console.error('Error fetching questions:', err);
+    } finally {
+      setIsFetchingQuestions(false);
+    }
   }, []);
+
+  const fetchCompetencies = useCallback(async () => {
+    try {
+      const response = await fetchClient('/questions/competency-types');
+      if (!response.ok) return;
+
+      const data = await response.json();
+      setCompetencyOptions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error fetching competency options:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchQuestions();
+    fetchCompetencies();
+  }, [fetchQuestions, fetchCompetencies]);
 
   // Fetch classes on mount
   useEffect(() => {
@@ -146,6 +162,21 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
         className="w-full max-w-2xl rounded-xl bg-white dark:bg-background-dark shadow-2xl border border-gray-200 dark:border-gray-700 max-h-[90vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
+        {isAIModalOpen && (
+          <AIQuestionGeneratorModal
+            competencyOptions={competencyOptions}
+            onClose={() => setIsAIModalOpen(false)}
+            onSaved={(result) => {
+              setSuccessMessage(result.message);
+              setIsAIModalOpen(false);
+              fetchQuestions();
+
+              if ((result.savedQuestionIds || []).length > 0) {
+                setSelectedQuestionIds((prev) => Array.from(new Set([...prev, ...(result.savedQuestionIds || [])])));
+              }
+            }}
+          />
+        )}
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 px-6 py-4">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tạo Bài Kiểm Tra</h2>
@@ -163,6 +194,12 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
             {error && (
               <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
                 {error}
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm border border-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300">
+                {successMessage}
               </div>
             )}
 
@@ -248,13 +285,24 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
             </div>
 
             <div className="space-y-3">
-              <div className="flex justify-between items-end">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Chọn Câu Hỏi ({selectedQuestionIds.length})
-                </label>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {isFetchingQuestions ? 'Đang tải câu hỏi...' : 'Chọn câu hỏi cho bài kiểm tra'}
-                </span>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Chọn Câu Hỏi ({selectedQuestionIds.length})
+                  </label>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {isFetchingQuestions ? 'Đang tải câu hỏi...' : 'Chọn câu hỏi cho bài kiểm tra'}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAIModalOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-700 transition-colors"
+                >
+                  <Sparkles size={16} />
+                  Tạo câu hỏi bằng AI
+                </button>
               </div>
               
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 h-64 overflow-y-auto p-2 space-y-2">
@@ -285,6 +333,11 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
                       />
                       <div className="flex-1">
                         <p className="text-sm text-gray-900 dark:text-gray-200">{q.content}</p>
+                        <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                          {q.competencyLabel && <span className="text-indigo-600 dark:text-indigo-400">{q.competencyLabel}</span>}
+                          {q.questionFormatLabel && <span className="text-violet-600 dark:text-violet-400">{q.questionFormatLabel}</span>}
+                          {q.difficultyLabel && <span className="text-amber-600 dark:text-amber-400">{q.difficultyLabel}</span>}
+                        </div>
                       </div>
                     </label>
                   ))

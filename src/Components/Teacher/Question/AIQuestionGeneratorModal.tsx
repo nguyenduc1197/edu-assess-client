@@ -23,7 +23,7 @@ interface GenerateResponse {
 interface AIQuestionGeneratorModalProps {
   competencyOptions: CompetencyOption[];
   onClose: () => void;
-  onSaved?: (message: string) => void;
+  onSaved?: (result: { message: string; savedQuestionIds?: string[] }) => void;
 }
 
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -169,10 +169,12 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
       setGeneratedQuestions(normalizedQuestions);
 
       if (saveToQuestionBank) {
-        const savedCount = data.savedQuestionIds?.length ?? normalizedQuestions.length;
-        const message = `Đã tạo và lưu ${savedCount} câu hỏi vào ngân hàng câu hỏi.`;
+        const savedIds = data.savedQuestionIds ?? [];
+        const savedCount = savedIds.length ?? normalizedQuestions.length;
+        const message = `Đã tạo và lưu ${savedCount || normalizedQuestions.length} câu hỏi vào ngân hàng câu hỏi.`;
         setSuccessMessage(message);
-        onSaved?.(message);
+        onSaved?.({ message, savedQuestionIds: savedIds });
+        onClose();
       } else if (normalizedQuestions.length === 0) {
         setError('AI chưa trả về câu hỏi nào để xem trước.');
       }
@@ -291,14 +293,16 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
         body: JSON.stringify(payload),
       });
 
+      const body = await response.json().catch(() => null);
+
       if (!response.ok) {
-        const body = await response.json().catch(() => null);
         throw new Error(body?.message || body?.title || 'Lưu bản nháp AI thất bại.');
       }
 
+      const savedQuestionIds = body?.questionIds || body?.savedQuestionIds || [];
       const message = `Đã lưu ${generatedQuestions.length} câu hỏi AI vào ngân hàng câu hỏi.`;
       setSuccessMessage(message);
-      onSaved?.(message);
+      onSaved?.({ message, savedQuestionIds });
       onClose();
     } catch (saveError: any) {
       console.error('Saving AI drafts failed:', saveError);
