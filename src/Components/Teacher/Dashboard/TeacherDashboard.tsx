@@ -136,23 +136,23 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   }, [fetchAssignments]);
 
   const getStudentStatusMeta = (item: ExamStudentStatusItem) => {
-    if (item.canViewResult || item.assessmentStatus === 'Completed') {
+    if (item.isSubmitted === false) {
+      return {
+        label: 'Chưa làm bài',
+        className: 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+      };
+    }
+
+    if (item.isSubmitted === true && item.canViewResult === true) {
       return {
         label: 'Đã có kết quả',
         className: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
       };
     }
 
-    if (item.isSubmitted || item.assessmentStatus === 'Pending' || item.assessmentStatus === 'Failed') {
-      return {
-        label: 'Đã nộp đang chấm',
-        className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
-      };
-    }
-
     return {
-      label: 'Chưa làm',
-      className: 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+      label: 'Đã nộp, đang chấm',
+      className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
     };
   };
 
@@ -172,7 +172,13 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       }
 
       const data = await response.json();
-      const items = Array.isArray(data) ? data : (data.items || data.data || []);
+      const items = Array.isArray(data)
+        ? data
+        : (data.students || data.items || data.data || []);
+
+      if (!Array.isArray(items)) {
+        throw new Error('Unexpected exam student response shape');
+      }
 
       const mappedStudents: ExamStudentStatusItem[] = items.map((item: any) => ({
         studentId: item.studentId || item.id || item.profileId || '',
@@ -191,6 +197,10 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       }));
 
       setExamStudents(mappedStudents);
+
+      if (!Array.isArray(data) && data.examName) {
+        setSelectedExam((prev) => (prev ? { ...prev, title: data.examName } : prev));
+      }
     } catch (error) {
       console.error('Failed to fetch exam students', error);
       setStudentListError('Không thể tải danh sách học sinh cho bài thi này.');
@@ -402,15 +412,15 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Chưa làm</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Chưa làm bài</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {examStudents.filter((item) => getStudentStatusMeta(item).label === 'Chưa làm').length}
+                        {examStudents.filter((item) => getStudentStatusMeta(item).label === 'Chưa làm bài').length}
                       </p>
                     </div>
                     <div className="rounded-lg border border-amber-200 dark:border-amber-800 p-4 bg-amber-50 dark:bg-amber-900/20">
-                      <p className="text-sm text-amber-700 dark:text-amber-300">Đã nộp đang chấm</p>
+                      <p className="text-sm text-amber-700 dark:text-amber-300">Đã nộp, đang chấm</p>
                       <p className="text-2xl font-bold text-amber-800 dark:text-amber-200">
-                        {examStudents.filter((item) => getStudentStatusMeta(item).label === 'Đã nộp đang chấm').length}
+                        {examStudents.filter((item) => getStudentStatusMeta(item).label === 'Đã nộp, đang chấm').length}
                       </p>
                     </div>
                     <div className="rounded-lg border border-green-200 dark:border-green-800 p-4 bg-green-50 dark:bg-green-900/20">
