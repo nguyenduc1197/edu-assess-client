@@ -403,13 +403,6 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                                       </div>
                                     </div>
 
-                                    {item.keywordHint && (
-                                      <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-800 dark:text-blue-200">
-                                        <p className="font-semibold mb-1">Từ khóa cần chú ý</p>
-                                        <p>{item.keywordHint}</p>
-                                      </div>
-                                    )}
-
                                     {(item.errorExplanation || item.highlightText) && (
                                       <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 dark:text-yellow-200">
                                         <p className="font-semibold mb-1">Vì sao đáp án đã chọn chưa đúng</p>
@@ -447,13 +440,6 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                                   <p className="mt-1 text-green-700 dark:text-green-200">{section.item.correctAnswer || 'Không có dữ liệu'}</p>
                                 </div>
                               </div>
-
-                              {section.item.keywordHint && (
-                                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-800 dark:text-blue-200">
-                                  <p className="font-semibold mb-1">Từ khóa cần chú ý</p>
-                                  <p>{section.item.keywordHint}</p>
-                                </div>
-                              )}
 
                               {(section.item.errorExplanation || section.item.highlightText) && (
                                 <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 dark:text-yellow-200">
