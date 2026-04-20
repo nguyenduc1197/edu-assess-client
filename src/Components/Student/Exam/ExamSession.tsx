@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AnswerState, Assignment, AssessmentResult, Question } from '../../../types';
+import { AnswerState, Assignment, AssessmentResult, Question, WrongAnswerReview } from '../../../types';
 import ExamReview from './ExamReview';
 import ExamTaking from './ExamTaking';
 import { fetchClient } from '../../../api/fetchClient';
@@ -8,13 +8,56 @@ import { fetchClient } from '../../../api/fetchClient';
 interface ExamSessionProps {
   assignment: Assignment;
   examId: string;
-  studentId: string;
   onExit: () => void;
+  onSubmitted?: () => void;
 }
 
 type SessionStep = 'taking' | 'review' | 'assessing' | 'result';
 
-const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId, onExit }) => {
+const getFeedbackItems = (feedback?: string | null) =>
+  (feedback || '')
+    .split(/\r?\n|•/)
+    .map((item) => item.replace(/^[-•]\s*/, '').trim())
+    .filter(Boolean);
+
+const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
+  const groups: Array<
+    | { type: 'single'; item: WrongAnswerReview }
+    | { type: 'group'; key: string; passageText?: string | null; items: WrongAnswerReview[] }
+  > = [];
+  const processedGroupKeys = new Set<string>();
+
+  items.forEach((item) => {
+    const groupKey = item.passageGroupKey?.trim();
+
+    if (item.questionFormat === 'TrueFalse' && groupKey) {
+      if (processedGroupKeys.has(groupKey)) return;
+
+      const groupItems = items
+        .filter((candidate) => candidate.questionFormat === 'TrueFalse' && candidate.passageGroupKey === groupKey)
+        .sort(
+          (a, b) =>
+            (a.statementOrder ?? Number.MAX_SAFE_INTEGER) -
+            (b.statementOrder ?? Number.MAX_SAFE_INTEGER)
+        );
+
+      groups.push({
+        type: 'group',
+        key: groupKey,
+        passageText: groupItems.find((candidate) => candidate.passageText)?.passageText || item.passageText,
+        items: groupItems,
+      });
+      processedGroupKeys.add(groupKey);
+      return;
+    }
+
+    groups.push({ type: 'single', item });
+  });
+
+  return groups;
+};
+
+const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, onSubmitted }) => {
   const [step, setStep] = useState<SessionStep>('taking');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
@@ -27,6 +70,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
+        setIsLoading(true);
         const response = await fetchClient(`/questions?pageNumber=1&examId=${examId}&pageSize=20`);
         
         if (response.ok) {
@@ -52,7 +96,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
       }
     };
     fetchQuestions();
-  }, []);
+  }, [examId]);
 
   const handleAnswer = (questionId: string, choiceId: string, content: string) => {
    setAnswers(prev => ({
@@ -67,12 +111,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
   const handleSubmit = async () => {
     try {
       const payload = {
-        studentId: studentId,
         answers: Object.entries(answers).map(([questionId, value]) => ({
           questionId,
           choiceId: value.choiceId ?? null,
           essayAnswer: null,
-        }))
+        })),
       };
 
       const response = await fetchClient(`/exams/${examId}/submit`, {
@@ -84,6 +127,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
       if (response.ok) {
         const submitData = await response.json();
         const studentExamId: string = submitData.studentExamId;
+        onSubmitted?.();
         setStep('assessing');
         startPolling(studentExamId);
       } else {
@@ -123,6 +167,10 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
     };
   }, []);
 
+  if (step === 'taking' && isLoading) {
+    return <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 text-gray-600 dark:text-gray-300">Đang tải câu hỏi...</div>;
+  }
+
   if (step === 'review') {
     return (
       <ExamReview 
@@ -149,18 +197,28 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
   }
 
   if (step === 'result' && assessmentResult) {
-    const { examName, studentName, score, assessmentStatus, assessmentError,
-      behaviorAdjustmentScore, selfDevelopmentScore, economicSocialParticipationScore,
-      overallFeedback, behaviorAdjustmentFeedback, selfDevelopmentFeedback,
-      economicSocialParticipationFeedback } = assessmentResult;
+    const {
+      examName,
+      studentName,
+      score,
+      assessmentStatus,
+      assessmentError,
+      behaviorAdjustmentScore,
+      selfDevelopmentScore,
+      economicSocialParticipationScore,
+      overallFeedback,
+    } = assessmentResult;
 
     const failed = assessmentStatus === 'Failed';
+    const wrongAnswers = assessmentResult.wrongAnswers || [];
+    const wrongAnswerSections = groupWrongAnswerItems(wrongAnswers);
+    const feedbackItems = getFeedbackItems(overallFeedback);
 
     const competencies = [
-      { label: 'Điều chỉnh hành vi', score: behaviorAdjustmentScore, feedback: behaviorAdjustmentFeedback },
-      { label: 'Phát triển bản thân', score: selfDevelopmentScore, feedback: selfDevelopmentFeedback },
-      { label: 'Tham gia hoạt động KT-XH', score: economicSocialParticipationScore, feedback: economicSocialParticipationFeedback },
-    ];
+      { label: 'Năng lực điều chỉnh hành vi', isShown: behaviorAdjustmentScore !== null },
+      { label: 'Năng lực phát triển bản thân', isShown: selfDevelopmentScore !== null },
+      { label: 'Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội', isShown: economicSocialParticipationScore !== null },
+    ].filter((item) => item.isShown);
 
     return (
       <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950 p-4 sm:p-8">
@@ -190,32 +248,152 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, studentId
               {overallFeedback && (
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nhận xét chung</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{overallFeedback}</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {(feedbackItems.length > 0 ? feedbackItems : [overallFeedback]).map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
-              {/* Per-competency scores */}
-              <div className="flex flex-col gap-4">
-                {competencies.map((c) => (
-                  c.score !== null && (
-                    <div key={c.label} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{c.label}</span>
-                        <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{c.score?.toFixed(1)}</span>
-                      </div>
-                      {/* Progress bar */}
+              {competencies.length > 0 && (
+                <div className="space-y-3">
+                  {behaviorAdjustmentScore !== null && (
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực điều chỉnh hành vi</p>
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400 transition-all duration-700"
-                          style={{ width: `${((c.score ?? 0) / 10) * 100}%` }}
-                        />
+                        <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((behaviorAdjustmentScore / 10) * 100, 100))}%` }} />
                       </div>
-                      {c.feedback && (
-                        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{c.feedback}</p>
-                      )}
                     </div>
-                  )
-                ))}
+                  )}
+                  {selfDevelopmentScore !== null && (
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực phát triển bản thân</p>
+                      <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                        <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selfDevelopmentScore / 10) * 100, 100))}%` }} />
+                      </div>
+                    </div>
+                  )}
+                  {economicSocialParticipationScore !== null && (
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội</p>
+                      <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                        <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((economicSocialParticipationScore / 10) * 100, 100))}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Học lại để lần sau không sai</p>
+
+                {wrongAnswers.length === 0 ? (
+                  <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 text-sm text-green-700 dark:text-green-300">
+                    Tuyệt vời! Em không có câu sai nào cần xem lại.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {wrongAnswerSections.map((section) =>
+                      section.type === 'group' ? (
+                        <div key={`group-${section.key}`} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                          {section.passageText && (
+                            <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-sm text-slate-700 dark:text-slate-200">
+                              <p className="font-semibold mb-1">Đoạn văn chung</p>
+                              <p>{section.passageText}</p>
+                            </div>
+                          )}
+
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Nhóm mệnh đề Đúng / Sai</p>
+
+                          <div className="space-y-3">
+                            {section.items.map((item, index) => (
+                              <div key={item.questionId} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40 p-4 space-y-3">
+                                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Mệnh đề {item.statementOrder ?? index + 1}</p>
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.questionContent}</p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                  <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+                                    <p className="font-semibold text-red-700 dark:text-red-300">Em chọn gì</p>
+                                    <p className="mt-1 text-red-600 dark:text-red-200">{item.selectedAnswer || 'Không có câu trả lời'}</p>
+                                  </div>
+                                  <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3">
+                                    <p className="font-semibold text-green-700 dark:text-green-300">Đáp án đúng là gì</p>
+                                    <p className="mt-1 text-green-700 dark:text-green-200">{item.correctAnswer || 'Không có dữ liệu'}</p>
+                                  </div>
+                                </div>
+
+                                {item.keywordHint && (
+                                  <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-800 dark:text-blue-200">
+                                    <p className="font-semibold mb-1">Từ khóa cần chú ý</p>
+                                    <p>{item.keywordHint}</p>
+                                  </div>
+                                )}
+
+                                {(item.errorExplanation || item.highlightText) && (
+                                  <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 dark:text-yellow-200">
+                                    <p className="font-semibold mb-1">Vì sao đáp án em chọn chưa đúng</p>
+                                    <p>{item.errorExplanation || item.highlightText}</p>
+                                  </div>
+                                )}
+
+                                {item.guidanceNote && (
+                                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                                    <span className="font-semibold">Gợi ý:</span> {item.guidanceNote}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div key={section.item.questionId} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                          {section.item.passageText && (
+                            <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-sm text-slate-700 dark:text-slate-200">
+                              <p className="font-semibold mb-1">Đoạn văn chung</p>
+                              <p>{section.item.passageText}</p>
+                            </div>
+                          )}
+
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{section.item.questionContent}</p>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+                              <p className="font-semibold text-red-700 dark:text-red-300">Em chọn gì</p>
+                              <p className="mt-1 text-red-600 dark:text-red-200">{section.item.selectedAnswer || 'Không có câu trả lời'}</p>
+                            </div>
+                            <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3">
+                              <p className="font-semibold text-green-700 dark:text-green-300">Đáp án đúng là gì</p>
+                              <p className="mt-1 text-green-700 dark:text-green-200">{section.item.correctAnswer || 'Không có dữ liệu'}</p>
+                            </div>
+                          </div>
+
+                          {section.item.keywordHint && (
+                            <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-800 dark:text-blue-200">
+                              <p className="font-semibold mb-1">Từ khóa cần chú ý</p>
+                              <p>{section.item.keywordHint}</p>
+                            </div>
+                          )}
+
+                          {(section.item.errorExplanation || section.item.highlightText) && (
+                            <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 dark:text-yellow-200">
+                              <p className="font-semibold mb-1">Vì sao đáp án em chọn chưa đúng</p>
+                              <p>{section.item.errorExplanation || section.item.highlightText}</p>
+                            </div>
+                          )}
+
+                          {section.item.guidanceNote && (
+                            <div className="text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-semibold">Gợi ý:</span> {section.item.guidanceNote}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}

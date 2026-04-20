@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, CheckCircle2, Flag } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnswerState, Question } from '../../../types';
 
 interface ExamTakingProps {
@@ -19,24 +19,66 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   onReview,
   onExit
 }) => {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = Math.round((Object.keys(answers).length / questions.length) * 100);
+  const questionBlocks = useMemo(() => {
+    const processedGroups = new Set<string>();
+
+    return questions.reduce<Array<{ key: string; type: 'single' | 'group'; questions: Question[]; passageText?: string | null }>>((blocks, question) => {
+      const groupKey = question.passageGroupKey?.trim();
+
+      if (question.questionFormat === 'TrueFalse' && groupKey) {
+        if (processedGroups.has(groupKey)) {
+          return blocks;
+        }
+
+        const groupedQuestions = questions
+          .filter((item) => item.questionFormat === 'TrueFalse' && item.passageGroupKey === groupKey)
+          .sort(
+            (a, b) =>
+              (a.statementOrder ?? Number.MAX_SAFE_INTEGER) -
+              (b.statementOrder ?? Number.MAX_SAFE_INTEGER)
+          );
+
+        blocks.push({
+          key: groupKey,
+          type: 'group',
+          questions: groupedQuestions,
+          passageText: groupedQuestions.find((item) => item.passageText)?.passageText || question.passageText,
+        });
+
+        processedGroups.add(groupKey);
+        return blocks;
+      }
+
+      blocks.push({ key: question.id, type: 'single', questions: [question] });
+      return blocks;
+    }, []);
+  }, [questions]);
+
+  useEffect(() => {
+    if (currentBlockIndex >= questionBlocks.length) {
+      setCurrentBlockIndex(Math.max(questionBlocks.length - 1, 0));
+    }
+  }, [currentBlockIndex, questionBlocks.length]);
+
+  const currentBlock = questionBlocks[currentBlockIndex];
+  const currentQuestion = currentBlock?.questions[0];
+  const progress = questions.length === 0 ? 0 : Math.round((Object.keys(answers).length / questions.length) * 100);
 
   const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+    if (currentBlockIndex < questionBlocks.length - 1) {
+      setCurrentBlockIndex((prev) => prev + 1);
     }
   };
 
   const handlePrev = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+    if (currentBlockIndex > 0) {
+      setCurrentBlockIndex((prev) => prev - 1);
     }
   };
 
-  if (!currentQuestion) return <div>Loading questions...</div>;
+  if (!currentQuestion || !currentBlock) return <div>Loading questions...</div>;
 
   return (
     <div className="flex h-screen flex-col bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100">
@@ -82,49 +124,113 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
 
             <div className="mb-8">
               <span className="text-sm font-semibold text-primary uppercase tracking-wider">
-                Câu hỏi {currentQuestionIndex + 1} / {questions.length}
+                {currentBlock.type === 'group'
+                  ? `Nhóm câu ${currentBlockIndex + 1} / ${questionBlocks.length}`
+                  : `Câu hỏi ${currentBlockIndex + 1} / ${questionBlocks.length}`}
               </span>
-              <h2 className="mt-4 text-2xl font-medium leading-relaxed">
-                {currentQuestion.content}
-              </h2>
+
+              {currentBlock.type === 'group' ? (
+                <div className="mt-4 space-y-5">
+                  <div>
+                    <h2 className="text-2xl font-medium leading-relaxed">Đọc đoạn văn và chọn Đúng hoặc Sai cho từng mệnh đề</h2>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                      Tất cả các mệnh đề liên quan đã được gộp vào cùng một trang để em dễ đối chiếu.
+                    </p>
+                  </div>
+
+                  {currentBlock.passageText && (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Đoạn văn chung
+                      </p>
+                      <p>{currentBlock.passageText}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <h2 className="mt-4 text-2xl font-medium leading-relaxed">
+                  {currentQuestion.content}
+                </h2>
+              )}
             </div>
 
             {/* Options */}
-            <div className="space-y-3">
-              {currentQuestion.choices?.map((option) => {
-                const isSelected = answers[currentQuestion.id]?.choiceId === option.id;
+            {currentBlock.type === 'group' ? (
+              <div className="space-y-4">
+                {currentBlock.questions.map((question, questionIdx) => (
+                  <div key={question.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-background-dark">
+                    <p className="mb-4 text-base font-semibold text-gray-900 dark:text-white">
+                      Mệnh đề {question.statementOrder ?? questionIdx + 1}: {question.content}
+                    </p>
+                    <div className="space-y-3">
+                      {question.choices?.map((option) => {
+                        const isSelected = answers[question.id]?.choiceId === option.id;
 
-                return (
-                  <label 
-                    key={option.id}
-                    className={`flex cursor-pointer items-center rounded-xl border p-4 transition-all ${
-                      isSelected 
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary dark:bg-primary/10' 
-                        : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-background-dark dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${currentQuestion.id}`}
-                      value={option.id ?? ''}
-                      checked={isSelected}
-                      onChange={() => onAnswer(currentQuestion.id, option.id ?? '', option.content)}
-                      className="h-5 w-5 border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
-                    />
-                    <span className="ml-4 font-medium text-gray-700 dark:text-gray-200">
-                      {option.optionLabel && <span className="mr-2 font-bold text-primary">{option.optionLabel}.</span>}
-                      {option.content}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
+                        return (
+                          <label
+                            key={option.id || `${question.id}-${option.optionLabel}`}
+                            className={`flex cursor-pointer items-center rounded-xl border p-4 transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/5 ring-1 ring-primary dark:bg-primary/10'
+                                : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-background-dark dark:hover:bg-gray-800'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name={`question-${question.id}`}
+                              value={option.id ?? ''}
+                              checked={isSelected}
+                              onChange={() => onAnswer(question.id, option.id ?? '', option.content)}
+                              className="h-5 w-5 border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
+                            />
+                            <span className="ml-4 font-medium text-gray-700 dark:text-gray-200">
+                              {option.optionLabel && <span className="mr-2 font-bold text-primary">{option.optionLabel}.</span>}
+                              {option.content}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {currentQuestion.choices?.map((option) => {
+                  const isSelected = answers[currentQuestion.id]?.choiceId === option.id;
+
+                  return (
+                    <label 
+                      key={option.id}
+                      className={`flex cursor-pointer items-center rounded-xl border p-4 transition-all ${
+                        isSelected 
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary dark:bg-primary/10' 
+                          : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-background-dark dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentQuestion.id}`}
+                        value={option.id ?? ''}
+                        checked={isSelected}
+                        onChange={() => onAnswer(currentQuestion.id, option.id ?? '', option.content)}
+                        className="h-5 w-5 border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
+                      />
+                      <span className="ml-4 font-medium text-gray-700 dark:text-gray-200">
+                        {option.optionLabel && <span className="mr-2 font-bold text-primary">{option.optionLabel}.</span>}
+                        {option.content}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Navigation Buttons */}
             <div className="mt-10 flex items-center justify-between">
               <button
                 onClick={handlePrev}
-                disabled={currentQuestionIndex === 0}
+                disabled={currentBlockIndex === 0}
                 className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-background-dark dark:text-gray-200 dark:hover:bg-gray-800"
               >
                 <ChevronLeft size={16} />
@@ -133,7 +239,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
               
               <button
                 onClick={handleNext}
-                disabled={currentQuestionIndex === questions.length - 1}
+                disabled={currentBlockIndex === questionBlocks.length - 1}
                 className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-background-dark dark:text-gray-200 dark:hover:bg-gray-800"
               >
                 Tiếp theo
@@ -148,22 +254,23 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
           <div className="p-6">
             <h3 className="mb-4 text-sm font-semibold text-gray-900 dark:text-white">Danh sách câu hỏi</h3>
             <div className="grid grid-cols-5 gap-2">
-              {questions.map((q, idx) => {
-                const isAnswered = !!answers[q.id];
-                const isCurrent = idx === currentQuestionIndex;
+              {questionBlocks.map((block, idx) => {
+                const isAnswered = block.questions.every((q) => !!answers[q.id]);
+                const isCurrent = idx === currentBlockIndex;
                 return (
                   <button
-                    key={q.id}
-                    onClick={() => setCurrentQuestionIndex(idx)}
-                    className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-medium transition-all ${
+                    key={block.key}
+                    onClick={() => setCurrentBlockIndex(idx)}
+                    className={`flex h-10 min-w-10 items-center justify-center rounded-lg px-2 text-sm font-medium transition-all ${
                       isCurrent
                         ? 'bg-primary text-white shadow-md'
                         : isAnswered
                         ? 'bg-blue-50 text-primary dark:bg-blue-900/30 dark:text-blue-300'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
                     }`}
+                    title={block.type === 'group' ? 'Nhóm câu Đúng / Sai' : `Câu ${idx + 1}`}
                   >
-                    {idx + 1}
+                    {block.type === 'group' ? `Đ/S ${idx + 1}` : idx + 1}
                   </button>
                 );
               })}

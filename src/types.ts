@@ -1,3 +1,6 @@
+export type QuestionFormat = 'SingleChoice' | 'TrueFalse';
+export type DifficultyLevel = 'Easy' | 'Medium' | 'Hard';
+
 export interface Choice {
   id?: string;        
   optionLabel: string;
@@ -10,6 +13,14 @@ export interface Question {
   content: string;
   competencyType?: string;
   competencyLabel?: string;
+  questionFormat?: QuestionFormat;
+  questionFormatLabel?: string;
+  difficultyLevel?: DifficultyLevel;
+  difficultyLabel?: string;
+  passageText?: string | null;
+  passageGroupKey?: string | null;
+  statementOrder?: number | null;
+  sourceEvidence?: string;
   choices?: Choice[];
   dateCreated?: string;
 }
@@ -27,6 +38,19 @@ export interface Subject {
 export interface Class {
   id: string;
   name: string;
+  homeRoomTeacherId?: string;
+  homeRoomTeacherName?: string;
+  schoolYearId?: string;
+  schoolYearStart?: string;
+  schoolYearEnd?: string;
+  isActive?: boolean;
+  isDeleted?: boolean;
+}
+
+export interface SchoolYear {
+  id: string;
+  start: string;
+  end: string;
 }
 
 export type AppView = 'dashboard' | 'exam-session';
@@ -41,7 +65,8 @@ export enum AssignmentStatus {
   IN_PROGRESS = 'Đang làm',
   SUBMITTED = 'Đã nộp',
   GRADED = 'Đã chấm điểm',
-  LATE = 'Trễ hạn'
+  LATE = 'Trễ hạn',
+  RETRY = 'Làm lại'
 }
 
 export enum SubjectLabel {
@@ -61,6 +86,10 @@ export interface Assignment {
   status: AssignmentStatus;
   isOverdue?: boolean;
   score?: number | null;
+  assessmentStatus?: 'Pending' | 'Completed' | 'Failed';
+  canRetry?: boolean;
+  assessmentError?: string | null;
+  statusMessage?: string;
 }
 
 export interface User {
@@ -95,6 +124,56 @@ export interface LoginProps {
   onLogout?: () => void;
 }
 
+export interface StudentResultSummary {
+  studentExamId: string;
+  examId: string;
+  examName: string;
+  studentId: string;
+  studentName: string;
+  schoolClassId: string;
+  schoolClassName: string;
+  isSubmitted: boolean;
+  score: number | null;
+  assessmentStatus: 'Pending' | 'Completed' | 'Failed';
+  finishedAt?: string;
+  assessedAt?: string | null;
+}
+
+export interface ExamStudentStatusItem {
+  studentId: string;
+  studentName: string;
+  schoolClassId?: string;
+  schoolClassName?: string;
+  studentExamId?: string | null;
+  isSubmitted?: boolean;
+  score?: number | null;
+  assessmentStatus?: 'NotStarted' | 'Pending' | 'Completed' | 'Failed' | string;
+  canViewResult?: boolean;
+  assessmentError?: string | null;
+  finishedAt?: string | null;
+}
+
+export interface WrongAnswerReview {
+  questionId: string;
+  questionContent: string;
+  competencyType?: string;
+  competencyLabel?: string;
+  questionFormat?: QuestionFormat;
+  questionFormatLabel?: string;
+  difficultyLevel?: DifficultyLevel;
+  difficultyLabel?: string;
+  passageText?: string | null;
+  passageGroupKey?: string | null;
+  statementOrder?: number | null;
+  selectedAnswer?: string | null;
+  correctAnswer?: string | null;
+  sourceEvidence?: string | null;
+  keywordHint?: string | null;
+  errorExplanation?: string | null;
+  highlightText?: string | null;
+  guidanceNote?: string | null;
+}
+
 export interface AssessmentResult {
   studentExamId: string;
   examId: string;
@@ -110,6 +189,7 @@ export interface AssessmentResult {
   behaviorAdjustmentFeedback: string | null;
   selfDevelopmentFeedback: string | null;
   economicSocialParticipationFeedback: string | null;
+  wrongAnswers?: WrongAnswerReview[];
   assessmentError: string | null;
   finishedAt: string;
   assessedAt: string | null;

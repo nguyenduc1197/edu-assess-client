@@ -1,5 +1,5 @@
 import './App.css';
-import { BrowserRouter, Navigate, Route, Router, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import ReviewPage from './Components/ReviewExam/ReviewExam';
 import StudentDashboard from './Components/Student/Dashboard/StudentDashboard';
 import TeacherDashboard from './Components/Teacher/Dashboard/TeacherDashboard';
@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react';
 import QuestionManagement from './Components/Teacher/Question/QuestionManagement';
 import TeacherManagement from './Components/Teacher/Teachers/TeacherManagement';
 import StudentManagement from './Components/Teacher/Students/StudentManagement';
+import ClassManagement from './Components/Teacher/Classes/ClassManagement';
+import TeacherResults from './Components/Teacher/Results/TeacherResults';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,10 +22,10 @@ useEffect(() => {
       setIsAuthenticated(true);
     }
     const role = localStorage.getItem('role');
-    if (role && role == 'Teacher') {
+    if (role && role === 'Teacher') {
       setIsTeacher(true);
     }
-    else if (role && role == 'Student')
+    else if (role && role === 'Student')
     {
       setIsTeacher(false);
     }
@@ -36,6 +38,9 @@ useEffect(() => {
     localStorage.removeItem('name');
     localStorage.removeItem('role');
     localStorage.removeItem('email');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('accountId');
+    localStorage.removeItem('profileId');
     setIsAuthenticated(false);
   };
 
@@ -70,8 +75,10 @@ useEffect(() => {
             <Route path="/" element={<TeacherDashboard onLogout={handleLogout} />} />
             <Route path="/teacherdashboard" element={<TeacherDashboard onLogout={handleLogout} />} />
             <Route path="/teacher/questions" element={<QuestionManagement onLogout={handleLogout} />} />
+            <Route path="/teacher/results" element={<TeacherResults onLogout={handleLogout} />} />
             <Route path="/teacher/teachers" element={<TeacherManagement onLogout={handleLogout} />} />
             <Route path="/teacher/students" element={<StudentManagement onLogout={handleLogout} />} />
+            <Route path="/teacher/classes" element={<ClassManagement onLogout={handleLogout} />} />
           </>
         }
         {
