@@ -546,7 +546,6 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                           <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.questionContent}</p>
                                           <p className="text-sm text-red-600 dark:text-red-300"><span className="font-semibold">Đã chọn:</span> {item.selectedAnswer || 'Không có câu trả lời'}</p>
                                           <p className="text-sm text-green-700 dark:text-green-300"><span className="font-semibold">Đáp án đúng:</span> {item.correctAnswer || 'Không có dữ liệu'}</p>
-                                          {item.keywordHint && <p className="text-sm text-blue-700 dark:text-blue-300"><span className="font-semibold">Từ khóa:</span> {item.keywordHint}</p>}
                                           {(item.errorExplanation || item.highlightText) && <p className="text-sm text-yellow-800 dark:text-yellow-200"><span className="font-semibold">Giải thích:</span> {item.errorExplanation || item.highlightText}</p>}
                                         </div>
                                       ))}
@@ -556,7 +555,6 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                       <p className="text-sm font-semibold text-gray-900 dark:text-white">{section.item.questionContent}</p>
                                       <p className="text-sm text-red-600 dark:text-red-300"><span className="font-semibold">Đã chọn:</span> {section.item.selectedAnswer || 'Không có câu trả lời'}</p>
                                       <p className="text-sm text-green-700 dark:text-green-300"><span className="font-semibold">Đáp án đúng:</span> {section.item.correctAnswer || 'Không có dữ liệu'}</p>
-                                      {section.item.keywordHint && <p className="text-sm text-blue-700 dark:text-blue-300"><span className="font-semibold">Từ khóa:</span> {section.item.keywordHint}</p>}
                                       {(section.item.errorExplanation || section.item.highlightText) && <p className="text-sm text-yellow-800 dark:text-yellow-200"><span className="font-semibold">Giải thích:</span> {section.item.errorExplanation || section.item.highlightText}</p>}
                                     </div>
                                   )
