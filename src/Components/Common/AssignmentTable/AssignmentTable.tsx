@@ -44,7 +44,43 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
   return (
     <div className="w-full @container">
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-lg shadow-slate-200/40 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-none">
-        <div className="overflow-x-auto">
+        <div className="space-y-3 p-3 md:hidden">
+          {assignments.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-slate-700">
+              Không tìm thấy bài tập nào phù hợp.
+            </div>
+          ) : (
+            assignments.map((assignment) => (
+              <div key={assignment.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <p className="line-clamp-2 text-sm font-semibold text-gray-900 dark:text-white">{assignment.title}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{assignment.subject}</p>
+                <p className={`mt-1 text-xs ${assignment.isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {assignment.deadlineDisplay}
+                </p>
+                {assignment.statusMessage && (
+                  <p className={`mt-2 text-xs ${assignment.canRetryAssessment ? 'text-amber-700 dark:text-amber-300' : 'text-gray-600 dark:text-gray-300'}`}>
+                    {assignment.statusMessage}
+                  </p>
+                )}
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <StatusBadge status={assignment.status} />
+                  {(onStartExam || onRetryAssessment) && (
+                    <button
+                      type="button"
+                      onClick={() => handleAction(assignment)}
+                      className="inline-flex min-h-9 items-center rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm"
+                    >
+                      {actionLabel || getActionText(assignment)}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50/90 dark:bg-slate-800/70">
               <tr>
