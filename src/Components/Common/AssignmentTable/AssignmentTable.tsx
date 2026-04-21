@@ -16,6 +16,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
     if (assignment.isSubmitted) {
       if (assignment.assessmentStatus === 'Pending') return 'Đang chấm';
       if (assignment.assessmentStatus === 'Failed' && assignment.canRetryAssessment) return 'Chấm lại';
+      if (assignment.assessmentStatus === 'Failed') return 'Xem kết quả';
       if (assignment.assessmentStatus === 'Completed') return 'Xem kết quả';
     }
 
