@@ -38,6 +38,12 @@ const FORMAT_LABELS: Record<string, string> = {
   TrueFalse: 'Đúng / Sai',
 };
 
+const countWords = (value?: string | null) =>
+  (value || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+
 const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   competencyOptions,
   onClose,
@@ -601,6 +607,8 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                       .map((item, index) => ({ item, index }))
                       .filter(({ item }) => item.passageGroupKey === question.passageGroupKey)
                       .sort((a, b) => (a.item.statementOrder || 0) - (b.item.statementOrder || 0));
+                    const passageWordCount = countWords(question.passageText);
+                    const shouldReviewPassage = passageWordCount > 0 && passageWordCount < 60;
 
                     return (
                       <div key={question.passageGroupKey} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-4">
@@ -663,6 +671,11 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                             rows={4}
                             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
                           />
+                          {shouldReviewPassage && (
+                            <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                              Đoạn văn này đang khá ngắn cho một nhóm Đúng / Sai dùng chung. Nên rà soát và chỉnh sửa để các mệnh đề bám sát cùng một ngữ cảnh trước khi lưu.
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-4">

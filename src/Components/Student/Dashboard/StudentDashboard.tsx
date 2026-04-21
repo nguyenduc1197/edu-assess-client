@@ -49,22 +49,31 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         const endDate = new Date(item.end);
         const startDate = new Date(item.start);
         const now = new Date();
+        const isSubmitted = item.isSubmitted === true;
+        const assessmentStatus = item.assessmentStatus || (isSubmitted ? 'Pending' : 'NotStarted');
+        const canRetryAssessment = item.canRetryAssessment === true;
 
         let status = AssignmentStatus.NEW;
         let statusMessage = '';
 
-        if (item.canRetry === true || item.assessmentStatus === 'Failed') {
-          status = AssignmentStatus.RETRY;
-          statusMessage = item.assessmentError
-            ? `${item.assessmentError} Em có thể làm lại bài này.`
-            : 'Đánh giá thất bại, em có thể làm lại bài này.';
-        } else if (item.assessmentStatus === 'Pending') {
+        if (!isSubmitted && now > endDate) {
+          status = AssignmentStatus.LATE;
+        } else if (!isSubmitted && now >= startDate && now <= endDate) {
+          status = AssignmentStatus.IN_PROGRESS;
+        } else if (isSubmitted && assessmentStatus === 'Pending') {
           status = AssignmentStatus.SUBMITTED;
           statusMessage = 'Bài đang được đánh giá.';
-        } else if (now >= startDate && now <= endDate) {
-          status = AssignmentStatus.IN_PROGRESS;
-        } else if (now > endDate) {
-          status = AssignmentStatus.LATE;
+        } else if (isSubmitted && assessmentStatus === 'Failed' && canRetryAssessment) {
+          status = AssignmentStatus.RETRY;
+          statusMessage = item.assessmentError
+            ? `${item.assessmentError} Em có thể yêu cầu chấm lại.`
+            : 'Đánh giá thất bại, em có thể yêu cầu chấm lại.';
+        } else if (isSubmitted && assessmentStatus === 'Completed') {
+          status = AssignmentStatus.GRADED;
+          statusMessage = 'Đã có kết quả.';
+        } else if (isSubmitted && assessmentStatus === 'Failed') {
+          status = AssignmentStatus.SUBMITTED;
+          statusMessage = item.assessmentError || 'Đánh giá thất bại.';
         }
 
         return {
@@ -82,10 +91,13 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           }),
           status,
           isOverdue: now > endDate,
-          assessmentStatus: item.assessmentStatus,
+          assessmentStatus,
           canRetry: !!item.canRetry,
+          canRetryAssessment,
           assessmentError: item.assessmentError || null,
           statusMessage,
+          studentExamId: item.studentExamId || null,
+          isSubmitted,
         };
       });
 
@@ -113,6 +125,47 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     setSelectedExam(assignment);
     setCurrentView('exam-session');
     window.scrollTo(0, 0);
+  };
+
+  const handleRetryAssessment = async (assignment: Assignment) => {
+    if (!assignment.studentExamId) {
+      setError('Không thể yêu cầu chấm lại: thiếu thông tin bài thi.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError('');
+
+      const response = await fetchClient(`/student-exams/${assignment.studentExamId}/retry-assessment`, {
+        method: 'POST',
+      });
+
+      const retryData = await response.json().catch(() => ({}));
+
+      if (!response.ok || !retryData?.studentExamId) {
+        throw new Error(retryData?.message || `API returned ${response.status}`);
+      }
+
+      await fetchAssignments();
+
+      setSelectedExam({
+        ...assignment,
+        studentExamId: retryData.studentExamId,
+        assessmentStatus: retryData.assessmentStatus || 'Pending',
+        isSubmitted: true,
+        canRetryAssessment: false,
+        status: AssignmentStatus.SUBMITTED,
+        statusMessage: retryData.message || 'Bài đang được đánh giá lại.',
+      });
+      setCurrentView('exam-session');
+      window.scrollTo(0, 0);
+    } catch (retryError) {
+      console.error('Failed to retry assessment', retryError);
+      setError('Không thể yêu cầu chấm lại. Vui lòng thử lại sau.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleExitExam = () => {
@@ -198,7 +251,11 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             </div>
           </div>
 
-          <AssignmentTable assignments={filteredAssignments} onStartExam={handleStartExam} />
+          <AssignmentTable
+            assignments={filteredAssignments}
+            onStartExam={handleStartExam}
+            onRetryAssessment={handleRetryAssessment}
+          />
         </div>
       </main>
     </div>
