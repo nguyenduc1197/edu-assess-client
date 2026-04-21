@@ -51,7 +51,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
             </div>
           ) : (
             assignments.map((assignment) => (
-              <div key={assignment.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-4 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:to-slate-900">
                 <p className="line-clamp-2 text-sm font-semibold text-gray-900 dark:text-white">{assignment.title}</p>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{assignment.subject}</p>
                 <p className={`mt-1 text-xs ${assignment.isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
@@ -63,13 +63,15 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                   </p>
                 )}
 
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <StatusBadge status={assignment.status} />
+                <div className="mt-3 flex flex-col gap-3">
+                  <div className="w-fit">
+                    <StatusBadge status={assignment.status} />
+                  </div>
                   {(onStartExam || onRetryAssessment) && (
                     <button
                       type="button"
                       onClick={() => handleAction(assignment)}
-                      className="inline-flex min-h-9 items-center rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm"
+                      className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-transform active:scale-[0.99]"
                     >
                       {actionLabel || getActionText(assignment)}
                     </button>

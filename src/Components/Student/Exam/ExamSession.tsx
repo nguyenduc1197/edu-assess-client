@@ -235,11 +235,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
   if (step === 'assessing') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 p-6">
-        <div className="flex flex-col items-center gap-6 max-w-md text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white p-6 dark:from-gray-950 dark:to-gray-950 sm:bg-gray-50 dark:sm:bg-gray-950">
+        <div className="flex max-w-md flex-col items-center gap-5 rounded-2xl border border-slate-200 bg-white/80 p-6 text-center shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/70 sm:gap-6 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
           <div className="h-16 w-16 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Đang đánh giá bài làm</h2>
-          <p className="text-gray-500 dark:text-gray-400">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Đang đánh giá bài làm</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 sm:text-base">
             Vui lòng chờ trong giây lát, bài làm đang được đánh giá...
           </p>
         </div>
@@ -272,23 +272,23 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     ].filter((item) => item.isShown);
 
     return (
-      <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950 p-4 sm:p-8">
-        <div className="mx-auto w-full max-w-2xl flex flex-col gap-6">
+      <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 to-white p-3 dark:from-gray-950 dark:to-gray-950 sm:bg-gray-50 dark:sm:bg-gray-950 sm:p-8">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 sm:gap-6">
 
           {/* Header */}
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{examName}</h1>
+          <div className="mobile-premium-enter flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">{examName}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">{studentName}</p>
           </div>
 
           {failed ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-5 text-red-700 dark:text-red-300">
+            <div className="mobile-premium-enter mobile-premium-delay-1 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300 sm:rounded-xl sm:p-5">
               <p className="font-semibold">Đánh giá thất bại</p>
               {assessmentError && <p className="mt-1 text-sm">{assessmentError}</p>}
               {assessmentResult.canRetryAssessment && (
                 <button
                   onClick={() => handleRetryAssessment(assessmentResult.studentExamId)}
-                  className="mt-3 w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
+                  className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-700 sm:rounded-lg sm:py-2"
                 >
                   Chấm lại
                 </button>
@@ -297,7 +297,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
           ) : (
             <>
               {/* Score card */}
-              <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 p-6 flex flex-col items-center gap-2">
+              <div className="mobile-premium-enter mobile-premium-delay-1 flex flex-col items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-800 dark:bg-blue-900/20 sm:rounded-xl sm:p-6">
                 <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Điểm số</span>
                 <span className="text-5xl font-extrabold text-blue-700 dark:text-blue-300">{score?.toFixed(1)}</span>
                 <span className="text-sm text-gray-500 dark:text-gray-400">/ 10</span>
@@ -305,7 +305,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
               {/* Overall feedback */}
               {overallFeedback && (
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+                <div className="mobile-premium-enter mobile-premium-delay-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-xl sm:p-5 sm:shadow-none">
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nhận xét chung</p>
                   <ul className="list-disc pl-5 space-y-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                     {(feedbackItems.length > 0 ? feedbackItems : [overallFeedback]).map((item, index) => (
@@ -316,9 +316,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
               )}
 
               {competencies.length > 0 && (
-                <div className="space-y-3">
+                <div className="mobile-premium-enter mobile-premium-delay-3 space-y-3">
                   {behaviorAdjustmentScore !== null && (
-                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
                       <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực điều chỉnh hành vi</p>
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((behaviorAdjustmentScore / 10) * 100, 100))}%` }} />
@@ -326,7 +326,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                     </div>
                   )}
                   {selfDevelopmentScore !== null && (
-                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
                       <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực phát triển bản thân</p>
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selfDevelopmentScore / 10) * 100, 100))}%` }} />
@@ -334,7 +334,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                     </div>
                   )}
                   {economicSocialParticipationScore !== null && (
-                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
                       <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội</p>
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((economicSocialParticipationScore / 10) * 100, 100))}%` }} />
@@ -344,7 +344,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                 </div>
               )}
 
-              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+              <div className="mobile-premium-enter mobile-premium-delay-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-xl sm:p-5 sm:shadow-none">
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Học lại để lần sau không sai</p>
 
                 {wrongAnswers.length === 0 ? (
@@ -355,7 +355,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                   <div className="space-y-4">
                     {wrongAnswerSections.map((section) =>
                       section.type === 'group' ? (
-                        <div key={`group-${section.key}`} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                        <div key={`group-${section.key}`} className="rounded-xl border border-gray-200 p-3 space-y-3 dark:border-gray-700 sm:rounded-lg sm:p-4">
                           {section.passageText && (
                             <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-sm text-slate-700 dark:text-slate-200">
                               <p className="font-semibold mb-1">Đoạn văn chung</p>
@@ -370,7 +370,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
                           <div className="space-y-3">
                             {section.items.map((item, index) => (
-                              <div key={item.questionId} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40 p-4 space-y-3">
+                              <div key={item.questionId} className="rounded-lg border border-gray-200 bg-gray-50/70 p-3 space-y-3 dark:border-gray-700 dark:bg-gray-800/40 sm:p-4">
                                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Mệnh đề {item.statementOrder ?? index + 1}</p>
                                 <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.questionContent}</p>
 
@@ -402,7 +402,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                           </div>
                         </div>
                       ) : (
-                        <div key={section.item.questionId} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                        <div key={section.item.questionId} className="rounded-xl border border-gray-200 p-3 space-y-3 dark:border-gray-700 sm:rounded-lg sm:p-4">
                           {section.item.passageText && (
                             <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-sm text-slate-700 dark:text-slate-200">
                               <p className="font-semibold mb-1">Đoạn văn chung</p>
@@ -449,7 +449,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
           {/* Exit button */}
           <button
             onClick={onExit}
-            className="mt-2 w-full rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-800"
+            className="mt-2 w-full rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 sm:rounded-lg"
           >
             Về trang chủ
           </button>
