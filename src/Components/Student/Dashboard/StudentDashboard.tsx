@@ -50,7 +50,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         const startDate = new Date(item.start);
         const now = new Date();
         const isSubmitted = item.isSubmitted === true;
-        const assessmentStatus = item.assessmentStatus || 'NotStarted';
+        const assessmentStatus = item.assessmentStatus || (isSubmitted ? 'Pending' : 'NotStarted');
         const canRetryAssessment = item.canRetryAssessment === true;
 
         let status = AssignmentStatus.NEW;
