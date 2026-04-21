@@ -90,12 +90,18 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     return data;
   };
 
-  const startPolling = (studentExamId: string) => {
+  const startPolling = async (studentExamId: string) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
 
-    fetchAssessmentResult(studentExamId).catch(() => {
+    try {
+      const initialResult = await fetchAssessmentResult(studentExamId);
+
+      if (initialResult?.status === 'Completed' || initialResult?.status === 'Failed') {
+        return;
+      }
+    } catch {
       // keep polling; transient errors shouldn't stop us
-    });
+    }
 
     pollIntervalRef.current = setInterval(async () => {
       try {
@@ -121,7 +127,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       }
 
       onSubmitted?.();
-      startPolling(retryData.studentExamId);
+      await startPolling(retryData.studentExamId);
     } catch (error) {
       console.error('Error retrying assessment:', error);
       alert('Không thể yêu cầu chấm lại. Vui lòng thử lại sau.');
