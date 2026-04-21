@@ -86,10 +86,13 @@ export interface Assignment {
   status: AssignmentStatus;
   isOverdue?: boolean;
   score?: number | null;
-  assessmentStatus?: 'Pending' | 'Completed' | 'Failed';
+  assessmentStatus?: 'NotStarted' | 'Pending' | 'Completed' | 'Failed';
   canRetry?: boolean;
+  canRetryAssessment?: boolean;
   assessmentError?: string | null;
   statusMessage?: string;
+  studentExamId?: string | null;
+  isSubmitted?: boolean;
 }
 
 export interface User {
@@ -193,4 +196,5 @@ export interface AssessmentResult {
   assessmentError: string | null;
   finishedAt: string;
   assessedAt: string | null;
+  canRetryAssessment?: boolean;
 }

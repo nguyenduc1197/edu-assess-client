@@ -7,19 +7,37 @@ interface AssignmentTableProps {
   assignments: Assignment[];
   onStartExam?: (assignment: Assignment) => void;
   onDelete?: (examId: string) => void;
+  onRetryAssessment?: (assignment: Assignment) => void;
   actionLabel?: string;
 }
 
-const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartExam, onDelete, actionLabel }) => {
-  const getActionText = (status: AssignmentStatus) => {
-    switch (status) {
+const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartExam, onDelete, onRetryAssessment, actionLabel }) => {
+  const getActionText = (assignment: Assignment) => {
+    if (assignment.isSubmitted) {
+      if (assignment.assessmentStatus === 'Pending') return 'Đang chấm';
+      if (assignment.assessmentStatus === 'Failed' && assignment.canRetryAssessment) return 'Chấm lại';
+      if (assignment.assessmentStatus === 'Completed') return 'Xem kết quả';
+    }
+
+    switch (assignment.status) {
       case AssignmentStatus.NEW: return 'Làm bài';
       case AssignmentStatus.IN_PROGRESS: return 'Tiếp tục';
-      case AssignmentStatus.SUBMITTED: return 'Xem lại';
-      case AssignmentStatus.GRADED: return 'Xem điểm';
+      case AssignmentStatus.SUBMITTED: return 'Đang chấm';
+      case AssignmentStatus.GRADED: return 'Xem kết quả';
       case AssignmentStatus.LATE: return 'Nộp bài';
-      case AssignmentStatus.RETRY: return 'Làm lại';
+      case AssignmentStatus.RETRY: return 'Chấm lại';
       default: return 'Chi tiết';
+    }
+  };
+
+  const handleAction = (assignment: Assignment) => {
+    if (assignment.isSubmitted && assignment.assessmentStatus === 'Failed' && assignment.canRetryAssessment && onRetryAssessment) {
+      onRetryAssessment(assignment);
+      return;
+    }
+
+    if (onStartExam) {
+      onStartExam(assignment);
     }
   };
 
@@ -70,7 +88,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                           {assignment.deadlineDisplay}
                         </span>
                         {assignment.statusMessage && (
-                          <span className={`mt-1 text-xs ${assignment.canRetry ? 'text-amber-700 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400'}`}>
+                          <span className={`mt-1 text-xs ${assignment.canRetryAssessment ? 'text-amber-700 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400'}`}>
                             {assignment.statusMessage}
                           </span>
                         )}
@@ -87,13 +105,13 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
                       <div className="flex items-center gap-4">
-                        {onStartExam && (
+                        {(onStartExam || onRetryAssessment) && (
                           <button
                             type="button"
-                            onClick={() => onStartExam(assignment)}
+                            onClick={() => handleAction(assignment)}
                             className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
                           >
-                            {actionLabel || getActionText(assignment.status)}
+                            {actionLabel || getActionText(assignment)}
                           </button>
                         )}
                         {onDelete && (

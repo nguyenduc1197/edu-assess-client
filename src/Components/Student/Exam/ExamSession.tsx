@@ -57,6 +57,8 @@ const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
   return groups;
 };
 
+const getExplanationText = (item: WrongAnswerReview) => item.errorExplanation || item.highlightText;
+
 const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, onSubmitted }) => {
   const [step, setStep] = useState<SessionStep>('taking');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -65,9 +67,78 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const fetchAssessmentResult = async (studentExamId: string) => {
+    const response = await fetchClient(`/student-exams/${studentExamId}/assessment`);
+
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+
+    const data: AssessmentResult = await response.json();
+
+    if (data.assessmentStatus === 'Completed' || data.assessmentStatus === 'Failed') {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+
+      setAssessmentResult(data);
+      setStep('result');
+    } else {
+      setStep('assessing');
+    }
+
+    return data;
+  };
+
+  const startPolling = (studentExamId: string) => {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+
+    fetchAssessmentResult(studentExamId).catch(() => {
+      // keep polling; transient errors shouldn't stop us
+    });
+
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        await fetchAssessmentResult(studentExamId);
+      } catch {
+        // keep polling; transient errors shouldn't stop us
+      }
+    }, 3000);
+  };
+
+  const handleRetryAssessment = async (studentExamId: string) => {
+    try {
+      setStep('assessing');
+      setAssessmentResult(null);
+
+      const response = await fetchClient(`/student-exams/${studentExamId}/retry-assessment`, {
+        method: 'POST',
+      });
+      const retryData = await response.json().catch(() => ({}));
+
+      if (!response.ok || !retryData?.studentExamId) {
+        throw new Error(retryData?.message || `API returned ${response.status}`);
+      }
+
+      onSubmitted?.();
+      startPolling(retryData.studentExamId);
+    } catch (error) {
+      console.error('Error retrying assessment:', error);
+      alert('Không thể yêu cầu chấm lại. Vui lòng thử lại sau.');
+      setStep('result');
+    }
+  };
+
   // Fetch questions specifically for this exam context
   // Note: Using the general questions endpoint for demo purposes as per instructions
   useEffect(() => {
+    if (assignment.isSubmitted && assignment.studentExamId) {
+      setIsLoading(false);
+      setStep('assessing');
+      startPolling(assignment.studentExamId);
+      return;
+    }
+
     const fetchQuestions = async () => {
       try {
         setIsLoading(true);
@@ -96,7 +167,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       }
     };
     fetchQuestions();
-  }, [examId]);
+  }, [assignment.isSubmitted, assignment.studentExamId, examId]);
 
   const handleAnswer = (questionId: string, choiceId: string, content: string) => {
    setAnswers(prev => ({
@@ -138,26 +209,6 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       console.error('Error submitting exam:', error);
       alert('Đã xảy ra lỗi khi nộp bài. Vui lòng thử lại.');
     }
-  };
-
-  const startPolling = (studentExamId: string) => {
-    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-
-    pollIntervalRef.current = setInterval(async () => {
-      try {
-        const res = await fetchClient(`/student-exams/${studentExamId}/assessment`);
-        if (res.ok) {
-          const data: AssessmentResult = await res.json();
-          if (data.assessmentStatus === 'Completed' || data.assessmentStatus === 'Failed') {
-            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-            setAssessmentResult(data);
-            setStep('result');
-          }
-        }
-      } catch {
-        // keep polling; transient errors shouldn't stop us
-      }
-    }, 3000);
   };
 
   // Clean up interval on unmount
@@ -234,6 +285,14 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
             <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-5 text-red-700 dark:text-red-300">
               <p className="font-semibold">Đánh giá thất bại</p>
               {assessmentError && <p className="mt-1 text-sm">{assessmentError}</p>}
+              {assessmentResult.canRetryAssessment && (
+                <button
+                  onClick={() => handleRetryAssessment(assessmentResult.studentExamId)}
+                  className="mt-3 w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
+                >
+                  Chấm lại
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -305,6 +364,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                           )}
 
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">Nhóm mệnh đề Đúng / Sai</p>
+                          <p className="text-sm leading-6 text-gray-600 dark:text-gray-300">
+                            Dựa vào đoạn văn chung để đối chiếu từng mệnh đề theo đúng nội dung của bài đọc.
+                          </p>
 
                           <div className="space-y-3">
                             {section.items.map((item, index) => (
@@ -323,10 +385,10 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                                   </div>
                                 </div>
 
-                                {(item.errorExplanation || item.highlightText) && (
+                                {getExplanationText(item) && (
                                   <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 dark:text-yellow-200">
                                     <p className="font-semibold mb-1">Vì sao đáp án em chọn chưa đúng</p>
-                                    <p>{item.errorExplanation || item.highlightText}</p>
+                                    <p>{getExplanationText(item)}</p>
                                   </div>
                                 )}
 
@@ -363,10 +425,10 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                             </div>
                           </div>
 
-                          {(section.item.errorExplanation || section.item.highlightText) && (
+                          {getExplanationText(section.item) && (
                             <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 dark:text-yellow-200">
                               <p className="font-semibold mb-1">Vì sao đáp án em chọn chưa đúng</p>
-                              <p>{section.item.errorExplanation || section.item.highlightText}</p>
+                              <p>{getExplanationText(section.item)}</p>
                             </div>
                           )}
 
