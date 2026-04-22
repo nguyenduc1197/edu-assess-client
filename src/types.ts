@@ -138,6 +138,10 @@ export interface StudentResultSummary {
   isSubmitted: boolean;
   score: number | null;
   assessmentStatus: 'Pending' | 'Completed' | 'Failed';
+  completedExamCount?: number;
+  behaviorAdjustmentAccumulation?: CompetencyAccumulation | null;
+  selfDevelopmentAccumulation?: CompetencyAccumulation | null;
+  economicSocialParticipationAccumulation?: CompetencyAccumulation | null;
   finishedAt?: string;
   assessedAt?: string | null;
 }

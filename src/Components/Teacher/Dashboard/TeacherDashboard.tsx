@@ -28,6 +28,25 @@ const getFeedbackItems = (feedback?: string | null) =>
     .map((item) => item.replace(/^[-•]\s*/, '').trim())
     .filter(Boolean);
 
+const formatAccumulationPercent = (value?: number | null) => {
+  if (value === null || value === undefined) return '--';
+  return `${(value * 10).toFixed(0)}%`;
+};
+
+const formatAccumulationGain = (value?: number | null) => {
+  if (value === null || value === undefined) return '--';
+
+  const percentValue = `${(value * 10).toFixed(0)}%`;
+  return value > 0 ? `+${percentValue}` : percentValue;
+};
+
+const getAccumulationGainTone = (value?: number | null) => {
+  if (value === null || value === undefined) return 'text-gray-400 dark:text-gray-500';
+  if (value > 0) return 'text-green-600 dark:text-green-400';
+  if (value < 0) return 'text-red-600 dark:text-red-400';
+  return 'text-gray-600 dark:text-gray-400';
+};
+
 const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
   const groups: Array<
     | { type: 'single'; item: WrongAnswerReview }
@@ -520,6 +539,90 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                   <li key={index}>{item}</li>
                                 ))}
                               </ul>
+                            </div>
+                          )}
+
+                          {selectedAssessment.completedExamCount > 0 && (
+                            <div className="space-y-4">
+                              <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tiến độ năng lực qua các bài kiểm tra</h5>
+
+                              {selectedAssessment.behaviorAdjustmentAccumulation && (
+                                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Năng lực điều chỉnh hành vi</p>
+                                  <div className="grid grid-cols-3 gap-3">
+                                    <div className="text-center">
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Lần này</p>
+                                      <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                        {formatAccumulationPercent(selectedAssessment.behaviorAdjustmentAccumulation.latestScore)}
+                                      </p>
+                                    </div>
+                                    <div className="text-center">
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Cao nhất</p>
+                                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                        {formatAccumulationPercent(selectedAssessment.behaviorAdjustmentAccumulation.bestScore)}
+                                      </p>
+                                    </div>
+                                    <div className="text-center">
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">So với trước</p>
+                                      <p className={`text-lg font-bold ${getAccumulationGainTone(selectedAssessment.behaviorAdjustmentAccumulation.gainVsPreviousAttempt)}`}>
+                                        {formatAccumulationGain(selectedAssessment.behaviorAdjustmentAccumulation.gainVsPreviousAttempt)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {selectedAssessment.selfDevelopmentAccumulation && (
+                                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Năng lực phát triển bản thân</p>
+                                  <div className="grid grid-cols-3 gap-3">
+                                    <div className="text-center">
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Lần này</p>
+                                      <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                        {formatAccumulationPercent(selectedAssessment.selfDevelopmentAccumulation.latestScore)}
+                                      </p>
+                                    </div>
+                                    <div className="text-center">
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Cao nhất</p>
+                                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                        {formatAccumulationPercent(selectedAssessment.selfDevelopmentAccumulation.bestScore)}
+                                      </p>
+                                    </div>
+                                    <div className="text-center">
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">So với trước</p>
+                                      <p className={`text-lg font-bold ${getAccumulationGainTone(selectedAssessment.selfDevelopmentAccumulation.gainVsPreviousAttempt)}`}>
+                                        {formatAccumulationGain(selectedAssessment.selfDevelopmentAccumulation.gainVsPreviousAttempt)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {selectedAssessment.economicSocialParticipationAccumulation && (
+                                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Năng lực tham gia hoạt động KT-XH</p>
+                                  <div className="grid grid-cols-3 gap-3">
+                                    <div className="text-center">
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Lần này</p>
+                                      <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                        {formatAccumulationPercent(selectedAssessment.economicSocialParticipationAccumulation.latestScore)}
+                                      </p>
+                                    </div>
+                                    <div className="text-center">
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Cao nhất</p>
+                                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                        {formatAccumulationPercent(selectedAssessment.economicSocialParticipationAccumulation.bestScore)}
+                                      </p>
+                                    </div>
+                                    <div className="text-center">
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">So với trước</p>
+                                      <p className={`text-lg font-bold ${getAccumulationGainTone(selectedAssessment.economicSocialParticipationAccumulation.gainVsPreviousAttempt)}`}>
+                                        {formatAccumulationGain(selectedAssessment.economicSocialParticipationAccumulation.gainVsPreviousAttempt)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
 

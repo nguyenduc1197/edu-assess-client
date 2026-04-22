@@ -3,6 +3,7 @@ import { Eye, Menu } from 'lucide-react';
 import {
   AssessmentResult,
   Class as SchoolClass,
+  CompetencyAccumulation,
   Student,
   StudentResultSummary,
   User,
@@ -27,6 +28,44 @@ const getFeedbackItems = (feedback?: string | null) =>
     .split(/\r?\n|•/)
     .map((item) => item.replace(/^[-•]\s*/, '').trim())
     .filter(Boolean);
+
+const formatScoreChipValue = (value?: number | null) => {
+  if (value === null || value === undefined) return '--';
+  return value.toFixed(1);
+};
+
+const formatGainChipValue = (value?: number | null) => {
+  if (value === null || value === undefined) return '--';
+  if (value > 0) return `+${value.toFixed(1)}`;
+  return value.toFixed(1);
+};
+
+const getGainChipTone = (value?: number | null) => {
+  if (value === null || value === undefined) return 'text-gray-500 dark:text-gray-400';
+  if (value > 0) return 'text-emerald-700 dark:text-emerald-300';
+  if (value < 0) return 'text-red-700 dark:text-red-300';
+  return 'text-gray-600 dark:text-gray-300';
+};
+
+const ProgressChip: React.FC<{
+  label: string;
+  accumulation?: CompetencyAccumulation | null;
+}> = ({ label, accumulation }) => {
+  if (!accumulation) return null;
+
+  return (
+    <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800/70">
+      <div className="font-semibold text-slate-700 dark:text-slate-200">{label}</div>
+      <div className="mt-1 flex flex-wrap items-center gap-2 text-slate-600 dark:text-slate-300">
+        <span>Now {formatScoreChipValue(accumulation.latestScore)}</span>
+        <span>Best {formatScoreChipValue(accumulation.bestScore)}</span>
+        <span className={getGainChipTone(accumulation.gainVsPreviousAttempt)}>
+          {formatGainChipValue(accumulation.gainVsPreviousAttempt)}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
   const groups: Array<
@@ -263,6 +302,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Học Sinh</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Lớp</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Điểm</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tiến độ</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng Thái</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Nộp Lúc</th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Chi Tiết</th>
@@ -275,6 +315,18 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.studentName}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.schoolClassName}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.score ?? '—'}</td>
+                      <td className="px-6 py-4 align-top">
+                        <div className="min-w-[280px] space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                          <div className="font-medium text-gray-700 dark:text-gray-200">
+                            {result.completedExamCount ? `${result.completedExamCount} bài đã tính` : 'Chưa có lịch sử'}
+                          </div>
+                          <div className="space-y-2">
+                            <ProgressChip label="Behavior" accumulation={result.behaviorAdjustmentAccumulation} />
+                            <ProgressChip label="Self-dev" accumulation={result.selfDevelopmentAccumulation} />
+                            <ProgressChip label="Economic-social" accumulation={result.economicSocialParticipationAccumulation} />
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.assessmentStatus}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{formatDateTime(result.finishedAt)}</td>
                       <td className="px-6 py-4 text-center">
