@@ -177,6 +177,13 @@ export interface WrongAnswerReview {
   guidanceNote?: string | null;
 }
 
+export interface CompetencyAccumulation {
+  previousScore: number | null;
+  latestScore: number;
+  bestScore: number;
+  gainVsPreviousAttempt: number | null;
+}
+
 export interface AssessmentResult {
   studentExamId: string;
   examId: string;
@@ -192,6 +199,10 @@ export interface AssessmentResult {
   behaviorAdjustmentFeedback: string | null;
   selfDevelopmentFeedback: string | null;
   economicSocialParticipationFeedback: string | null;
+  completedExamCount: number;
+  behaviorAdjustmentAccumulation: CompetencyAccumulation | null;
+  selfDevelopmentAccumulation: CompetencyAccumulation | null;
+  economicSocialParticipationAccumulation: CompetencyAccumulation | null;
   wrongAnswers?: WrongAnswerReview[];
   assessmentError: string | null;
   finishedAt: string;

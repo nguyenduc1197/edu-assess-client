@@ -350,7 +350,128 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                 </div>
               )}
 
-              <div className="mobile-premium-enter mobile-premium-delay-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-xl sm:p-5 sm:shadow-none">
+              {/* Per-competency accumulation metrics */}
+              {assessmentResult.completedExamCount > 0 && (
+                <div className="mobile-premium-enter mobile-premium-delay-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tiến độ năng lực qua các bài kiểm tra</h3>
+                  
+                  {assessmentResult.behaviorAdjustmentAccumulation && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Năng lực điều chỉnh hành vi</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                            {(assessmentResult.behaviorAdjustmentAccumulation.latestScore * 10).toFixed(0)}%
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cao nhất</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                            {(assessmentResult.behaviorAdjustmentAccumulation.bestScore * 10).toFixed(0)}%
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">So với trước</p>
+                          <p className={`text-lg font-bold ${
+                            assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt === null
+                              ? 'text-gray-400 dark:text-gray-500'
+                              : assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt > 0
+                              ? 'text-green-600 dark:text-green-400'
+                              : assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt < 0
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}>
+                            {assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt === null
+                              ? '--'
+                              : assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt > 0
+                              ? `+${(assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`
+                              : `${(assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {assessmentResult.selfDevelopmentAccumulation && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Năng lực phát triển bản thân</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                            {(assessmentResult.selfDevelopmentAccumulation.latestScore * 10).toFixed(0)}%
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cao nhất</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                            {(assessmentResult.selfDevelopmentAccumulation.bestScore * 10).toFixed(0)}%
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">So với trước</p>
+                          <p className={`text-lg font-bold ${
+                            assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt === null
+                              ? 'text-gray-400 dark:text-gray-500'
+                              : assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt > 0
+                              ? 'text-green-600 dark:text-green-400'
+                              : assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt < 0
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}>
+                            {assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt === null
+                              ? '--'
+                              : assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt > 0
+                              ? `+${(assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`
+                              : `${(assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {assessmentResult.economicSocialParticipationAccumulation && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Năng lực tham gia hoạt động KT-XH</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                            {(assessmentResult.economicSocialParticipationAccumulation.latestScore * 10).toFixed(0)}%
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cao nhất</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                            {(assessmentResult.economicSocialParticipationAccumulation.bestScore * 10).toFixed(0)}%
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">So với trước</p>
+                          <p className={`text-lg font-bold ${
+                            assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt === null
+                              ? 'text-gray-400 dark:text-gray-500'
+                              : assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt > 0
+                              ? 'text-green-600 dark:text-green-400'
+                              : assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt < 0
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}>
+                            {assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt === null
+                              ? '--'
+                              : assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt > 0
+                              ? `+${(assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`
+                              : `${(assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="mobile-premium-enter mobile-premium-delay-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-xl sm:p-5 sm:shadow-none">
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Học lại để lần sau không sai</p>
 
                 {wrongAnswers.length === 0 ? (
