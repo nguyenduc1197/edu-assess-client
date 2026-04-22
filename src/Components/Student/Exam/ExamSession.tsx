@@ -96,7 +96,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     try {
       const initialResult = await fetchAssessmentResult(studentExamId);
 
-      if (initialResult?.status === 'Completed' || initialResult?.status === 'Failed') {
+      if (initialResult?.assessmentStatus === 'Completed' || initialResult?.assessmentStatus === 'Failed') {
         return;
       }
     } catch {
