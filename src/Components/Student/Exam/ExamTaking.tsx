@@ -83,30 +83,33 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   return (
     <div className="flex h-screen flex-col bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100">
       {/* Header */}
-      <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 dark:border-gray-800 dark:bg-background-dark">
-        <div className="flex items-center gap-4">
-          <button onClick={onExit} className="text-gray-500 hover:text-red-600 transition-colors">
+      <header className="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-background-dark sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button onClick={onExit} className="rounded-lg p-1 text-gray-500 transition-colors hover:text-red-600">
             <span className="material-symbols-outlined">close</span>
-          </button>
-          <h1 className="text-lg font-bold">{examTitle}</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex flex-col items-end">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Thời gian còn lại</span>
-            <span className="font-mono font-bold text-primary">45:00</span>
+            </button>
+            <h1 className="line-clamp-1 text-base font-bold sm:text-lg">{examTitle}</h1>
           </div>
-          <button 
-            onClick={onReview}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark transition-colors"
-          >
-            Review & Nộp bài
-          </button>
+
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Thời gian còn lại</span>
+              <span className="font-mono font-bold text-primary">45:00</span>
+            </div>
+            <button
+              onClick={onReview}
+              className="min-h-10 w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark sm:w-auto"
+            >
+              Review & Nộp bài
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="flex flex-1 overflow-hidden">
         {/* Question Area */}
-        <div className="flex-1 overflow-y-auto p-6 lg:p-10">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
           <div className="mx-auto max-w-3xl">
             {/* Progress Bar (Mobile) */}
             <div className="mb-6 lg:hidden">

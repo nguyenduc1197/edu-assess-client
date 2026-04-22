@@ -207,17 +207,17 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         onLogout={onLogout}
       />
 
-      <main className="flex-1 px-4 py-8 sm:px-8 lg:p-8 overflow-y-auto h-screen">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8">
-          <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-cyan-50 to-blue-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <main className="h-screen flex-1 overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:p-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 sm:gap-6">
+          <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-cyan-50 to-blue-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <div className="flex flex-col gap-2">
               <span className="inline-flex w-fit items-center rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
                 Không gian học tập
               </span>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
                 Bài Thi Khả Dụng
               </h1>
-              <p className="text-base text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400 sm:text-base">
                 Các bài chưa làm hoặc cần làm lại sẽ hiển thị ở đây để em tiếp tục ngay.
               </p>
             </div>
@@ -230,7 +230,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           )}
 
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="relative w-full max-w-xs">
+            <div className="relative w-full max-w-none sm:max-w-xs">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                 <Search size={20} />
               </div>
@@ -244,7 +244,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button className="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors">
+              <button className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 sm:w-auto">
                 <span>{isLoading ? 'Đang tải...' : `${filteredAssignments.length} bài thi`}</span>
                 <ChevronDown size={16} className="text-gray-500" />
               </button>
