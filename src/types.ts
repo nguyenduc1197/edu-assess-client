@@ -25,6 +25,36 @@ export interface Question {
   dateCreated?: string;
 }
 
+export interface AIQuestionGenerateResponse {
+  sourceType?: string;
+  sourceTitle?: string;
+  sourcePreview?: string;
+  extractedCharacterCount?: number;
+  requestedCompetencies?: string[];
+  questions?: Question[];
+  savedQuestionIds?: string[];
+}
+
+export interface AIExamVariant {
+  variantIndex: number;
+  examName: string;
+  targetTopic?: string;
+  generationNotes?: string;
+  questions: Question[];
+  savedQuestionIds?: string[];
+}
+
+export interface AIExamScanGenerateResponse {
+  sourceType?: string;
+  sourceTitle?: string;
+  variantCount?: number;
+  inferredSubject?: string;
+  inferredGradeLevel?: string;
+  inferredOriginalTopic?: string;
+  originalStructureSummary?: string;
+  examVariants?: AIExamVariant[];
+}
+
 export interface CompetencyOption {
   value: string;
   label: string;
