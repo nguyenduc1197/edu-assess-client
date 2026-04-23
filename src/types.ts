@@ -184,6 +184,7 @@ export interface WrongAnswerReview {
 export interface CompetencyAccumulation {
   previousScore: number | null;
   latestScore: number;
+  averageScore: number;
   bestScore: number;
   gainVsPreviousAttempt: number | null;
 }

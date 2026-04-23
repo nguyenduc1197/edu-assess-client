@@ -18,6 +18,8 @@ const mockUser: User = {
 
 const ClassManagement: React.FC<ClassManagementProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'teacherName' | 'schoolYearStart'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -33,7 +35,7 @@ const ClassManagement: React.FC<ClassManagementProps> = ({ onLogout }) => {
       setError('');
 
       const [classResponse, teacherResponse, schoolYearResponse] = await Promise.all([
-        fetchClient('/classes?pageNumber=1&pageSize=100'),
+        fetchClient(`/classes?pageNumber=1&pageSize=100&sortBy=${sortBy}&sortDirection=${sortDirection}`),
         fetchClient('/teachers?pageNumber=1&pageSize=100&isDeleted=false'),
         fetchClient('/school-years'),
       ]);
@@ -55,7 +57,7 @@ const ClassManagement: React.FC<ClassManagementProps> = ({ onLogout }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [sortBy, sortDirection]);
 
   useEffect(() => {
     fetchData();
@@ -70,6 +72,16 @@ const ClassManagement: React.FC<ClassManagementProps> = ({ onLogout }) => {
       );
     });
   }, [classes, searchQuery]);
+
+  const handleSort = (column: 'name' | 'teacherName' | 'schoolYearStart') => {
+    if (sortBy === column) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column);
+    setSortDirection('asc');
+  };
 
   const handleOpenCreate = () => {
     setEditingClass(null);
@@ -172,17 +184,20 @@ const ClassManagement: React.FC<ClassManagementProps> = ({ onLogout }) => {
             </div>
           )}
 
-          <div className="relative w-full max-w-xs">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-              <Search size={20} />
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full max-w-xs">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                <Search size={20} />
+              </div>
+              <input
+                type="text"
+                placeholder="Tìm lớp học..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Tìm lớp học..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-            />
+
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -194,9 +209,9 @@ const ClassManagement: React.FC<ClassManagementProps> = ({ onLogout }) => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tên Lớp</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">GVCN</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Niên Khóa</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('name')} className="hover:text-gray-900 dark:hover:text-white">Tên Lớp {sortBy === 'name' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('teacherName')} className="hover:text-gray-900 dark:hover:text-white">GVCN {sortBy === 'teacherName' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('schoolYearStart')} className="hover:text-gray-900 dark:hover:text-white">Niên Khóa {sortBy === 'schoolYearStart' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng Thái</th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành Động</th>
                   </tr>

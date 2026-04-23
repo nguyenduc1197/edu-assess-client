@@ -86,6 +86,10 @@ const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
 
 const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'title' | 'subject' | 'deadline' | 'status'>('deadline');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [studentSortBy, setStudentSortBy] = useState<'studentName' | 'schoolClassName' | 'assessmentStatus' | 'score'>('studentName');
+  const [studentSortDirection, setStudentSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -98,8 +102,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [selectedStudentName, setSelectedStudentName] = useState('');
   const fetchAssignments = useCallback(async () => {
     try {
-      const response = await fetchClient(
-  `/exams?pageNumber=1&pageSize=100`,
+          const response = await fetchClient(
+        `/exams?pageNumber=1&pageSize=100`,
   {
     headers: {
       accept: "*/*",
@@ -153,6 +157,26 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   useEffect(() => {
     fetchAssignments();
   }, [fetchAssignments]);
+
+  const handleAssignmentSort = useCallback((column: string) => {
+    if (sortBy === column) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column as 'title' | 'subject' | 'deadline' | 'status');
+    setSortDirection('asc');
+  }, [sortBy]);
+
+  const handleStudentSort = useCallback((column: 'studentName' | 'schoolClassName' | 'assessmentStatus' | 'score') => {
+    if (studentSortBy === column) {
+      setStudentSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setStudentSortBy(column);
+    setStudentSortDirection('asc');
+  }, [studentSortBy]);
 
   const getStudentStatusMeta = (item: ExamStudentStatusItem) => {
     if (item.isSubmitted === false) {
@@ -267,10 +291,44 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   }, [fetchAssessmentDetail, selectedAssessment]);
 
   const filteredAssignments = useMemo(() => {
-    return assignments.filter(a => 
+    const filtered = assignments.filter(a => 
       a.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [assignments, searchQuery]);
+
+    const modifier = sortDirection === 'asc' ? 1 : -1;
+
+    return [...filtered].sort((left, right) => {
+      switch (sortBy) {
+        case 'title':
+          return left.title.localeCompare(right.title) * modifier;
+        case 'subject':
+          return String(left.subject).localeCompare(String(right.subject)) * modifier;
+        case 'status':
+          return String(left.status).localeCompare(String(right.status)) * modifier;
+        case 'deadline':
+        default:
+          return (new Date(left.deadline).getTime() - new Date(right.deadline).getTime()) * modifier;
+      }
+    });
+  }, [assignments, searchQuery, sortBy, sortDirection]);
+
+  const sortedExamStudents = useMemo(() => {
+    const modifier = studentSortDirection === 'asc' ? 1 : -1;
+
+    return [...examStudents].sort((left, right) => {
+      switch (studentSortBy) {
+        case 'schoolClassName':
+          return (left.schoolClassName || '').localeCompare(right.schoolClassName || '') * modifier;
+        case 'assessmentStatus':
+          return String(left.assessmentStatus || '').localeCompare(String(right.assessmentStatus || '')) * modifier;
+        case 'score':
+          return ((left.score ?? -1) - (right.score ?? -1)) * modifier;
+        case 'studentName':
+        default:
+          return left.studentName.localeCompare(right.studentName) * modifier;
+      }
+    });
+  }, [examStudents, studentSortBy, studentSortDirection]);
 
     const handleDeleteExam = async (examId: string) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa bài tập này không?")) {
@@ -392,6 +450,9 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             onStartExam={handleOpenExamStudents}
             actionLabel="Xem học sinh"
             onDelete={handleDeleteExam}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSort={handleAssignmentSort}
           />
 
         </div>
@@ -454,10 +515,10 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800/60">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Học sinh</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Lớp</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Trạng thái</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Điểm</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('studentName')} className="hover:text-gray-700 dark:hover:text-gray-200">Học sinh {studentSortBy === 'studentName' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('schoolClassName')} className="hover:text-gray-700 dark:hover:text-gray-200">Lớp {studentSortBy === 'schoolClassName' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('assessmentStatus')} className="hover:text-gray-700 dark:hover:text-gray-200">Trạng thái {studentSortBy === 'assessmentStatus' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('score')} className="hover:text-gray-700 dark:hover:text-gray-200">Điểm {studentSortBy === 'score' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                           <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Hành động</th>
                         </tr>
                       </thead>
@@ -469,7 +530,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                             </td>
                           </tr>
                         ) : (
-                          examStudents.map((item) => {
+                          sortedExamStudents.map((item) => {
                             const statusMeta = getStudentStatusMeta(item);
 
                             return (
@@ -557,9 +618,9 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                       </p>
                                     </div>
                                     <div className="text-center">
-                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Cao nhất</p>
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Trung bình</p>
                                       <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                        {formatAccumulationPercent(selectedAssessment.behaviorAdjustmentAccumulation.bestScore)}
+                                        {formatAccumulationPercent(selectedAssessment.behaviorAdjustmentAccumulation.averageScore)}
                                       </p>
                                     </div>
                                     <div className="text-center">
@@ -583,9 +644,9 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                       </p>
                                     </div>
                                     <div className="text-center">
-                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Cao nhất</p>
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Trung bình</p>
                                       <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                        {formatAccumulationPercent(selectedAssessment.selfDevelopmentAccumulation.bestScore)}
+                                        {formatAccumulationPercent(selectedAssessment.selfDevelopmentAccumulation.averageScore)}
                                       </p>
                                     </div>
                                     <div className="text-center">
@@ -609,9 +670,9 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                       </p>
                                     </div>
                                     <div className="text-center">
-                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Cao nhất</p>
+                                      <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Trung bình</p>
                                       <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                        {formatAccumulationPercent(selectedAssessment.economicSocialParticipationAccumulation.bestScore)}
+                                        {formatAccumulationPercent(selectedAssessment.economicSocialParticipationAccumulation.averageScore)}
                                       </p>
                                     </div>
                                     <div className="text-center">

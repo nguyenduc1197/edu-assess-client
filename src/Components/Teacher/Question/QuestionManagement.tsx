@@ -19,6 +19,8 @@ const mockUser: User = {
 
 const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'dateCreated' | 'content' | 'competencyType' | 'difficultyLevel'>('dateCreated');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -49,6 +51,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
       const query = new URLSearchParams({
         pageNumber: '1',
         pageSize: '100',
+        sortBy,
+        sortDirection,
       });
 
       if (selectedCompetency) {
@@ -94,7 +98,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCompetency]);
+  }, [selectedCompetency, sortBy, sortDirection]);
 
   useEffect(() => {
     loadCompetencyOptions();
@@ -109,6 +113,16 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
       question.content.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [questions, searchQuery]);
+
+  const handleSort = (column: 'dateCreated' | 'content' | 'competencyType' | 'difficultyLevel') => {
+    if (sortBy === column) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column);
+    setSortDirection(column === 'dateCreated' ? 'desc' : 'asc');
+  };
 
   const mapQuestionPayload = (question: Question) => ({
     content: question.content.trim(),
@@ -320,6 +334,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                 </option>
               ))}
             </select>
+
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -331,10 +346,10 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Câu Hỏi</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Năng Lực</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('content')} className="hover:text-gray-900 dark:hover:text-white">Câu Hỏi {sortBy === 'content' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('competencyType')} className="hover:text-gray-900 dark:hover:text-white">Năng Lực {sortBy === 'competencyType' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Số Đáp Án</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Ngày Tạo</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('dateCreated')} className="hover:text-gray-900 dark:hover:text-white">Ngày Tạo {sortBy === 'dateCreated' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành Động</th>
                   </tr>
                 </thead>
