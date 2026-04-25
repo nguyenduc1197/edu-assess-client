@@ -15,6 +15,8 @@ const mockUser: User = {
 
 const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'title' | 'subject' | 'deadline' | 'status'>('deadline');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedExam, setSelectedExam] = useState<Assignment | null>(null);
@@ -115,11 +117,37 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     fetchAssignments();
   }, [fetchAssignments]);
 
+  const handleSort = useCallback((column: string) => {
+    if (sortBy === column) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column as 'title' | 'subject' | 'deadline' | 'status');
+    setSortDirection('asc');
+  }, [sortBy]);
+
   const filteredAssignments = useMemo(() => {
-    return assignments.filter((assignment) =>
+    const filtered = assignments.filter((assignment) =>
       assignment.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [assignments, searchQuery]);
+
+    return [...filtered].sort((left, right) => {
+      const modifier = sortDirection === 'asc' ? 1 : -1;
+
+      switch (sortBy) {
+        case 'title':
+          return left.title.localeCompare(right.title) * modifier;
+        case 'subject':
+          return String(left.subject).localeCompare(String(right.subject)) * modifier;
+        case 'status':
+          return String(left.status).localeCompare(String(right.status)) * modifier;
+        case 'deadline':
+        default:
+          return (new Date(left.deadline).getTime() - new Date(right.deadline).getTime()) * modifier;
+      }
+    });
+  }, [assignments, searchQuery, sortBy, sortDirection]);
 
   const handleStartExam = (assignment: Assignment) => {
     setSelectedExam(assignment);
@@ -255,6 +283,9 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             assignments={filteredAssignments}
             onStartExam={handleStartExam}
             onRetryAssessment={handleRetryAssessment}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSort={handleSort}
           />
         </div>
       </main>

@@ -25,6 +25,36 @@ export interface Question {
   dateCreated?: string;
 }
 
+export interface AIQuestionGenerateResponse {
+  sourceType?: string;
+  sourceTitle?: string;
+  sourcePreview?: string;
+  extractedCharacterCount?: number;
+  requestedCompetencies?: string[];
+  questions?: Question[];
+  savedQuestionIds?: string[];
+}
+
+export interface AIExamVariant {
+  variantIndex: number;
+  examName: string;
+  targetTopic?: string;
+  generationNotes?: string;
+  questions: Question[];
+  savedQuestionIds?: string[];
+}
+
+export interface AIExamScanGenerateResponse {
+  sourceType?: string;
+  sourceTitle?: string;
+  variantCount?: number;
+  inferredSubject?: string;
+  inferredGradeLevel?: string;
+  inferredOriginalTopic?: string;
+  originalStructureSummary?: string;
+  examVariants?: AIExamVariant[];
+}
+
 export interface CompetencyOption {
   value: string;
   label: string;
@@ -138,6 +168,10 @@ export interface StudentResultSummary {
   isSubmitted: boolean;
   score: number | null;
   assessmentStatus: 'Pending' | 'Completed' | 'Failed';
+  completedExamCount?: number;
+  behaviorAdjustmentAccumulation?: CompetencyAccumulation | null;
+  selfDevelopmentAccumulation?: CompetencyAccumulation | null;
+  economicSocialParticipationAccumulation?: CompetencyAccumulation | null;
   finishedAt?: string;
   assessedAt?: string | null;
 }
@@ -180,6 +214,7 @@ export interface WrongAnswerReview {
 export interface CompetencyAccumulation {
   previousScore: number | null;
   latestScore: number;
+  averageScore: number;
   bestScore: number;
   gainVsPreviousAttempt: number | null;
 }

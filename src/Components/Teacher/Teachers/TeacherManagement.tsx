@@ -18,6 +18,8 @@ const mockUser: User = {
 
 const TeacherManagement: React.FC<TeacherManagementProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'dateCreated' | 'dateModified' | 'email'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,7 +31,14 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ onLogout }) => {
     try {
       setIsLoading(true);
       setError('');
-      const response = await fetchClient('/teachers?pageNumber=1&pageSize=100&isDeleted=false');
+      const query = new URLSearchParams({
+        pageNumber: '1',
+        pageSize: '100',
+        isDeleted: 'false',
+        sortBy,
+        sortDirection,
+      });
+      const response = await fetchClient(`/teachers?${query.toString()}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -53,7 +62,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ onLogout }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [sortBy, sortDirection]);
 
   useEffect(() => {
     fetchTeachers();
@@ -65,6 +74,16 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ onLogout }) => {
       t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.subject.toLowerCase().includes(searchQuery.toLowerCase())
     ), [teachers, searchQuery]);
+
+  const handleSort = (column: 'name' | 'dateCreated' | 'dateModified' | 'email') => {
+    if (sortBy === column) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column);
+    setSortDirection('asc');
+  };
 
   const handleOpenCreate = () => {
     setEditingTeacher(null);
@@ -163,17 +182,20 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ onLogout }) => {
             </div>
           )}
 
-          <div className="relative w-full max-w-xs">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-              <Search size={20} />
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full max-w-xs">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                <Search size={20} />
+              </div>
+              <input
+                type="text"
+                placeholder="Tìm giáo viên..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Tìm giáo viên..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-            />
+
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -185,8 +207,8 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ onLogout }) => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Họ Tên</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Email</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('name')} className="hover:text-gray-900 dark:hover:text-white">Họ Tên {sortBy === 'name' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('email')} className="hover:text-gray-900 dark:hover:text-white">Email {sortBy === 'email' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Môn Học</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Ngày Sinh</th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành Động</th>

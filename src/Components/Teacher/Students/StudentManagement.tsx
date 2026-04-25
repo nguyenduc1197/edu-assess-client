@@ -18,6 +18,8 @@ const mockUser: User = {
 
 const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'className' | 'dateCreated' | 'dateModified'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,7 +31,14 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
     try {
       setIsLoading(true);
       setError('');
-      const response = await fetchClient('/students?pageNumber=1&pageSize=100&isDeleted=false');
+      const query = new URLSearchParams({
+        pageNumber: '1',
+        pageSize: '100',
+        isDeleted: 'false',
+        sortBy,
+        sortDirection,
+      });
+      const response = await fetchClient(`/students?${query.toString()}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -53,7 +62,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [sortBy, sortDirection]);
 
   useEffect(() => {
     fetchStudents();
@@ -64,6 +73,16 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (s.username || '').toLowerCase().includes(searchQuery.toLowerCase())
     ), [students, searchQuery]);
+
+  const handleSort = (column: 'name' | 'className' | 'dateCreated' | 'dateModified') => {
+    if (sortBy === column) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column);
+    setSortDirection('asc');
+  };
 
   const handleOpenCreate = () => {
     setEditingStudent(null);
@@ -162,17 +181,20 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
             </div>
           )}
 
-          <div className="relative w-full max-w-xs">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-              <Search size={20} />
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full max-w-xs">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                <Search size={20} />
+              </div>
+              <input
+                type="text"
+                placeholder="Tìm học sinh..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Tìm học sinh..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-            />
+
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -184,9 +206,9 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Họ Tên</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('name')} className="hover:text-gray-900 dark:hover:text-white">Họ Tên {sortBy === 'name' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tên Đăng Nhập</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Lớp Học</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('className')} className="hover:text-gray-900 dark:hover:text-white">Lớp Học {sortBy === 'className' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Ngày Sinh</th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành Động</th>
                   </tr>

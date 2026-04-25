@@ -366,9 +366,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cao nhất</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trung bình</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {(assessmentResult.behaviorAdjustmentAccumulation.bestScore * 10).toFixed(0)}%
+                            {(assessmentResult.behaviorAdjustmentAccumulation.averageScore * 10).toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
@@ -404,9 +404,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cao nhất</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trung bình</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {(assessmentResult.selfDevelopmentAccumulation.bestScore * 10).toFixed(0)}%
+                            {(assessmentResult.selfDevelopmentAccumulation.averageScore * 10).toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
@@ -442,9 +442,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cao nhất</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trung bình</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {(assessmentResult.economicSocialParticipationAccumulation.bestScore * 10).toFixed(0)}%
+                            {(assessmentResult.economicSocialParticipationAccumulation.averageScore * 10).toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">

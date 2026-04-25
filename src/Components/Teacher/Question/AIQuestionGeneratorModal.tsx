@@ -1,29 +1,29 @@
 import React, { useState } from 'react';
 import { Bot, Loader2, Save, UploadCloud, X } from 'lucide-react';
-import { Choice, CompetencyOption, Question } from '../../../types';
+import {
+  AIExamScanGenerateResponse,
+  AIExamVariant,
+  AIQuestionGenerateResponse,
+  Choice,
+  CompetencyOption,
+  Question,
+} from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
 
 type SourceMode = 'text' | 'pdf' | 'url' | 'youtube';
+type GeneratorTab = 'content' | 'scan';
 
 type GeneratedQuestion = Question & {
   sourceEvidence?: string;
   choices: Choice[];
 };
 
-interface GenerateResponse {
-  sourceType?: string;
-  sourceTitle?: string;
-  sourcePreview?: string;
-  extractedCharacterCount?: number;
-  requestedCompetencies?: string[];
-  questions?: GeneratedQuestion[];
-  savedQuestionIds?: string[];
-}
-
 interface AIQuestionGeneratorModalProps {
   competencyOptions: CompetencyOption[];
   onClose: () => void;
   onSaved?: (result: { message: string; savedQuestionIds?: string[] }) => void;
+  enableExamVariantMode?: boolean;
+  initialTab?: GeneratorTab;
 }
 
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -48,20 +48,28 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   competencyOptions,
   onClose,
   onSaved,
+  enableExamVariantMode = false,
+  initialTab = 'content',
 }) => {
+  const [activeTab, setActiveTab] = useState<GeneratorTab>(enableExamVariantMode ? initialTab : 'content');
   const [sourceMode, setSourceMode] = useState<SourceMode>('text');
   const [sourceText, setSourceText] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [scanFile, setScanFile] = useState<File | null>(null);
   const [selectedCompetencies, setSelectedCompetencies] = useState<string[]>([]);
   const [questionCount, setQuestionCount] = useState(5);
+  const [variantCount, setVariantCount] = useState(3);
   const [saveToQuestionBank, setSaveToQuestionBank] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSavingDrafts, setIsSavingDrafts] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
-  const [responseMeta, setResponseMeta] = useState<GenerateResponse | null>(null);
+  const [responseMeta, setResponseMeta] = useState<AIQuestionGenerateResponse | null>(null);
+  const [scanResponseMeta, setScanResponseMeta] = useState<AIExamScanGenerateResponse | null>(null);
+  const [scanVariants, setScanVariants] = useState<AIExamVariant[]>([]);
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState<number>(0);
 
   const toggleCompetency = (value: string) => {
     setSelectedCompetencies((prev) =>
@@ -70,6 +78,18 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   };
 
   const validateSource = () => {
+    if (activeTab === 'scan') {
+      if (!scanFile) {
+        return 'Vui lòng tải lên ảnh scan đề bài.';
+      }
+
+      if (variantCount < 1 || variantCount > 5) {
+        return 'Số lượng biến thể phải nằm trong khoảng từ 1 đến 5.';
+      }
+
+      return '';
+    }
+
     if (selectedCompetencies.length === 0) {
       return 'Vui lòng chọn ít nhất một năng lực cần đánh giá.';
     }
@@ -93,7 +113,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
     return '';
   };
 
-  const normalizeQuestions = (items: GeneratedQuestion[] = []) => {
+  const normalizeQuestions = (items: Question[] = []): GeneratedQuestion[] => {
     const seed = Date.now();
 
     return items.map((question, questionIndex) => {
@@ -124,6 +144,14 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
     });
   };
 
+  const resetGeneratedState = () => {
+    setGeneratedQuestions([]);
+    setResponseMeta(null);
+    setScanResponseMeta(null);
+    setScanVariants([]);
+    setSelectedVariantIndex(0);
+  };
+
   const handleGenerate = async () => {
     const validationMessage = validateSource();
 
@@ -136,8 +164,48 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
       setIsGenerating(true);
       setError('');
       setSuccessMessage('');
+      resetGeneratedState();
 
       const formData = new FormData();
+
+      if (activeTab === 'scan') {
+        formData.append('file', scanFile as Blob);
+        formData.append('variantCount', String(variantCount));
+        formData.append('saveToQuestionBank', String(saveToQuestionBank));
+
+        const response = await fetchClient('/exams/ai-generate-from-scan', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.message || body?.title || 'Tạo đề từ ảnh scan thất bại.');
+        }
+
+        const data: AIExamScanGenerateResponse = await response.json();
+        const normalizedVariants = (data.examVariants || []).map((variant) => ({
+          ...variant,
+          questions: normalizeQuestions((variant.questions || []) as GeneratedQuestion[]),
+        }));
+
+        setScanResponseMeta(data);
+        setScanVariants(normalizedVariants);
+        setSelectedVariantIndex(0);
+
+        if (saveToQuestionBank) {
+          const selectedVariant = normalizedVariants[0];
+          const savedIds = selectedVariant?.savedQuestionIds || [];
+
+          if (savedIds.length > 0) {
+            const message = `Đã tạo ${normalizedVariants.length} biến thể và nạp sẵn câu hỏi của biến thể ${selectedVariant.variantIndex} vào flow tạo bài thi.`;
+            setSuccessMessage(message);
+            onSaved?.({ message, savedQuestionIds: savedIds });
+          }
+        }
+
+        return;
+      }
 
       if (sourceMode === 'text') {
         formData.append('sourceText', sourceText.trim());
@@ -168,7 +236,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
         throw new Error(body?.message || body?.title || 'Tạo câu hỏi bằng AI thất bại.');
       }
 
-      const data: GenerateResponse = await response.json();
+      const data: AIQuestionGenerateResponse = await response.json();
       const normalizedQuestions = normalizeQuestions(data.questions || []);
 
       setResponseMeta(data);
@@ -191,6 +259,28 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
       setIsGenerating(false);
     }
   };
+
+  const handleUseVariantForExam = () => {
+    const selectedVariant = scanVariants[selectedVariantIndex];
+    const savedIds = selectedVariant?.savedQuestionIds || [];
+
+    if (!selectedVariant) {
+      setError('Chưa có biến thể nào để sử dụng.');
+      return;
+    }
+
+    if (savedIds.length === 0) {
+      setError('Biến thể này chưa có savedQuestionIds. Hãy bật lưu vào ngân hàng câu hỏi rồi tạo lại để dùng trực tiếp cho flow tạo bài thi.');
+      return;
+    }
+
+    const message = `Đã chọn biến thể ${selectedVariant.variantIndex}: ${selectedVariant.examName}.`;
+    setSuccessMessage(message);
+    onSaved?.({ message, savedQuestionIds: savedIds });
+    onClose();
+  };
+
+  const selectedVariant = scanVariants[selectedVariantIndex] || null;
 
   const updateQuestionContent = (questionIndex: number, value: string) => {
     setGeneratedQuestions((prev) =>
@@ -367,8 +457,12 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
               <Bot size={18} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tạo câu hỏi bằng AI</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Hỗ trợ từ văn bản, PDF, liên kết web hoặc YouTube</p>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{enableExamVariantMode ? 'Tạo exam bằng AI' : 'Tạo câu hỏi bằng AI'}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {enableExamVariantMode
+                  ? 'Tạo câu hỏi từ nội dung hoặc tạo biến thể đề mới từ ảnh scan'
+                  : 'Hỗ trợ từ văn bản, PDF, liên kết web hoặc YouTube'}
+              </p>
             </div>
           </div>
           <button
@@ -393,8 +487,46 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
             </div>
           )}
 
+          {enableExamVariantMode && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('content');
+                  setError('');
+                  setSuccessMessage('');
+                  resetGeneratedState();
+                }}
+                className={`rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
+                  activeTab === 'content'
+                    ? 'bg-white text-violet-700 shadow-sm dark:bg-gray-900 dark:text-violet-300'
+                    : 'text-gray-600 hover:bg-white/70 dark:text-gray-300 dark:hover:bg-gray-900/50'
+                }`}
+              >
+                Tạo câu hỏi từ nội dung
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('scan');
+                  setError('');
+                  setSuccessMessage('');
+                  resetGeneratedState();
+                }}
+                className={`rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
+                  activeTab === 'scan'
+                    ? 'bg-white text-violet-700 shadow-sm dark:bg-gray-900 dark:text-violet-300'
+                    : 'text-gray-600 hover:bg-white/70 dark:text-gray-300 dark:hover:bg-gray-900/50'
+                }`}
+              >
+                Tạo đề mới từ ảnh scan
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="space-y-4">
+              {activeTab === 'content' ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Nguồn nội dung
@@ -421,8 +553,59 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                   ))}
                 </div>
               </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-dashed border-gray-300 bg-white p-4 dark:border-gray-600 dark:bg-gray-800/40">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Ảnh scan đề gốc
+                    </label>
+                    <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
+                      <UploadCloud size={20} />
+                      <span>{scanFile ? scanFile.name : 'Tải lên PNG, JPG, JPEG hoặc WEBP'}</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        className="hidden"
+                        onChange={(e) => setScanFile(e.target.files?.[0] || null)}
+                      />
+                    </label>
+                  </div>
 
-              {sourceMode === 'text' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Số lượng biến thể
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={variantCount}
+                        onChange={(e) => setVariantCount(Number(e.target.value) || 1)}
+                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3 w-full bg-gray-50 dark:bg-gray-800/50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={saveToQuestionBank}
+                          onChange={(e) => setSaveToQuestionBank(e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                        />
+                        <span>Lưu câu hỏi của biến thể vào ngân hàng</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                    Ảnh scan chỉ dùng để sinh biến thể đề mới. Flow tạo bài thi hiện tại vẫn giữ nguyên, và nếu bật lưu vào ngân hàng câu hỏi thì bạn có thể nạp ngay question IDs của biến thể đã chọn vào form tạo bài thi này.
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'content' && sourceMode === 'text' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Nội dung bài học
@@ -437,7 +620,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 </div>
               )}
 
-              {(sourceMode === 'url' || sourceMode === 'youtube') && (
+              {activeTab === 'content' && (sourceMode === 'url' || sourceMode === 'youtube') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {sourceMode === 'youtube' ? 'Liên kết YouTube' : 'Liên kết trang web'}
@@ -457,7 +640,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 </div>
               )}
 
-              {sourceMode === 'pdf' && (
+              {activeTab === 'content' && sourceMode === 'pdf' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Tệp PDF
@@ -477,6 +660,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
             </div>
 
             <div className="space-y-4">
+              {activeTab === 'content' ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Năng lực cần đánh giá
@@ -495,7 +679,20 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                   ))}
                 </div>
               </div>
+              ) : (
+                <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900/60">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">CTA sau khi AI sinh đề</p>
+                    <ul className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                      <li>Preview questions của từng biến thể ngay trong modal.</li>
+                      <li>Nếu bật lưu vào ngân hàng, dùng selected savedQuestionIds để quay lại flow tạo bài thi hiện có.</li>
+                      <li>Không bật lưu thì modal vẫn cho review đầy đủ, nhưng chưa thể nạp question IDs vào form tạo bài thi.</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
 
+              {activeTab === 'content' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -523,6 +720,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                   </label>
                 </div>
               </div>
+              )}
 
               <button
                 type="button"
@@ -533,19 +731,19 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 {isGenerating ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    Đang tạo câu hỏi...
+                    {activeTab === 'scan' ? 'Đang tạo biến thể đề...' : 'Đang tạo câu hỏi...'}
                   </>
                 ) : (
                   <>
                     <Bot size={16} />
-                    Tạo câu hỏi bằng AI
+                    {activeTab === 'scan' ? 'Tạo đề mới từ ảnh scan' : 'Tạo câu hỏi bằng AI'}
                   </>
                 )}
               </button>
             </div>
           </div>
 
-          {responseMeta && (
+          {activeTab === 'content' && responseMeta && (
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Thông tin nguồn đã trích xuất</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
@@ -570,7 +768,164 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
             </div>
           )}
 
-          {generatedQuestions.length > 0 && (
+          {activeTab === 'scan' && scanResponseMeta && (
+            <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Nguồn</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{scanResponseMeta.sourceTitle || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Môn học suy luận</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{scanResponseMeta.inferredSubject || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Khối lớp</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{scanResponseMeta.inferredGradeLevel || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Số biến thể</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{scanResponseMeta.variantCount ?? scanVariants.length}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <p className="text-gray-500 dark:text-gray-400">Chủ đề gốc được suy luận</p>
+                  <p className="mt-1 font-medium text-gray-900 dark:text-white">{scanResponseMeta.inferredOriginalTopic || '—'}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                  <p className="text-gray-500 dark:text-gray-400">Tóm tắt cấu trúc đề gốc</p>
+                  <p className="mt-1 text-gray-700 dark:text-gray-200">{scanResponseMeta.originalStructureSummary || '—'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'scan' && scanVariants.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {scanVariants.map((variant, index) => (
+                  <button
+                    key={variant.variantIndex}
+                    type="button"
+                    onClick={() => setSelectedVariantIndex(index)}
+                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                      selectedVariantIndex === index
+                        ? 'border-violet-500 bg-violet-50 text-violet-700 dark:border-violet-400 dark:bg-violet-900/20 dark:text-violet-300'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    Biến thể {variant.variantIndex}
+                  </button>
+                ))}
+              </div>
+
+              {selectedVariant && (
+                <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900 space-y-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedVariant.examName}</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{selectedVariant.targetTopic || 'Chưa có chủ đề đích'}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={handleUseVariantForExam}
+                        className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 transition-colors"
+                      >
+                        Dùng biến thể này để tạo bài thi
+                      </button>
+                    </div>
+                  </div>
+
+                  {selectedVariant.generationNotes && (
+                    <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                      {selectedVariant.generationNotes}
+                    </div>
+                  )}
+
+                  {!saveToQuestionBank && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                      Bạn đang ở chế độ preview. Nếu muốn nạp trực tiếp vào flow tạo bài thi, hãy bật "Lưu câu hỏi của biến thể vào ngân hàng" rồi tạo lại.
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {selectedVariant.questions
+                      .map((question, originalIndex) => ({ question, originalIndex }))
+                      .filter(({ question, originalIndex }) => {
+                        if (question.questionFormat !== 'TrueFalse' || !question.passageGroupKey) return true;
+                        return !selectedVariant.questions.some(
+                          (other, otherIndex) =>
+                            otherIndex < originalIndex &&
+                            other.questionFormat === 'TrueFalse' &&
+                            other.passageGroupKey === question.passageGroupKey
+                        );
+                      })
+                      .map(({ question, originalIndex }) => {
+                        if (question.questionFormat === 'TrueFalse' && question.passageGroupKey) {
+                          const groupItems = selectedVariant.questions
+                            .filter((item) => item.passageGroupKey === question.passageGroupKey)
+                            .sort((a, b) => (a.statementOrder || 0) - (b.statementOrder || 0));
+
+                          return (
+                            <div key={question.passageGroupKey} className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                              <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">Nhóm Đúng / Sai</p>
+                              {question.passageText && (
+                                <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                  {question.passageText}
+                                </div>
+                              )}
+                              <div className="mt-3 space-y-3">
+                                {groupItems.map((item, index) => (
+                                  <div key={`${item.id || question.passageGroupKey}-${index}`} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Mệnh đề {item.statementOrder ?? index + 1}</p>
+                                    <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">{item.content}</p>
+                                    <div className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                                      {item.choices?.slice(0, 2).map((choice, choiceIndex) => (
+                                        <p key={`${item.id}-${choiceIndex}`}>
+                                          <span className="font-semibold text-violet-600 dark:text-violet-300">{choice.optionLabel}.</span> {choice.content}
+                                          {choice.isCorrect ? ' (Đúng án)' : ''}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={question.id || `${selectedVariant.variantIndex}-${originalIndex}`} className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              {question.competencyType && <span className="rounded-full bg-indigo-50 px-3 py-1 font-medium text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">{question.competencyType}</span>}
+                              {question.questionFormat && <span className="rounded-full bg-violet-50 px-3 py-1 font-medium text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">{question.questionFormat}</span>}
+                              {question.difficultyLevel && <span className="rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">{question.difficultyLevel}</span>}
+                            </div>
+                            <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{question.content}</p>
+                            {question.sourceEvidence && (
+                              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Nguồn gợi ý: {question.sourceEvidence}</p>
+                            )}
+                            <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                              {question.choices?.map((choice, choiceIndex) => (
+                                <p key={`${question.id}-${choiceIndex}`}>
+                                  <span className="font-semibold text-violet-600 dark:text-violet-300">{choice.optionLabel}.</span> {choice.content}
+                                  {choice.isCorrect ? ' (Đúng án)' : ''}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'content' && generatedQuestions.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>

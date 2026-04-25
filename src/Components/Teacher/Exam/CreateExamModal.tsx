@@ -165,6 +165,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
         {isAIModalOpen && (
           <AIQuestionGeneratorModal
             competencyOptions={competencyOptions}
+            enableExamVariantMode={true}
             onClose={() => setIsAIModalOpen(false)}
             onSaved={(result) => {
               setSuccessMessage(result.message);

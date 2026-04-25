@@ -9,9 +9,43 @@ interface AssignmentTableProps {
   onDelete?: (examId: string) => void;
   onRetryAssessment?: (assignment: Assignment) => void;
   actionLabel?: string;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  onSort?: (column: string) => void;
 }
 
-const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartExam, onDelete, onRetryAssessment, actionLabel }) => {
+const AssignmentTable: React.FC<AssignmentTableProps> = ({
+  assignments,
+  onStartExam,
+  onDelete,
+  onRetryAssessment,
+  actionLabel,
+  sortBy,
+  sortDirection,
+  onSort,
+}) => {
+  const getSortIndicator = (column: string) => {
+    if (sortBy !== column) return '<->';
+    return sortDirection === 'asc' ? '^' : 'v';
+  };
+
+  const renderSortableHeader = (label: string, column: string, className: string) => (
+    <th scope="col" className={className}>
+      {onSort ? (
+        <button
+          type="button"
+          onClick={() => onSort(column)}
+          className="inline-flex items-center gap-1 text-left uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200"
+        >
+          <span>{label}</span>
+          <span className="text-[10px]">{getSortIndicator(column)}</span>
+        </button>
+      ) : (
+        label
+      )}
+    </th>
+  );
+
   const getActionText = (assignment: Assignment) => {
     if (assignment.isSubmitted) {
       if (assignment.assessmentStatus === 'Pending') return 'Đang chấm';
@@ -87,18 +121,10 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({ assignments, onStartE
           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50/90 dark:bg-slate-800/70">
               <tr>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Tên bài tập
-                </th>
-                <th scope="col" className="hidden px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 @lg:table-cell">
-                  Môn học
-                </th>
-                <th scope="col" className="hidden px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 @md:table-cell">
-                  Hạn chót
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Trạng thái
-                </th>
+                {renderSortableHeader('Tên bài tập', 'title', 'px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400')}
+                {renderSortableHeader('Môn học', 'subject', 'hidden px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 @lg:table-cell')}
+                {renderSortableHeader('Hạn chót', 'deadline', 'hidden px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 @md:table-cell')}
+                {renderSortableHeader('Trạng thái', 'status', 'px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400')}
                 <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   Hành động
                 </th>

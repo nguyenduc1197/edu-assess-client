@@ -3,6 +3,7 @@ import { Eye, Menu } from 'lucide-react';
 import {
   AssessmentResult,
   Class as SchoolClass,
+  CompetencyAccumulation,
   Student,
   StudentResultSummary,
   User,
@@ -27,6 +28,44 @@ const getFeedbackItems = (feedback?: string | null) =>
     .split(/\r?\n|•/)
     .map((item) => item.replace(/^[-•]\s*/, '').trim())
     .filter(Boolean);
+
+const formatScoreChipValue = (value?: number | null) => {
+  if (value === null || value === undefined) return '--';
+  return value.toFixed(1);
+};
+
+const formatGainChipValue = (value?: number | null) => {
+  if (value === null || value === undefined) return '--';
+  if (value > 0) return `+${value.toFixed(1)}`;
+  return value.toFixed(1);
+};
+
+const getGainChipTone = (value?: number | null) => {
+  if (value === null || value === undefined) return 'text-gray-500 dark:text-gray-400';
+  if (value > 0) return 'text-emerald-700 dark:text-emerald-300';
+  if (value < 0) return 'text-red-700 dark:text-red-300';
+  return 'text-gray-600 dark:text-gray-300';
+};
+
+const ProgressChip: React.FC<{
+  label: string;
+  accumulation?: CompetencyAccumulation | null;
+}> = ({ label, accumulation }) => {
+  if (!accumulation) return null;
+
+  return (
+    <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800/70">
+      <div className="font-semibold text-slate-700 dark:text-slate-200">{label}</div>
+      <div className="mt-1 flex flex-wrap items-center gap-2 text-slate-600 dark:text-slate-300">
+        <span>Now {formatScoreChipValue(accumulation.latestScore)}</span>
+        <span>Avg {formatScoreChipValue(accumulation.averageScore)}</span>
+        <span className={getGainChipTone(accumulation.gainVsPreviousAttempt)}>
+          {formatGainChipValue(accumulation.gainVsPreviousAttempt)}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
   const groups: Array<
@@ -75,6 +114,8 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [sortBy, setSortBy] = useState<'finishedAt' | 'assessedAt' | 'score' | 'studentName' | 'examName'>('finishedAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedResult, setSelectedResult] = useState<AssessmentResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -117,6 +158,8 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
       if (selectedClassId) params.append('schoolClassId', selectedClassId);
       if (selectedStudentId) params.append('studentId', selectedStudentId);
       if (selectedStatus) params.append('assessmentStatus', selectedStatus);
+      params.append('sortBy', sortBy);
+      params.append('sortDirection', sortDirection);
 
       const query = params.toString();
       const response = await fetchClient(`/student-exams/results${query ? `?${query}` : ''}`);
@@ -134,7 +177,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedExamId, selectedClassId, selectedStudentId, selectedStatus]);
+  }, [selectedExamId, selectedClassId, selectedStudentId, selectedStatus, sortBy, sortDirection]);
 
   useEffect(() => {
     fetchMetadata();
@@ -143,6 +186,16 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
   useEffect(() => {
     fetchResults();
   }, [fetchResults]);
+
+  const handleSort = (column: 'finishedAt' | 'assessedAt' | 'score' | 'studentName' | 'examName') => {
+    if (sortBy === column) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column);
+    setSortDirection(column === 'score' ? 'desc' : 'asc');
+  };
 
   const fetchAssessmentDetail = useCallback(async (studentExamId: string, silent = false) => {
     try {
@@ -220,7 +273,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
             <select value={selectedExamId} onChange={(e) => setSelectedExamId(e.target.value)} className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
               <option value="">Tất cả bài thi</option>
               {exams.map((exam) => (
@@ -248,6 +301,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
               <option value="Completed">Completed</option>
               <option value="Failed">Failed</option>
             </select>
+
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -259,12 +313,13 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Bài Thi</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Học Sinh</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('examName')} className="hover:text-gray-900 dark:hover:text-white">Bài Thi {sortBy === 'examName' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('studentName')} className="hover:text-gray-900 dark:hover:text-white">Học Sinh {sortBy === 'studentName' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Lớp</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Điểm</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('score')} className="hover:text-gray-900 dark:hover:text-white">Điểm {sortBy === 'score' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tiến độ</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng Thái</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Nộp Lúc</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('finishedAt')} className="hover:text-gray-900 dark:hover:text-white">Nộp Lúc {sortBy === 'finishedAt' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Chi Tiết</th>
                   </tr>
                 </thead>
@@ -275,6 +330,18 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.studentName}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.schoolClassName}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.score ?? '—'}</td>
+                      <td className="px-6 py-4 align-top">
+                        <div className="min-w-[280px] space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                          <div className="font-medium text-gray-700 dark:text-gray-200">
+                            {result.completedExamCount ? `${result.completedExamCount} bài đã tính` : 'Chưa có lịch sử'}
+                          </div>
+                          <div className="space-y-2">
+                            <ProgressChip label="Behavior" accumulation={result.behaviorAdjustmentAccumulation} />
+                            <ProgressChip label="Self-dev" accumulation={result.selfDevelopmentAccumulation} />
+                            <ProgressChip label="Economic-social" accumulation={result.economicSocialParticipationAccumulation} />
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.assessmentStatus}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{formatDateTime(result.finishedAt)}</td>
                       <td className="px-6 py-4 text-center">
