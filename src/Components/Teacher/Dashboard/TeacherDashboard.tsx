@@ -1,17 +1,18 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, PlusCircle, ChevronDown, Menu } from 'lucide-react';
+import { Search, PlusCircle, Menu, Copy, Edit2, BarChart2 } from 'lucide-react';
 import {
   AssessmentResult,
   Assignment,
   AssignmentStatus,
+  ExamAnalytics,
   ExamStudentStatusItem,
   LoginProps,
+  ScoreDistributionItem,
   SubjectLabel,
   User,
   WrongAnswerReview,
 } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
-import AssignmentTable from '../../Common/AssignmentTable/AssignmentTable';
 import CreateExamModal from '../Exam/CreateExamModal';
 import { fetchClient } from '../../../api/fetchClient';
 
@@ -86,13 +87,14 @@ const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
 
 const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'title' | 'subject' | 'deadline' | 'status'>('deadline');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortBy] = useState<'title' | 'subject' | 'deadline' | 'status'>('deadline');
+  const [sortDirection] = useState<'asc' | 'desc'>('desc');
   const [studentSortBy, setStudentSortBy] = useState<'studentName' | 'schoolClassName' | 'assessmentStatus' | 'score'>('studentName');
   const [studentSortDirection, setStudentSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; questionIds: string[]; schoolClassId: string } | null>(null);
   const [selectedExam, setSelectedExam] = useState<Assignment | null>(null);
   const [examStudents, setExamStudents] = useState<ExamStudentStatusItem[]>([]);
   const [isStudentListLoading, setIsStudentListLoading] = useState(false);
@@ -100,31 +102,46 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentResult | null>(null);
   const [isAssessmentLoading, setIsAssessmentLoading] = useState(false);
   const [selectedStudentName, setSelectedStudentName] = useState('');
-  const fetchAssignments = useCallback(async () => {
+  const [examAnalytics, setExamAnalytics] = useState<ExamAnalytics | null>(null);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState('');
+  const [examDetailTab, setExamDetailTab] = useState<'students' | 'analytics'>('students');
+  const [filterClassId, setFilterClassId] = useState('');
+  const [filterClasses, setFilterClasses] = useState<{ id: string; name: string }[]>([]);
+  const [totalExams, setTotalExams] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const PAGE_SIZE = 20;
+
+  const fetchAssignments = useCallback(async (page = 1, classId = '', keyword = '') => {
     try {
-          const response = await fetchClient(
-        `/exams?pageNumber=1&pageSize=100`,
-  {
-    headers: {
-      accept: "*/*",
-    },
-  }
-);
+      const query = new URLSearchParams({
+        pageNumber: String(page),
+        pageSize: String(PAGE_SIZE),
+        sortBy: 'start',
+        sortDirection: 'desc',
+      });
+      if (classId) query.append('schoolClassId', classId);
+      if (keyword) query.append('keyword', keyword);
+
+      const response = await fetchClient(`/exams?${query.toString()}`);
       
       if (response.ok) {
         const data = await response.json();
-        // Handle array response directly as per your sample
-        const items = Array.isArray(data) ? data : (data.data || []);
+        const items = Array.isArray(data) ? data : (data.items || data.data || []);
+        const total = data.totalCount ?? items.length;
+        const pages = data.totalPages ?? (Math.ceil(total / PAGE_SIZE) || 1);
+        setTotalExams(total);
+        setTotalPages(pages);
         
         const mappedAssignments: Assignment[] = items.map((item: any) => {
           const endDate = new Date(item.end);
           const startDate = new Date(item.start);
           const now = new Date();
           
-          // Logic to determine status since API doesn't return it
           let status = AssignmentStatus.NEW;
           if (now > endDate) {
-            status = AssignmentStatus.GRADED; // Or LATE/CLOSED depending on logic
+            status = AssignmentStatus.GRADED;
           } else if (now >= startDate && now <= endDate) {
             status = AssignmentStatus.IN_PROGRESS;
           }
@@ -132,7 +149,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           return {
             id: item.id,
             title: item.name,
-            subject: SubjectLabel.GD_KTPL, // Default subject since API doesn't return it
+            subject: SubjectLabel.GD_KTPL,
             deadline: item.end,
             deadlineDisplay: endDate.toLocaleString('vi-VN', {
               hour: '2-digit',
@@ -154,19 +171,26 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchAssignments();
-  }, [fetchAssignments]);
+    fetchAssignments(currentPage, filterClassId, searchQuery);
+  }, [fetchAssignments, currentPage, filterClassId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleAssignmentSort = useCallback((column: string) => {
-    if (sortBy === column) {
-      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-
-    setSortBy(column as 'title' | 'subject' | 'deadline' | 'status');
-    setSortDirection('asc');
-  }, [sortBy]);
+  // Load classes for filter dropdown
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        const response = await fetchClient('/classes?pageNumber=1&pageSize=100');
+        if (!response.ok) return;
+        const data = await response.json();
+        const items = Array.isArray(data) ? data : (data.items || data.data || []);
+        setFilterClasses(items.map((c: any) => ({ id: c.id, name: c.name })));
+      } catch (err) {
+        console.error('Failed to load classes for filter', err);
+      }
+    };
+    loadClasses();
+  }, []);
 
   const handleStudentSort = useCallback((column: 'studentName' | 'schoolClassName' | 'assessmentStatus' | 'score') => {
     if (studentSortBy === column) {
@@ -330,27 +354,95 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     });
   }, [examStudents, studentSortBy, studentSortDirection]);
 
-    const handleDeleteExam = async (examId: string) => {
+  const handleDeleteExam = async (examId: string) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa bài tập này không?")) {
       return;
     }
 
     try {
-    const response = await fetchClient(`/exams/${examId}`,
-    {
-      method: "DELETE"
-    }
-);
-
+      const response = await fetchClient(`/exams/${examId}`, { method: "DELETE" });
       if (response.ok) {
-        // Refresh the list
-        fetchAssignments();
+        fetchAssignments(currentPage, filterClassId, searchQuery);
       } else {
         alert("Xóa thất bại. Vui lòng thử lại.");
       }
     } catch (error) {
       console.error("Error deleting exam:", error);
       alert("Đã xảy ra lỗi khi xóa bài tập.");
+    }
+  };
+
+  const handleEditExam = async (assignment: Assignment) => {
+    try {
+      const [examRes, questionsRes] = await Promise.all([
+        fetchClient(`/exams/${assignment.id}`),
+        fetchClient(`/questions?examId=${assignment.id}&pageNumber=1&pageSize=200`),
+      ]);
+      const examData = examRes.ok ? await examRes.json() : {};
+      const qData = questionsRes.ok ? await questionsRes.json() : [];
+      const questionItems: any[] = Array.isArray(qData) ? qData : (qData.items || []);
+      setEditingExam({
+        id: assignment.id,
+        name: examData.name || assignment.title,
+        start: examData.start || assignment.deadline,
+        end: examData.end || assignment.deadline,
+        questionIds: questionItems.map((q: any) => q.id),
+        schoolClassId: examData.schoolClassId || '',
+      });
+    } catch (err) {
+      console.error('Failed to load exam for editing', err);
+      setEditingExam({
+        id: assignment.id,
+        name: assignment.title,
+        start: '',
+        end: assignment.deadline,
+        questionIds: [],
+        schoolClassId: '',
+      });
+    }
+  };
+
+  const handleDuplicateExam = async (examId: string) => {
+    try {
+      const response = await fetchClient(`/exams/${examId}/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      const result = await response.json();
+      fetchAssignments(currentPage, filterClassId, searchQuery);
+      if (result?.examId) {
+        const newAssignment: Assignment = {
+          id: result.examId,
+          title: '',
+          subject: SubjectLabel.GD_KTPL,
+          deadline: '',
+          deadlineDisplay: '',
+          status: AssignmentStatus.NEW,
+        };
+        handleEditExam(newAssignment);
+      }
+    } catch (err) {
+      console.error('Failed to duplicate exam', err);
+      alert('Nhân đôi bài thi thất bại. Vui lòng thử lại.');
+    }
+  };
+
+  const fetchExamAnalytics = async (examId: string) => {
+    setIsAnalyticsLoading(true);
+    setAnalyticsError('');
+    setExamAnalytics(null);
+    try {
+      const response = await fetchClient(`/exams/${examId}/analytics`);
+      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      const data: ExamAnalytics = await response.json();
+      setExamAnalytics(data);
+    } catch (err) {
+      console.error('Failed to fetch exam analytics', err);
+      setAnalyticsError('Không thể tải dữ liệu phân tích.');
+    } finally {
+      setIsAnalyticsLoading(false);
     }
   };
 
@@ -377,13 +469,14 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         onClose={() => setIsSidebarOpen(false)} 
         onLogout={onLogout}
       />
-{/* Create Exam Modal */}
-      {isCreateModalOpen && (
+{/* Create/Edit Exam Modal */}
+      {(isCreateModalOpen || editingExam) && (
         <CreateExamModal 
-          onClose={() => setIsCreateModalOpen(false)} 
+          onClose={() => { setIsCreateModalOpen(false); setEditingExam(null); }} 
           onSuccess={() => {
-            fetchAssignments();
+            fetchAssignments(currentPage, filterClassId, searchQuery);
           }}
+          examToEdit={editingExam}
         />
       )}
 
@@ -414,46 +507,179 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           </div>
 
           {/* Toolbar & Filters */}
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            
-            {/* Search Input */}
-            <div className="relative w-full max-w-xs">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                <Search size={20} />
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              {/* Search Input */}
+              <div className="relative w-full sm:w-64">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                  <Search size={20} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Tìm bài tập..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') fetchAssignments(1, filterClassId, searchQuery);
+                  }}
+                  className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-background-dark dark:text-white dark:placeholder-gray-500 transition-colors"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Tìm bài tập..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-background-dark dark:text-white dark:placeholder-gray-500 transition-colors"
-              />
+
+              {/* Class filter */}
+              <select
+                value={filterClassId}
+                onChange={(e) => { setFilterClassId(e.target.value); setCurrentPage(1); }}
+                className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              >
+                <option value="">Tất cả lớp</option>
+                {filterClasses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => fetchAssignments(1, filterClassId, searchQuery)}
+                className="h-10 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
+              >
+                Tìm kiếm
+              </button>
             </div>
 
-            {/* Filter Chips */}
-            <div className="flex flex-wrap gap-2">
-              <button className="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors">
-                <span>Tất cả trạng thái</span>
-                <ChevronDown size={16} className="text-gray-500" />
-              </button>
-              
-              <button className="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors">
-                <span>Tất cả môn học</span>
-                <ChevronDown size={16} className="text-gray-500" />
-              </button>
-            </div>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {totalExams} bài thi
+            </span>
           </div>
 
           {/* Table Data */}
-          <AssignmentTable
-            assignments={filteredAssignments}
-            onStartExam={handleOpenExamStudents}
-            actionLabel="Xem học sinh"
-            onDelete={handleDeleteExam}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            onSort={handleAssignmentSort}
-          />
+          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tên bài thi</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Thời hạn</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng thái</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAssignments.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                      Chưa có bài thi nào.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAssignments.map((a) => (
+                    <tr key={a.id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white max-w-[220px] truncate">
+                        {a.title}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {a.deadlineDisplay}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                          a.status === AssignmentStatus.IN_PROGRESS
+                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
+                            : a.status === AssignmentStatus.GRADED
+                            ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+                        }`}>
+                          {a.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            title="Xem học sinh"
+                            onClick={() => handleOpenExamStudents(a)}
+                            className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors text-xs font-medium"
+                          >
+                            Học sinh
+                          </button>
+                          <button
+                            type="button"
+                            title="Phân tích"
+                            onClick={() => { handleOpenExamStudents(a); setExamDetailTab('analytics'); fetchExamAnalytics(a.id); }}
+                            className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20 transition-colors"
+                          >
+                            <BarChart2 size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Chỉnh sửa"
+                            onClick={() => handleEditExam(a)}
+                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Nhân đôi"
+                            onClick={() => handleDuplicateExam(a.id)}
+                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20 transition-colors"
+                          >
+                            <Copy size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Xóa"
+                            onClick={() => handleDeleteExam(a.id)}
+                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+              >
+                ‹
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => Math.abs(p - currentPage) <= 2)
+                .map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setCurrentPage(p)}
+                    className={`h-9 w-9 rounded-lg border text-sm font-medium transition-colors ${
+                      p === currentPage
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+              >
+                ›
+              </button>
+            </div>
+          )}
 
         </div>
       </main>
@@ -463,8 +689,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           <div className="w-full max-w-5xl rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Danh sách học sinh theo bài thi</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{selectedExam.title}</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{selectedExam.title}</h3>
               </div>
               <button
                 type="button"
@@ -472,6 +697,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                   setSelectedExam(null);
                   setSelectedAssessment(null);
                   setSelectedStudentName('');
+                  setExamAnalytics(null);
+                  setExamDetailTab('students');
                 }}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
@@ -479,7 +706,36 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 dark:border-gray-700 px-6">
+              <button
+                onClick={() => setExamDetailTab('students')}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  examDetailTab === 'students'
+                    ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
+              >
+                Học sinh
+              </button>
+              <button
+                onClick={() => {
+                  setExamDetailTab('analytics');
+                  if (!examAnalytics && selectedExam) fetchExamAnalytics(selectedExam.id);
+                }}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  examDetailTab === 'analytics'
+                    ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
+              >
+                Phân tích
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+              {examDetailTab === 'students' && (
+                <>
               {studentListError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
                   {studentListError}
@@ -731,6 +987,89 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     </div>
                   )}
                 </>
+              )}
+                </>
+              )}
+
+              {examDetailTab === 'analytics' && (
+                <div className="space-y-5">
+                  {analyticsError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                      {analyticsError}
+                    </div>
+                  )}
+                  {isAnalyticsLoading ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải phân tích...</p>
+                  ) : examAnalytics ? (
+                    <>
+                      {/* Summary */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center bg-white dark:bg-gray-900">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Tổng học sinh</p>
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">{examAnalytics.totalStudents}</p>
+                        </div>
+                        <div className="rounded-lg border border-blue-200 dark:border-blue-800 p-3 text-center bg-blue-50 dark:bg-blue-900/20">
+                          <p className="text-xs text-blue-600 dark:text-blue-400">Đã nộp</p>
+                          <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{examAnalytics.submittedCount}</p>
+                        </div>
+                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center bg-white dark:bg-gray-900">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Cao nhất</p>
+                          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{examAnalytics.highestScore?.toFixed(1)}</p>
+                        </div>
+                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-center bg-white dark:bg-gray-900">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Thấp nhất</p>
+                          <p className="text-2xl font-bold text-red-600 dark:text-red-400">{examAnalytics.lowestScore?.toFixed(1)}</p>
+                        </div>
+                      </div>
+
+                      {/* Competency averages */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-800 dark:bg-violet-900/20">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400 mb-1">Điều chỉnh hành vi</p>
+                          <p className="text-3xl font-bold text-violet-700 dark:text-violet-300">
+                            {examAnalytics.averageBehaviorAdjustmentScore !== null ? examAnalytics.averageBehaviorAdjustmentScore?.toFixed(2) : '--'}
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-900/20">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1">Phát triển bản thân</p>
+                          <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+                            {examAnalytics.averageSelfDevelopmentScore !== null ? examAnalytics.averageSelfDevelopmentScore?.toFixed(2) : '--'}
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">Tham gia KT-XH</p>
+                          <p className="text-3xl font-bold text-amber-700 dark:text-amber-300">
+                            {examAnalytics.averageEconomicSocialParticipationScore !== null ? examAnalytics.averageEconomicSocialParticipationScore?.toFixed(2) : '--'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Score Distribution Bar Chart */}
+                      {examAnalytics.scoreDistribution && examAnalytics.scoreDistribution.length > 0 && (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Phân bố điểm số</h4>
+                          <div className="flex items-end gap-2 h-32">
+                            {(() => {
+                              const maxCount = Math.max(...examAnalytics.scoreDistribution.map((d: ScoreDistributionItem) => d.count), 1);
+                              return examAnalytics.scoreDistribution.map((d: ScoreDistributionItem) => (
+                                <div key={d.label} className="flex flex-1 flex-col items-center gap-1">
+                                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{d.count}</span>
+                                  <div
+                                    className="w-full rounded-t bg-primary/70 dark:bg-blue-500/70 transition-all"
+                                    style={{ height: `${(d.count / maxCount) * 96}px`, minHeight: '2px' }}
+                                  />
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">{d.label}</span>
+                                </div>
+                              ));
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Không có dữ liệu phân tích.</p>
+                  )}
+                </div>
               )}
             </div>
           </div>

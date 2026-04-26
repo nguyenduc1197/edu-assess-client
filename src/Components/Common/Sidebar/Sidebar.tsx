@@ -37,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role
 
   const studentNavItems = [
     { icon: LayoutDashboard, label: 'Tổng quan', href: '/studentdashboard' },
+    { icon: BarChart3, label: 'Phân tích', href: '/student/analytics' },
   ];
 
   const navItems = isTeacher ? teacherNavItems : studentNavItems;
@@ -141,6 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role
         <div className="border-t border-white/10 p-3">
           <button
             type="button"
+            onClick={() => { window.location.href = '/settings'; }}
             className="mb-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-white/8 hover:text-white"
           >
             <Settings size={18} className="text-slate-400" />
