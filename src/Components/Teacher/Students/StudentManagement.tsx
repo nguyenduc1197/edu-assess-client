@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, PlusCircle, Menu, Trash2, Edit2 } from 'lucide-react';
+import { Search, PlusCircle, Menu, Trash2, Edit2, Users } from 'lucide-react';
 import { User, Student } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import StudentFormModal from './StudentFormModal';
+import BulkStudentModal from './BulkStudentModal';
 import { fetchClient } from '../../../api/fetchClient';
 
 interface StudentManagementProps {
@@ -23,6 +24,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -153,6 +155,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
         />
       )}
 
+      {isBulkModalOpen && (
+        <BulkStudentModal
+          onClose={() => setIsBulkModalOpen(false)}
+          onSuccess={fetchStudents}
+        />
+      )}
+
       <main className="flex-1 px-4 py-8 sm:px-8 lg:p-8 overflow-y-auto h-screen">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
 
@@ -165,13 +174,22 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
                 <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Quản Lý Học Sinh</h1>
                 <p className="text-base text-gray-600 dark:text-gray-400">Tổng cộng: {students.length} học sinh đang có trong hệ thống</p>
               </div>
-              <button
-                onClick={handleOpenCreate}
-                className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-cyan-700 transition-colors"
-              >
-                <PlusCircle size={20} />
-                <span>Thêm Học Sinh</span>
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsBulkModalOpen(true)}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-white border border-blue-300 px-5 py-2.5 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50 transition-colors dark:bg-gray-800 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/20"
+                >
+                  <Users size={20} />
+                  <span>Thêm Nhiều Học Sinh</span>
+                </button>
+                <button
+                  onClick={handleOpenCreate}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-cyan-700 transition-colors"
+                >
+                  <PlusCircle size={20} />
+                  <span>Thêm Học Sinh</span>
+                </button>
+              </div>
             </div>
           </div>
 
