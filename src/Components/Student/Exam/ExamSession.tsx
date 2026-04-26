@@ -67,11 +67,16 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveDraftIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const answersRef = useRef(answers);
 
-  const saveDraft = async (currentAnswers: Record<string, AnswerState>) => {
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  const saveDraft = async () => {
     try {
       const payload = {
-        answers: Object.entries(currentAnswers).map(([questionId, value]) => ({
+        answers: Object.entries(answersRef.current).map(([questionId, value]) => ({
           questionId,
           choiceId: value.choiceId ?? null,
           essayAnswer: null,
@@ -94,13 +99,13 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       return;
     }
     saveDraftIntervalRef.current = setInterval(() => {
-      saveDraft(answers);
+      saveDraft();
     }, 30000);
     return () => {
       if (saveDraftIntervalRef.current) clearInterval(saveDraftIntervalRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, answers, examId]);
+  }, [step, examId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAssessmentResult = async (studentExamId: string) => {
     const response = await fetchClient(`/student-exams/${studentExamId}/assessment`);

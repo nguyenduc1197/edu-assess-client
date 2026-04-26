@@ -160,7 +160,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
       body: JSON.stringify(payload),
     });
 
-      if (!response.ok && response.status !== 204) {
+      if (!response.ok) {
         throw new Error(`Error: ${response.statusText}`);
       }
 

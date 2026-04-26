@@ -117,14 +117,16 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
           const x = xScale(idx);
           return (
             <g key={`dots-${item.studentExamId}`}>
-              <circle cx={x} cy={yScale(item.score)!} r="3" fill="#3b82f6" />
-              {item.behaviorAdjustmentScore !== null && (
+              {yScale(item.score) !== null && (
+                <circle cx={x} cy={yScale(item.score)!} r="3" fill="#3b82f6" />
+              )}
+              {item.behaviorAdjustmentScore !== null && yScale(item.behaviorAdjustmentScore) !== null && (
                 <circle cx={x} cy={yScale(item.behaviorAdjustmentScore)!} r="3" fill="#8b5cf6" />
               )}
-              {item.selfDevelopmentScore !== null && (
+              {item.selfDevelopmentScore !== null && yScale(item.selfDevelopmentScore) !== null && (
                 <circle cx={x} cy={yScale(item.selfDevelopmentScore)!} r="3" fill="#10b981" />
               )}
-              {item.economicSocialParticipationScore !== null && (
+              {item.economicSocialParticipationScore !== null && yScale(item.economicSocialParticipationScore) !== null && (
                 <circle cx={x} cy={yScale(item.economicSocialParticipationScore)!} r="3" fill="#f59e0b" />
               )}
             </g>
