@@ -339,7 +339,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                           <div className="space-y-2">
                             <ProgressChip label="Điều chỉnh hành vi" accumulation={result.behaviorAdjustmentAccumulation} />
                             <ProgressChip label="Phát triển bản thân" accumulation={result.selfDevelopmentAccumulation} />
-                            <ProgressChip label="Tìm hiểu và tham gia KT-XH" accumulation={result.economicSocialParticipationAccumulation} />
+                            <ProgressChip label="Tìm kiếm Tham gia KT-XH" accumulation={result.economicSocialParticipationAccumulation} />
                           </div>
                         </div>
                       </td>
