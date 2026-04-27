@@ -71,22 +71,22 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
-              aria-label="Close sidebar"
-            >
-              <X size={20} />
-            </button>
+             <button
+               onClick={onClose}
+               className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
+               aria-label="Đóng thanh bên"
+             >
+               <X size={20} />
+             </button>
           </div>
 
           <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur">
             <div className="flex items-start gap-3 overflow-hidden">
-              <div
-                className="aspect-square size-11 shrink-0 rounded-2xl bg-cover bg-center ring-2 ring-white/10"
-                style={{ backgroundImage: `url("${user.avatarUrl}")` }}
-                aria-label={`Avatar of ${user.name}`}
-              />
+               <div
+                 className="aspect-square size-11 shrink-0 rounded-2xl bg-cover bg-center ring-2 ring-white/10"
+                 style={{ backgroundImage: `url("${user.avatarUrl}")` }}
+                 aria-label={`Ảnh đại diện của ${user.name}`}
+               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-white">
                   {localStorage.getItem('name') || user.name}

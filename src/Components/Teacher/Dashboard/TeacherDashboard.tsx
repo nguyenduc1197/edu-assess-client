@@ -15,6 +15,7 @@ import {
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import CreateExamModal from '../Exam/CreateExamModal';
 import { fetchClient } from '../../../api/fetchClient';
+import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 
 let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
@@ -845,7 +846,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                           <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-200 dark:border-blue-800">
                             <p className="text-sm text-gray-500 dark:text-gray-400">Điểm tổng</p>
                             <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{selectedAssessment.score?.toFixed(1) ?? '—'}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái: {selectedAssessment.assessmentStatus}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái: {getAssessmentStatusLabel(selectedAssessment.assessmentStatus)}</p>
                           </div>
 
                           {selectedAssessment.overallFeedback && (

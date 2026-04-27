@@ -329,11 +329,11 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                 {isFetchingQuestions ? (
                   <div className="flex h-full w-full items-center justify-center text-gray-500 dark:text-gray-400 gap-2">
                     <span className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></span>
-                    <span>Loading...</span>
+                    <span>Đang tải...</span>
                   </div>
                 ) : questions.length === 0 ? (
                   <div className="flex h-full w-full items-center justify-center text-gray-500 dark:text-gray-400 text-sm">
-                    No questions available.
+                    Chưa có câu hỏi nào.
                   </div>
                 ) : (
                   questions.map(q => (
@@ -374,7 +374,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white rounded-lg transition-colors"
           >
-            Cancel
+            Hủy
           </button>
           <button
             type="submit"
@@ -382,17 +382,17 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
             disabled={isLoading}
             className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? (
-               <>
-                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                 Saving...
-               </>
-            ) : (
-               <>
-                 <span className="material-symbols-outlined text-[18px]">save</span>
-                 {isEditing ? 'Cập nhật' : 'Create Exam'}
-               </>
-            )}
+             {isLoading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  Đang lưu...
+                </>
+             ) : (
+                <>
+                  <span className="material-symbols-outlined text-[18px]">save</span>
+                  {isEditing ? 'Cập nhật' : 'Tạo bài kiểm tra'}
+                </>
+             )}
           </button>
         </div>
       </div>
