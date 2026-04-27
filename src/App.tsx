@@ -10,6 +10,8 @@ import TeacherManagement from './Components/Teacher/Teachers/TeacherManagement';
 import StudentManagement from './Components/Teacher/Students/StudentManagement';
 import ClassManagement from './Components/Teacher/Classes/ClassManagement';
 import TeacherResults from './Components/Teacher/Results/TeacherResults';
+import SettingsPage from './Components/Common/Settings/SettingsPage';
+import StudentAnalyticsPage from './Components/Student/Analytics/StudentAnalyticsPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -79,6 +81,7 @@ useEffect(() => {
             <Route path="/teacher/teachers" element={<TeacherManagement onLogout={handleLogout} />} />
             <Route path="/teacher/students" element={<StudentManagement onLogout={handleLogout} />} />
             <Route path="/teacher/classes" element={<ClassManagement onLogout={handleLogout} />} />
+            <Route path="/settings" element={<SettingsPage onLogout={handleLogout} />} />
           </>
         }
         {
@@ -86,6 +89,8 @@ useEffect(() => {
           <>
             <Route path="/" element={<StudentDashboard onLogout={handleLogout} />} />
             <Route path="/studentdashboard" element={<StudentDashboard onLogout={handleLogout} />} />
+            <Route path="/student/analytics" element={<StudentAnalyticsPage onLogout={handleLogout} />} />
+            <Route path="/settings" element={<SettingsPage onLogout={handleLogout} />} />
             <Route path="/review" element={<ReviewPage />} />
           </>
         }

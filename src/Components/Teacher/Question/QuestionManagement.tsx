@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, PlusCircle, Menu, Trash2, Edit2, Sparkles } from 'lucide-react';
 import { CompetencyOption, Question, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
@@ -30,6 +30,12 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
   const [successMessage, setSuccessMessage] = useState('');
   const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
   const [selectedCompetency, setSelectedCompetency] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('');
+  const [selectedFormat, setSelectedFormat] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const PAGE_SIZE = 20;
 
   const loadCompetencyOptions = useCallback(async () => {
     try {
@@ -49,14 +55,23 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
       setError('');
 
       const query = new URLSearchParams({
-        pageNumber: '1',
-        pageSize: '100',
+        pageNumber: String(currentPage),
+        pageSize: String(PAGE_SIZE),
         sortBy,
         sortDirection,
       });
 
       if (selectedCompetency) {
         query.append('competencyType', selectedCompetency);
+      }
+      if (selectedDifficulty) {
+        query.append('difficultyLevel', selectedDifficulty);
+      }
+      if (selectedFormat) {
+        query.append('questionFormat', selectedFormat);
+      }
+      if (searchQuery) {
+        query.append('keyword', searchQuery);
       }
 
       const response = await fetchClient(`/questions/without-exam?${query.toString()}`);
@@ -66,7 +81,11 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
       }
 
       const data = await response.json();
-      const items = Array.isArray(data) ? data : (data.data || data.items || []);
+      const items = Array.isArray(data) ? data : (data.items || data.data || []);
+      const total = data.totalCount ?? items.length;
+      const pages = data.totalPages ?? (Math.ceil(total / PAGE_SIZE) || 1);
+      setTotalQuestions(total);
+      setTotalPages(pages);
 
       const mappedQuestions: Question[] = items.map((item: any) => ({
         id: item.id,
@@ -98,7 +117,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCompetency, sortBy, sortDirection]);
+  }, [selectedCompetency, selectedDifficulty, selectedFormat, searchQuery, sortBy, sortDirection, currentPage]);
 
   useEffect(() => {
     loadCompetencyOptions();
@@ -108,11 +127,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
     fetchQuestions();
   }, [fetchQuestions]);
 
-  const filteredQuestions = useMemo(() => {
-    return questions.filter((question) =>
-      question.content.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [questions, searchQuery]);
+  const filteredQuestions = questions; // Server-side filtering via keyword param
 
   const handleSort = (column: 'dateCreated' | 'content' | 'competencyType' | 'difficultyLevel') => {
     if (sortBy === column) {
@@ -272,7 +287,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                   Quản Lý Câu Hỏi
                 </h1>
                 <p className="text-base text-gray-600 dark:text-gray-400">
-                  Tổng cộng: {questions.length} câu hỏi chưa gán vào bài thi
+                  Tổng cộng: {totalQuestions} câu hỏi chưa gán vào bài thi
                 </p>
               </div>
 
@@ -308,8 +323,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
             </div>
           )}
 
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="relative w-full max-w-xs">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="relative w-full sm:w-64">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                 <Search size={20} />
               </div>
@@ -317,14 +332,15 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                 type="text"
                 placeholder="Tìm câu hỏi..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') fetchQuestions(); }}
                 className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
               />
             </div>
 
             <select
               value={selectedCompetency}
-              onChange={(e) => setSelectedCompetency(e.target.value)}
+              onChange={(e) => { setSelectedCompetency(e.target.value); setCurrentPage(1); }}
               className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
               <option value="">Tất cả năng lực</option>
@@ -335,6 +351,33 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
               ))}
             </select>
 
+            <select
+              value={selectedDifficulty}
+              onChange={(e) => { setSelectedDifficulty(e.target.value); setCurrentPage(1); }}
+              className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="">Tất cả độ khó</option>
+              <option value="Easy">Dễ</option>
+              <option value="Medium">Trung bình</option>
+              <option value="Hard">Khó</option>
+            </select>
+
+            <select
+              value={selectedFormat}
+              onChange={(e) => { setSelectedFormat(e.target.value); setCurrentPage(1); }}
+              className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="">Tất cả dạng câu</option>
+              <option value="SingleChoice">Trắc nghiệm</option>
+              <option value="TrueFalse">Đúng / Sai</option>
+            </select>
+
+            <button
+              onClick={() => { setCurrentPage(1); fetchQuestions(); }}
+              className="h-10 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-colors"
+            >
+              Tìm kiếm
+            </button>
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -348,7 +391,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                   <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('content')} className="hover:text-gray-900 dark:hover:text-white">Câu Hỏi {sortBy === 'content' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('competencyType')} className="hover:text-gray-900 dark:hover:text-white">Năng Lực {sortBy === 'competencyType' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Số Đáp Án</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Dạng / Độ khó</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('dateCreated')} className="hover:text-gray-900 dark:hover:text-white">Ngày Tạo {sortBy === 'dateCreated' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành Động</th>
                   </tr>
@@ -366,7 +409,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                         {question.competencyLabel || question.competencyType || '—'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {question.choices?.length || 0} đáp án
+                        <span className="text-violet-600 dark:text-violet-400">{question.questionFormatLabel || question.questionFormat || '—'}</span>
+                        {question.difficultyLabel && <span className="ml-2 text-amber-600 dark:text-amber-400">{question.difficultyLabel}</span>}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         {question.dateCreated || '—'}
@@ -398,7 +442,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                   <p className="text-gray-500 dark:text-gray-400 mb-2">
-                    {searchQuery || selectedCompetency ? 'Không tìm thấy câu hỏi nào' : 'Chưa có câu hỏi nào'}
+                    {searchQuery || selectedCompetency || selectedDifficulty || selectedFormat ? 'Không tìm thấy câu hỏi nào' : 'Chưa có câu hỏi nào'}
                   </p>
                   <button
                     onClick={() => setIsAddModalOpen(true)}
@@ -410,6 +454,44 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
               </div>
             )}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+              >
+                ‹
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => Math.abs(p - currentPage) <= 2)
+                .map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setCurrentPage(p)}
+                    className={`h-9 w-9 rounded-lg border text-sm font-medium transition-colors ${
+                      p === currentPage
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+              >
+                ›
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>

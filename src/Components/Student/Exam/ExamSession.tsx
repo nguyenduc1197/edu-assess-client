@@ -66,6 +66,46 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const saveDraftIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const answersRef = useRef(answers);
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  const saveDraft = async () => {
+    try {
+      const payload = {
+        answers: Object.entries(answersRef.current).map(([questionId, value]) => ({
+          questionId,
+          choiceId: value.choiceId ?? null,
+          essayAnswer: null,
+        })),
+      };
+      await fetchClient(`/exams/${examId}/save-draft`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // silently ignore draft save errors
+    }
+  };
+
+  // Start/stop auto-save draft every 30 seconds while taking exam
+  useEffect(() => {
+    if (step !== 'taking') {
+      if (saveDraftIntervalRef.current) clearInterval(saveDraftIntervalRef.current);
+      return;
+    }
+    saveDraftIntervalRef.current = setInterval(() => {
+      saveDraft();
+    }, 30000);
+    return () => {
+      if (saveDraftIntervalRef.current) clearInterval(saveDraftIntervalRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, examId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAssessmentResult = async (studentExamId: string) => {
     const response = await fetchClient(`/student-exams/${studentExamId}/assessment`);
@@ -173,7 +213,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       }
     };
     fetchQuestions();
-  }, [assignment.isSubmitted, assignment.studentExamId, examId]);
+  }, [assignment.isSubmitted, assignment.studentExamId, examId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAnswer = (questionId: string, choiceId: string, content: string) => {
    setAnswers(prev => ({
@@ -217,10 +257,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     }
   };
 
-  // Clean up interval on unmount
+  // Clean up intervals on unmount
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (saveDraftIntervalRef.current) clearInterval(saveDraftIntervalRef.current);
     };
   }, []);
 
@@ -588,6 +629,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   return (
     <ExamTaking
       examTitle={assignment.title}
+      examEnd={assignment.deadline}
       questions={questions}
       answers={answers}
       onAnswer={handleAnswer}

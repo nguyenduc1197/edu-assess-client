@@ -219,6 +219,75 @@ export interface CompetencyAccumulation {
   gainVsPreviousAttempt: number | null;
 }
 
+export interface AccountMe {
+  accountId: string;
+  username: string;
+  name: string;
+  role: string;
+  email?: string;
+  profileId?: string;
+}
+
+export interface CompletedExam {
+  studentExamId: string;
+  examId: string;
+  examName: string;
+  start: string;
+  end: string;
+  finishedAt: string;
+  assessedAt: string | null;
+  score: number | null;
+  behaviorAdjustmentScore: number | null;
+  selfDevelopmentScore: number | null;
+  economicSocialParticipationScore: number | null;
+  assessmentStatus: 'NotStarted' | 'Pending' | 'Completed' | 'Failed';
+  overallFeedback: string | null;
+  canRetryAssessment: boolean;
+}
+
+export interface AnalyticsProgressItem {
+  studentExamId: string;
+  examName: string;
+  finishedAt: string;
+  score: number;
+  behaviorAdjustmentScore: number | null;
+  selfDevelopmentScore: number | null;
+  economicSocialParticipationScore: number | null;
+}
+
+export interface StudentAnalytics {
+  studentId: string;
+  studentName: string;
+  completedExamCount: number;
+  overallAverageScore: number;
+  behaviorAdjustmentAverageScore: number | null;
+  selfDevelopmentAverageScore: number | null;
+  economicSocialParticipationAverageScore: number | null;
+  progressOverTime: AnalyticsProgressItem[];
+}
+
+export interface ScoreDistributionItem {
+  label: string;
+  rangeMin: number;
+  rangeMax: number;
+  count: number;
+}
+
+export interface ExamAnalytics {
+  examId: string;
+  examName: string;
+  totalStudents: number;
+  submittedCount: number;
+  notSubmittedCount: number;
+  averageScore: number;
+  averageBehaviorAdjustmentScore: number | null;
+  averageSelfDevelopmentScore: number | null;
+  averageEconomicSocialParticipationScore: number | null;
+  highestScore: number;
+  lowestScore: number;
+  scoreDistribution: ScoreDistributionItem[];
+}
+
 export interface AssessmentResult {
   studentExamId: string;
   examId: string;
