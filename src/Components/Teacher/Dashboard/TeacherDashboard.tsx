@@ -860,6 +860,29 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                             </div>
                           )}
 
+                          {(selectedAssessment.behaviorAdjustmentFeedback || selectedAssessment.selfDevelopmentFeedback || selectedAssessment.economicSocialParticipationFeedback) && (
+                            <div className="space-y-3">
+                              {selectedAssessment.behaviorAdjustmentFeedback && (
+                                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Năng lực điều chỉnh hành vi</p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">{selectedAssessment.behaviorAdjustmentFeedback}</p>
+                                </div>
+                              )}
+                              {selectedAssessment.selfDevelopmentFeedback && (
+                                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Năng lực phát triển bản thân</p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">{selectedAssessment.selfDevelopmentFeedback}</p>
+                                </div>
+                              )}
+                              {selectedAssessment.economicSocialParticipationFeedback && (
+                                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Năng lực tìm hiểu và tham gia hoạt động KT-XH</p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">{selectedAssessment.economicSocialParticipationFeedback}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           {selectedAssessment.completedExamCount > 0 && (
                             <div className="space-y-4">
                               <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tiến độ năng lực qua các bài kiểm tra</h5>
