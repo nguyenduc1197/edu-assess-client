@@ -74,7 +74,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         query.append('keyword', searchQuery);
       }
 
-      const response = await fetchClient(`/questions/without-exam?${query.toString()}`);
+      const response = await fetchClient(`/questions?${query.toString()}`);
 
       if (!response.ok) {
         throw new Error(`API returned ${response.status}`);

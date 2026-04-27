@@ -50,24 +50,40 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   const fetchQuestions = useCallback(async () => {
     setIsFetchingQuestions(true);
     try {
-      const response = await fetchClient('/questions/without-exam?pageNumber=1&pageSize=100');
+      const requests: Promise<Response>[] = [
+        fetchClient('/questions/without-exam?pageNumber=1&pageSize=100'),
+      ];
 
-      if (response.ok) {
-        const data = await response.json();
-        const questionsList = Array.isArray(data)
-          ? data
-          : (data.items || data.data || []);
-
-        setQuestions(questionsList);
-      } else {
-        console.error('Failed to fetch questions:', response.status);
+      if (isEditing && examToEdit?.id) {
+        requests.push(fetchClient(`/questions?examId=${examToEdit.id}&pageNumber=1&pageSize=200`));
       }
+
+      const responses = await Promise.all(requests);
+      const allItems: any[] = [];
+      const seenIds = new Set<string>();
+
+      for (const response of responses) {
+        if (response.ok) {
+          const data = await response.json();
+          const items: any[] = Array.isArray(data) ? data : (data.items || data.data || []);
+          for (const item of items) {
+            if (item.id && !seenIds.has(item.id)) {
+              seenIds.add(item.id);
+              allItems.push(item);
+            }
+          }
+        } else {
+          console.error('Failed to fetch questions:', response.status);
+        }
+      }
+
+      setQuestions(allItems);
     } catch (err) {
       console.error('Error fetching questions:', err);
     } finally {
       setIsFetchingQuestions(false);
     }
-  }, []);
+  }, [isEditing, examToEdit]);
 
   const fetchCompetencies = useCallback(async () => {
     try {

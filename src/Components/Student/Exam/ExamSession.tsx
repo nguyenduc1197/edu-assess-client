@@ -188,7 +188,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     const fetchQuestions = async () => {
       try {
         setIsLoading(true);
-        const response = await fetchClient(`/questions?pageNumber=1&examId=${examId}&pageSize=20`);
+        const response = await fetchClient(`/questions?examId=${examId}&pageNumber=1&pageSize=200`);
         
         if (response.ok) {
           const data = await response.json();
@@ -198,16 +198,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
             throw new Error('API Error');
         }
       } catch (error) {
-        console.warn("Failed to load exam questions, using mock data.", error);
-        // Fallback mock data
-        const mockQuestions: Question[] = [
-            { id: 'q1', content: 'Quyền bình đẳng của công dân trong lao động được thể hiện ở việc mọi công dân đều có quyền?' },
-            { id: 'q2', content: 'Nội dung nào dưới đây không phải là bình đẳng trong hôn nhân và gia đình?'},
-            { id: 'q3', content: 'Hành vi nào dưới đây vi phạm quyền bình đẳng của công dân trước pháp luật?'},
-            { id: 'q4', content: 'Quyền bình đẳng giữa các dân tộc được hiểu là các dân tộc trong cộng đồng dân cư Việt Nam có quyền dùng tiếng nói, chữ viết của dân tộc mình là thể hiện quyền bình đẳng về?'},
-            { id: 'q5', content: 'Công dân bình đẳng về trách nhiệm pháp lí là?'}
-        ];
-        setQuestions(mockQuestions);
+        console.error("Failed to load exam questions.", error);
+        setQuestions([]);
       } finally {
         setIsLoading(false);
       }
