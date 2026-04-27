@@ -29,6 +29,21 @@ const getFeedbackItems = (feedback?: string | null) =>
     .map((item) => item.replace(/^[-•]\s*/, '').trim())
     .filter(Boolean);
 
+const getAssessmentStatusLabel = (status?: string | null) => {
+  switch (status) {
+    case 'Pending':
+      return 'Đang chấm';
+    case 'Completed':
+      return 'Đã hoàn thành';
+    case 'Failed':
+      return 'Đánh giá lỗi';
+    case 'NotStarted':
+      return 'Chưa bắt đầu';
+    default:
+      return status || '—';
+  }
+};
+
 const formatAccumulationPercent = (value?: number | null) => {
   if (value === null || value === undefined) return '--';
   return `${(value * 10).toFixed(0)}%`;
@@ -845,7 +860,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                           <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-200 dark:border-blue-800">
                             <p className="text-sm text-gray-500 dark:text-gray-400">Điểm tổng</p>
                             <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{selectedAssessment.score?.toFixed(1) ?? '—'}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái: {selectedAssessment.assessmentStatus}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái: {getAssessmentStatusLabel(selectedAssessment.assessmentStatus)}</p>
                           </div>
 
                           {selectedAssessment.overallFeedback && (

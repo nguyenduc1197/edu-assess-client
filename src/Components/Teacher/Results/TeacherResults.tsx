@@ -40,6 +40,21 @@ const formatGainChipValue = (value?: number | null) => {
   return value.toFixed(1);
 };
 
+const getAssessmentStatusLabel = (status?: string | null) => {
+  switch (status) {
+    case 'Pending':
+      return 'Đang chấm';
+    case 'Completed':
+      return 'Đã hoàn thành';
+    case 'Failed':
+      return 'Đánh giá lỗi';
+    case 'NotStarted':
+      return 'Chưa bắt đầu';
+    default:
+      return status || '—';
+  }
+};
+
 const getGainChipTone = (value?: number | null) => {
   if (value === null || value === undefined) return 'text-gray-500 dark:text-gray-400';
   if (value > 0) return 'text-emerald-700 dark:text-emerald-300';
@@ -54,14 +69,14 @@ const ProgressChip: React.FC<{
   if (!accumulation) return null;
 
   return (
-    <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800/70">
-      <div className="font-semibold text-slate-700 dark:text-slate-200">{label}</div>
-      <div className="mt-1 flex flex-wrap items-center gap-2 text-slate-600 dark:text-slate-300">
-        <span>Now {formatScoreChipValue(accumulation.latestScore)}</span>
-        <span>Avg {formatScoreChipValue(accumulation.averageScore)}</span>
-        <span className={getGainChipTone(accumulation.gainVsPreviousAttempt)}>
-          {formatGainChipValue(accumulation.gainVsPreviousAttempt)}
-        </span>
+      <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800/70">
+        <div className="font-semibold text-slate-700 dark:text-slate-200">{label}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-slate-600 dark:text-slate-300">
+          <span>Hiện tại {formatScoreChipValue(accumulation.latestScore)}</span>
+          <span>Trung bình {formatScoreChipValue(accumulation.averageScore)}</span>
+          <span className={getGainChipTone(accumulation.gainVsPreviousAttempt)}>
+            {formatGainChipValue(accumulation.gainVsPreviousAttempt)}
+          </span>
       </div>
     </div>
   );
@@ -297,9 +312,9 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
             <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
               <option value="">Tất cả trạng thái</option>
-              <option value="Pending">Pending</option>
-              <option value="Completed">Completed</option>
-              <option value="Failed">Failed</option>
+              <option value="Pending">Đang chấm</option>
+              <option value="Completed">Đã hoàn thành</option>
+              <option value="Failed">Đánh giá lỗi</option>
             </select>
 
           </div>
@@ -336,13 +351,13 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                             {result.completedExamCount ? `${result.completedExamCount} bài đã tính` : 'Chưa có lịch sử'}
                           </div>
                           <div className="space-y-2">
-                            <ProgressChip label="Behavior" accumulation={result.behaviorAdjustmentAccumulation} />
-                            <ProgressChip label="Self-dev" accumulation={result.selfDevelopmentAccumulation} />
-                            <ProgressChip label="Economic-social" accumulation={result.economicSocialParticipationAccumulation} />
+                            <ProgressChip label="Điều chỉnh hành vi" accumulation={result.behaviorAdjustmentAccumulation} />
+                            <ProgressChip label="Phát triển bản thân" accumulation={result.selfDevelopmentAccumulation} />
+                            <ProgressChip label="Tham gia KT-XH" accumulation={result.economicSocialParticipationAccumulation} />
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.assessmentStatus}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{getAssessmentStatusLabel(result.assessmentStatus)}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{formatDateTime(result.finishedAt)}</td>
                       <td className="px-6 py-4 text-center">
                         <button
@@ -385,7 +400,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                   <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-200 dark:border-blue-800">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Điểm tổng</p>
                     <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{selectedResult.score?.toFixed(1) ?? '—'}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái: {selectedResult.assessmentStatus}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái: {getAssessmentStatusLabel(selectedResult.assessmentStatus)}</p>
                   </div>
 
                   {selectedResult.overallFeedback && (

@@ -38,6 +38,9 @@ const FORMAT_LABELS: Record<string, string> = {
   TrueFalse: 'Đúng / Sai',
 };
 
+const getCompetencyLabel = (value?: string, options: CompetencyOption[] = []) =>
+  options.find((option) => option.value === value)?.label || value || 'Chưa chọn năng lực';
+
 const countWords = (value?: string | null) =>
   (value || '')
     .trim()
@@ -198,7 +201,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
           const savedIds = selectedVariant?.savedQuestionIds || [];
 
           if (savedIds.length > 0) {
-            const message = `Đã tạo ${normalizedVariants.length} biến thể và nạp sẵn câu hỏi của biến thể ${selectedVariant.variantIndex} vào flow tạo bài thi.`;
+            const message = `Đã tạo ${normalizedVariants.length} biến thể và nạp sẵn câu hỏi của biến thể ${selectedVariant.variantIndex} vào quy trình tạo bài thi.`;
             setSuccessMessage(message);
             onSaved?.({ message, savedQuestionIds: savedIds });
           }
@@ -270,7 +273,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
     }
 
     if (savedIds.length === 0) {
-      setError('Biến thể này chưa có savedQuestionIds. Hãy bật lưu vào ngân hàng câu hỏi rồi tạo lại để dùng trực tiếp cho flow tạo bài thi.');
+      setError('Biến thể này chưa có mã câu hỏi đã lưu. Hãy bật lưu vào ngân hàng câu hỏi rồi tạo lại để dùng trực tiếp cho quy trình tạo bài thi.');
       return;
     }
 
@@ -457,7 +460,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
               <Bot size={18} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{enableExamVariantMode ? 'Tạo exam bằng AI' : 'Tạo câu hỏi bằng AI'}</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{enableExamVariantMode ? 'Tạo bài thi bằng AI' : 'Tạo câu hỏi bằng AI'}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {enableExamVariantMode
                   ? 'Tạo câu hỏi từ nội dung hoặc tạo biến thể đề mới từ ảnh scan'
@@ -535,7 +538,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                   {[
                     { value: 'text', label: 'Văn bản' },
                     { value: 'pdf', label: 'PDF' },
-                    { value: 'url', label: 'Web URL' },
+                    { value: 'url', label: 'Liên kết web' },
                     { value: 'youtube', label: 'YouTube' },
                   ].map((item) => (
                     <button
@@ -600,7 +603,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                   </div>
 
                   <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                    Ảnh scan chỉ dùng để sinh biến thể đề mới. Flow tạo bài thi hiện tại vẫn giữ nguyên, và nếu bật lưu vào ngân hàng câu hỏi thì bạn có thể nạp ngay question IDs của biến thể đã chọn vào form tạo bài thi này.
+                    Ảnh scan chỉ dùng để sinh biến thể đề mới. Quy trình tạo bài thi hiện tại vẫn giữ nguyên, và nếu bật lưu vào ngân hàng câu hỏi thì bạn có thể nạp ngay mã câu hỏi của biến thể đã chọn vào biểu mẫu tạo bài thi này.
                   </div>
                 </div>
               )}
@@ -682,11 +685,11 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
               ) : (
                 <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900/60">
                   <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">CTA sau khi AI sinh đề</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Các bước sau khi AI sinh đề</p>
                     <ul className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <li>Preview questions của từng biến thể ngay trong modal.</li>
-                      <li>Nếu bật lưu vào ngân hàng, dùng selected savedQuestionIds để quay lại flow tạo bài thi hiện có.</li>
-                      <li>Không bật lưu thì modal vẫn cho review đầy đủ, nhưng chưa thể nạp question IDs vào form tạo bài thi.</li>
+                      <li>Xem trước câu hỏi của từng biến thể ngay trong cửa sổ này.</li>
+                      <li>Nếu bật lưu vào ngân hàng, dùng danh sách mã câu hỏi đã lưu để quay lại quy trình tạo bài thi hiện có.</li>
+                      <li>Nếu chưa bật lưu, cửa sổ vẫn cho xem lại đầy đủ nhưng chưa thể nạp mã câu hỏi vào biểu mẫu tạo bài thi.</li>
                     </ul>
                   </div>
                 </div>
@@ -847,7 +850,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
 
                   {!saveToQuestionBank && (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-                      Bạn đang ở chế độ preview. Nếu muốn nạp trực tiếp vào flow tạo bài thi, hãy bật "Lưu câu hỏi của biến thể vào ngân hàng" rồi tạo lại.
+                      Bạn đang ở chế độ xem trước. Nếu muốn nạp trực tiếp vào quy trình tạo bài thi, hãy bật "Lưu câu hỏi của biến thể vào ngân hàng" rồi tạo lại.
                     </div>
                   )}
 
@@ -886,7 +889,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                                       {item.choices?.slice(0, 2).map((choice, choiceIndex) => (
                                         <p key={`${item.id}-${choiceIndex}`}>
                                           <span className="font-semibold text-violet-600 dark:text-violet-300">{choice.optionLabel}.</span> {choice.content}
-                                          {choice.isCorrect ? ' (Đúng án)' : ''}
+                                          {choice.isCorrect ? ' (Đáp án đúng)' : ''}
                                         </p>
                                       ))}
                                     </div>
@@ -900,9 +903,9 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                         return (
                           <div key={question.id || `${selectedVariant.variantIndex}-${originalIndex}`} className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
                             <div className="flex flex-wrap gap-2 text-xs">
-                              {question.competencyType && <span className="rounded-full bg-indigo-50 px-3 py-1 font-medium text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">{question.competencyType}</span>}
-                              {question.questionFormat && <span className="rounded-full bg-violet-50 px-3 py-1 font-medium text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">{question.questionFormat}</span>}
-                              {question.difficultyLevel && <span className="rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">{question.difficultyLevel}</span>}
+                              {question.competencyType && <span className="rounded-full bg-indigo-50 px-3 py-1 font-medium text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">{getCompetencyLabel(question.competencyType, competencyOptions)}</span>}
+                              {question.questionFormat && <span className="rounded-full bg-violet-50 px-3 py-1 font-medium text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">{FORMAT_LABELS[question.questionFormat] || question.questionFormat}</span>}
+                              {question.difficultyLevel && <span className="rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">{DIFFICULTY_LABELS[question.difficultyLevel] || question.difficultyLevel}</span>}
                             </div>
                             <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{question.content}</p>
                             {question.sourceEvidence && (
@@ -912,7 +915,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                               {question.choices?.map((choice, choiceIndex) => (
                                 <p key={`${question.id}-${choiceIndex}`}>
                                   <span className="font-semibold text-violet-600 dark:text-violet-300">{choice.optionLabel}.</span> {choice.content}
-                                  {choice.isCorrect ? ' (Đúng án)' : ''}
+                                  {choice.isCorrect ? ' (Đáp án đúng)' : ''}
                                 </p>
                               ))}
                             </div>
