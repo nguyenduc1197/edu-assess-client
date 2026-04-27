@@ -150,7 +150,7 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-2 w-5 rounded-full bg-amber-500" />
-          <span>Tham gia KT-XH</span>
+          <span>Tìm hiểu và tham gia KT-XH</span>
         </div>
       </div>
     </div>
@@ -268,7 +268,7 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
                 </div>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">
-                    Tham gia KT-XH
+                    Tìm hiểu và tham gia KT-XH
                   </p>
                   <p className="text-3xl font-bold text-amber-700 dark:text-amber-300">
                     {fmt(analytics.economicSocialParticipationAverageScore)}
