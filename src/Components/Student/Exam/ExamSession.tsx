@@ -474,7 +474,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
                   {assessmentResult.economicSocialParticipationAccumulation && (
                     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Năng lực Tìm kiếm Tham gia KT-XH</p>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Năng lực Tìm hiểu Tham gia KT-XH</p>
                       <div className="grid grid-cols-3 gap-3">
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
