@@ -15,6 +15,7 @@ import {
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import CreateExamModal from '../Exam/CreateExamModal';
 import { fetchClient } from '../../../api/fetchClient';
+import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 
 let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
@@ -28,21 +29,6 @@ const getFeedbackItems = (feedback?: string | null) =>
     .split(/\r?\n|•/)
     .map((item) => item.replace(/^[-•]\s*/, '').trim())
     .filter(Boolean);
-
-const getAssessmentStatusLabel = (status?: string | null) => {
-  switch (status) {
-    case 'Pending':
-      return 'Đang chấm';
-    case 'Completed':
-      return 'Đã hoàn thành';
-    case 'Failed':
-      return 'Đánh giá lỗi';
-    case 'NotStarted':
-      return 'Chưa bắt đầu';
-    default:
-      return status || '—';
-  }
-};
 
 const formatAccumulationPercent = (value?: number | null) => {
   if (value === null || value === undefined) return '--';

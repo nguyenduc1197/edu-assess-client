@@ -11,6 +11,7 @@ import {
 } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import { fetchClient } from '../../../api/fetchClient';
+import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 
 interface TeacherResultsProps {
   onLogout?: () => void;
@@ -38,21 +39,6 @@ const formatGainChipValue = (value?: number | null) => {
   if (value === null || value === undefined) return '--';
   if (value > 0) return `+${value.toFixed(1)}`;
   return value.toFixed(1);
-};
-
-const getAssessmentStatusLabel = (status?: string | null) => {
-  switch (status) {
-    case 'Pending':
-      return 'Đang chấm';
-    case 'Completed':
-      return 'Đã hoàn thành';
-    case 'Failed':
-      return 'Đánh giá lỗi';
-    case 'NotStarted':
-      return 'Chưa bắt đầu';
-    default:
-      return status || '—';
-  }
 };
 
 const getGainChipTone = (value?: number | null) => {
