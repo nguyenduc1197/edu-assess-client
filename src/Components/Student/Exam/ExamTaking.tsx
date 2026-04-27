@@ -4,6 +4,7 @@ import { AnswerState, Question } from '../../../types';
 
 interface ExamTakingProps {
   examTitle: string;
+  examEnd?: string;
   questions: Question[];
   answers: Record<string, AnswerState>;
   onAnswer: (questionId: string, id: string, content: string) => void;
@@ -13,6 +14,7 @@ interface ExamTakingProps {
 
 const ExamTaking: React.FC<ExamTakingProps> = ({ 
   examTitle, 
+  examEnd,
   questions, 
   answers, 
   onAnswer, 
@@ -20,6 +22,36 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   onExit
 }) => {
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(() => {
+    if (!examEnd) return null;
+    const diff = Math.floor((new Date(examEnd).getTime() - Date.now()) / 1000);
+    return diff > 0 ? diff : 0;
+  });
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (remainingSeconds === null) return;
+    if (remainingSeconds <= 0) return;
+    const tid = window.setInterval(() => {
+      setRemainingSeconds((prev) => {
+        if (prev === null || prev <= 1) {
+          window.clearInterval(tid);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(tid);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const formatCountdown = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    return `${pad(m)}:${pad(s)}`;
+  };
 
   const questionBlocks = useMemo(() => {
     const processedGroups = new Set<string>();
@@ -95,7 +127,11 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-xs text-gray-500 dark:text-gray-400">Thời gian còn lại</span>
-              <span className="font-mono font-bold text-primary">45:00</span>
+              <span className={`font-mono font-bold ${
+                remainingSeconds !== null && remainingSeconds <= 300 ? 'text-red-500' : 'text-primary'
+              }`}>
+                {remainingSeconds !== null ? formatCountdown(remainingSeconds) : '--:--'}
+              </span>
             </div>
             <button
               onClick={onReview}

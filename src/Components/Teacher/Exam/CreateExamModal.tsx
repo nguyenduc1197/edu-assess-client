@@ -4,16 +4,33 @@ import { Class, CompetencyOption, Question, SubjectLabel } from '../../../types'
 import { fetchClient } from '../../../api/fetchClient';
 import AIQuestionGeneratorModal from '../Question/AIQuestionGeneratorModal';
 
+interface ExamToEdit {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+  questionIds: string[];
+  schoolClassId: string;
+}
+
 interface CreateExamModalProps {
   onClose: () => void;
   onSuccess?: () => void;
+  examToEdit?: ExamToEdit | null;
 }
 
-const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess }) => {
-  const [name, setName] = useState('');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
-  const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
+const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, examToEdit }) => {
+  const isEditing = !!examToEdit;
+  const [name, setName] = useState(examToEdit?.name || '');
+  const toLocalDatetime = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const [start, setStart] = useState(examToEdit ? toLocalDatetime(examToEdit.start) : '');
+  const [end, setEnd] = useState(examToEdit ? toLocalDatetime(examToEdit.end) : '');
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>(examToEdit?.questionIds || []);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
@@ -24,7 +41,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
   
   // State for fetching classes
   const [classes, setClasses] = useState<Class[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [selectedClassId, setSelectedClassId] = useState<string>(examToEdit?.schoolClassId || '');
   const [isFetchingClasses, setIsFetchingClasses] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -132,9 +149,11 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
     };
 
     try {
-    const response = await fetchClient("/exams",
+    const url = isEditing ? `/exams/${examToEdit!.id}` : '/exams';
+    const method = isEditing ? 'PUT' : 'POST';
+    const response = await fetchClient(url,
     {
-      method: "POST",
+      method,
       headers: {
         "Content-Type": "application/json",
       },
@@ -149,8 +168,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      console.error("Failed to create exam:", err);
-      setError("Failed to create exam. Please ensure the server is running.");
+      console.error("Failed to save exam:", err);
+      setError(isEditing ? "Cập nhật bài thi thất bại. Vui lòng thử lại." : "Failed to create exam. Please ensure the server is running.");
     } finally {
       setIsLoading(false);
     }
@@ -180,7 +199,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
         )}
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 px-6 py-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tạo Bài Kiểm Tra</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{isEditing ? 'Chỉnh Sửa Bài Kiểm Tra' : 'Tạo Bài Kiểm Tra'}</h2>
           <button 
             onClick={onClose}
             className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-800 transition-colors"
@@ -371,7 +390,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess })
             ) : (
                <>
                  <span className="material-symbols-outlined text-[18px]">save</span>
-                 Create Exam
+                 {isEditing ? 'Cập nhật' : 'Create Exam'}
                </>
             )}
           </button>

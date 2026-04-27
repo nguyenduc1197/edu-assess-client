@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, ChevronDown, Menu } from 'lucide-react';
-import { AppView, Assignment, AssignmentStatus, LoginProps, SubjectLabel, User } from '../../../types';
+import { AppView, Assignment, AssignmentStatus, CompletedExam, LoginProps, SubjectLabel, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import AssignmentTable from '../../Common/AssignmentTable/AssignmentTable';
 import ExamSession from '../Exam/ExamSession';
@@ -23,6 +23,34 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'available' | 'completed'>('available');
+  const [completedExams, setCompletedExams] = useState<CompletedExam[]>([]);
+  const [isCompletedLoading, setIsCompletedLoading] = useState(false);
+  const [completedError, setCompletedError] = useState('');
+  const [viewingResultStudentExamId, setViewingResultStudentExamId] = useState<string | null>(null);
+
+  const fetchCompletedExams = useCallback(async () => {
+    const studentId = getCurrentProfileId();
+    if (!studentId) return;
+
+    setIsCompletedLoading(true);
+    setCompletedError('');
+    try {
+      const response = await fetchClient(`/students/${studentId}/completed-exams`);
+      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      const data = await response.json();
+      setCompletedExams(Array.isArray(data) ? data : (data.items || data.data || []));
+    } catch (err) {
+      console.error('Failed to fetch completed exams', err);
+      setCompletedError('Không thể tải danh sách bài thi đã hoàn thành.');
+    } finally {
+      setIsCompletedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCompletedExams();
+  }, [fetchCompletedExams]);
 
   const fetchAssignments = useCallback(async () => {
     const studentId = getCurrentProfileId();
@@ -200,7 +228,33 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     setSelectedExam(null);
     setCurrentView('dashboard');
     fetchAssignments();
+    fetchCompletedExams();
   };
+
+  if (viewingResultStudentExamId) {
+    const examForResult = completedExams.find(
+      (ce) => ce.studentExamId === viewingResultStudentExamId
+    );
+    const assignmentForResult: Assignment = {
+      id: examForResult?.examId || '',
+      title: examForResult?.examName || '',
+      subject: SubjectLabel.GD_KTPL,
+      deadline: examForResult?.end || '',
+      deadlineDisplay: '',
+      status: AssignmentStatus.GRADED,
+      studentExamId: viewingResultStudentExamId,
+      isSubmitted: true,
+      assessmentStatus: 'Completed',
+    };
+    return (
+      <ExamSession
+        assignment={assignmentForResult}
+        examId={assignmentForResult.id}
+        onExit={() => setViewingResultStudentExamId(null)}
+        onSubmitted={() => {}}
+      />
+    );
+  }
 
   if (currentView === 'exam-session' && selectedExam) {
     return (
@@ -243,50 +297,170 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                 Không gian học tập
               </span>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-                Bài Thi Khả Dụng
+                Bài Thi Của Em
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 sm:text-base">
-                Các bài chưa làm hoặc cần làm lại sẽ hiển thị ở đây để em tiếp tục ngay.
+                Theo dõi các bài thi khả dụng và lịch sử hoàn thành.
               </p>
             </div>
           </div>
 
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
-              {error}
-            </div>
-          )}
-
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="relative w-full max-w-none sm:max-w-xs">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                <Search size={20} />
-              </div>
-              <input
-                type="text"
-                placeholder="Tìm bài tập..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-background-dark dark:text-white dark:placeholder-gray-500 transition-colors"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 sm:w-auto">
-                <span>{isLoading ? 'Đang tải...' : `${filteredAssignments.length} bài thi`}</span>
-                <ChevronDown size={16} className="text-gray-500" />
-              </button>
-            </div>
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab('available')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'available'
+                  ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              Bài thi khả dụng
+              {assignments.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary dark:bg-blue-900/30 dark:text-blue-300">
+                  {assignments.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('completed')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'completed'
+                  ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              Đã hoàn thành
+              {completedExams.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-green-100 px-1.5 py-0.5 text-xs text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                  {completedExams.length}
+                </span>
+              )}
+            </button>
           </div>
 
-          <AssignmentTable
-            assignments={filteredAssignments}
-            onStartExam={handleStartExam}
-            onRetryAssessment={handleRetryAssessment}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            onSort={handleSort}
-          />
+          {activeTab === 'available' && (
+            <>
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="relative w-full max-w-none sm:max-w-xs">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <Search size={20} />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Tìm bài tập..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-background-dark dark:text-white dark:placeholder-gray-500 transition-colors"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 sm:w-auto">
+                    <span>{isLoading ? 'Đang tải...' : `${filteredAssignments.length} bài thi`}</span>
+                    <ChevronDown size={16} className="text-gray-500" />
+                  </button>
+                </div>
+              </div>
+
+              <AssignmentTable
+                assignments={filteredAssignments}
+                onStartExam={handleStartExam}
+                onRetryAssessment={handleRetryAssessment}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+              />
+            </>
+          )}
+
+          {activeTab === 'completed' && (
+            <>
+              {completedError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
+                  {completedError}
+                </div>
+              )}
+
+              {isCompletedLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <p className="text-gray-500 dark:text-gray-400">Đang tải...</p>
+                </div>
+              ) : completedExams.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                  <p className="text-gray-500 dark:text-gray-400">Chưa có bài thi nào đã hoàn thành.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Bài thi</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Ngày nộp</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">Điểm</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng thái</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {completedExams.map((ce) => (
+                        <tr
+                          key={ce.studentExamId}
+                          className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                        >
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white max-w-[200px] truncate">
+                            {ce.examName}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                            {new Date(ce.finishedAt).toLocaleDateString('vi-VN')}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">
+                            {ce.score !== null ? ce.score.toFixed(1) : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                              ce.assessmentStatus === 'Completed'
+                                ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+                                : ce.assessmentStatus === 'Pending'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+                            }`}>
+                              {ce.assessmentStatus === 'Completed'
+                                ? 'Đã đánh giá'
+                                : ce.assessmentStatus === 'Pending'
+                                ? 'Đang chấm'
+                                : ce.assessmentStatus === 'Failed'
+                                ? 'Lỗi đánh giá'
+                                : 'Chưa đánh giá'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {ce.assessmentStatus === 'Completed' ? (
+                              <button
+                                type="button"
+                                onClick={() => setViewingResultStudentExamId(ce.studentExamId)}
+                                className="text-primary hover:underline text-sm font-medium dark:text-blue-400"
+                              >
+                                Xem kết quả
+                              </button>
+                            ) : (
+                              <span className="text-gray-400 text-sm">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </main>
     </div>
