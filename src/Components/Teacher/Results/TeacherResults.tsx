@@ -407,6 +407,9 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                         <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                           <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.behaviorAdjustmentScore / 10) * 100, 100))}%` }} />
                         </div>
+                        {selectedResult.behaviorAdjustmentFeedback && (
+                          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{selectedResult.behaviorAdjustmentFeedback}</p>
+                        )}
                       </div>
                     )}
                     {selectedResult.selfDevelopmentScore !== null && (
@@ -415,6 +418,9 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                         <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                           <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.selfDevelopmentScore / 10) * 100, 100))}%` }} />
                         </div>
+                        {selectedResult.selfDevelopmentFeedback && (
+                          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{selectedResult.selfDevelopmentFeedback}</p>
+                        )}
                       </div>
                     )}
                     {selectedResult.economicSocialParticipationScore !== null && (
@@ -423,6 +429,9 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                         <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                           <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.economicSocialParticipationScore / 10) * 100, 100))}%` }} />
                         </div>
+                        {selectedResult.economicSocialParticipationFeedback && (
+                          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{selectedResult.economicSocialParticipationFeedback}</p>
+                        )}
                       </div>
                     )}
                   </div>

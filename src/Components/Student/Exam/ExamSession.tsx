@@ -305,6 +305,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       selfDevelopmentScore,
       economicSocialParticipationScore,
       overallFeedback,
+      behaviorAdjustmentFeedback,
+      selfDevelopmentFeedback,
+      economicSocialParticipationFeedback,
     } = assessmentResult;
 
     const failed = assessmentStatus === 'Failed';
@@ -370,6 +373,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((behaviorAdjustmentScore / 10) * 100, 100))}%` }} />
                       </div>
+                      {behaviorAdjustmentFeedback && (
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{behaviorAdjustmentFeedback}</p>
+                      )}
                     </div>
                   )}
                   {selfDevelopmentScore !== null && (
@@ -378,6 +384,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selfDevelopmentScore / 10) * 100, 100))}%` }} />
                       </div>
+                      {selfDevelopmentFeedback && (
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{selfDevelopmentFeedback}</p>
+                      )}
                     </div>
                   )}
                   {economicSocialParticipationScore !== null && (
@@ -386,6 +395,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((economicSocialParticipationScore / 10) * 100, 100))}%` }} />
                       </div>
+                      {economicSocialParticipationFeedback && (
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{economicSocialParticipationFeedback}</p>
+                      )}
                     </div>
                   )}
                 </div>
