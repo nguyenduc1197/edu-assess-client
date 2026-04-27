@@ -918,7 +918,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
                               {selectedAssessment.economicSocialParticipationAccumulation && (
                                 <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Năng lực tìm hiểu và tham gia hoạt động KT-XH</p>
+                                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Năng lực Tìm kiếm Tham gia KT-XH</p>
                                   <div className="grid grid-cols-3 gap-3">
                                     <div className="text-center">
                                       <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">Lần này</p>
@@ -1038,7 +1038,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                           </p>
                         </div>
                         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">Tìm hiểu và tham gia KT-XH</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">Tìm kiếm Tham gia KT-XH</p>
                           <p className="text-3xl font-bold text-amber-700 dark:text-amber-300">
                             {examAnalytics.averageEconomicSocialParticipationScore !== null ? examAnalytics.averageEconomicSocialParticipationScore?.toFixed(2) : '--'}
                           </p>
