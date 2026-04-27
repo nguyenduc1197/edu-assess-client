@@ -59,17 +59,17 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
       }
 
       const responses = await Promise.all(requests);
-      const allItems: any[] = [];
-      const seenIds = new Set<string>();
+      const mergedQuestions: Question[] = [];
+      const processedQuestionIds = new Set<string>();
 
       for (const response of responses) {
         if (response.ok) {
           const data = await response.json();
-          const items: any[] = Array.isArray(data) ? data : (data.items || data.data || []);
+          const items: Question[] = Array.isArray(data) ? data : (data.items || data.data || []);
           for (const item of items) {
-            if (item.id && !seenIds.has(item.id)) {
-              seenIds.add(item.id);
-              allItems.push(item);
+            if (item.id && !processedQuestionIds.has(item.id)) {
+              processedQuestionIds.add(item.id);
+              mergedQuestions.push(item);
             }
           }
         } else {
@@ -77,7 +77,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
         }
       }
 
-      setQuestions(allItems);
+      setQuestions(mergedQuestions);
     } catch (err) {
       console.error('Error fetching questions:', err);
     } finally {
