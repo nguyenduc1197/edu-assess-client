@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { Student, Class } from '../../../types';
-import { fetchClient } from '../../../api/fetchClient';
+import { MIN_PASSWORD_LENGTH } from './constants';
+import { fetchAllClasses } from './studentApi';
 
 interface StudentFormModalProps {
   student?: Student | null;
@@ -22,15 +23,19 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
   const [classes, setClasses] = useState<Class[]>([]);
   const [isFetchingClasses, setIsFetchingClasses] = useState(true);
 
+  const resetFormFields = () => {
+    setName('');
+    setDateOfBirth('');
+    setSchoolClassId('');
+    setUsername('');
+    setPassword('');
+  };
+
   useEffect(() => {
     const fetchClasses = async () => {
       setIsFetchingClasses(true);
       try {
-        const response = await fetchClient('/classes?pageNumber=1&pageSize=100');
-        if (response.ok) {
-          const data = await response.json();
-          setClasses(Array.isArray(data) ? data : (data.items || data.data || []));
-        }
+        setClasses(await fetchAllClasses());
       } catch (err) {
         console.error('Error fetching classes:', err);
       } finally {
@@ -45,7 +50,10 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
       setName(student.name);
       setDateOfBirth(student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '');
       setSchoolClassId(student.schoolClassId);
+      return;
     }
+
+    resetFormFields();
   }, [student]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,6 +65,7 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
     if (!schoolClassId.trim()) { setError('Vui lòng nhập mã lớp học'); return; }
     if (!isEdit && !username.trim()) { setError('Vui lòng nhập tên đăng nhập'); return; }
     if (!isEdit && !password.trim()) { setError('Vui lòng nhập mật khẩu'); return; }
+    if (!isEdit && password.trim().length < MIN_PASSWORD_LENGTH) { setError(`Mật khẩu phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự`); return; }
 
     setIsSubmitting(true);
     try {
@@ -64,8 +73,8 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
         ? { id: student!.id, name: name.trim(), dateOfBirth: `${dateOfBirth}T00:00:00`, schoolClassId: schoolClassId.trim() }
         : { name: name.trim(), dateOfBirth: `${dateOfBirth}T00:00:00`, schoolClassId: schoolClassId.trim(), username: username.trim(), password };
       await onSubmit(payload);
-    } catch {
-      setError('Đã xảy ra lỗi. Vui lòng thử lại.');
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Đã xảy ra lỗi. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
     }
