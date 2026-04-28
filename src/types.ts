@@ -149,7 +149,11 @@ export interface Student {
   schoolClassId: string;
   schoolClassName?: string;
   username?: string;
+  avatarUrl?: string | null;
   dateCreated?: string;
+  dateModified?: string;
+  isActive?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface LoginProps {

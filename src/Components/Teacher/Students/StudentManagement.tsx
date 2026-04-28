@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, PlusCircle, Menu, Trash2, Edit2, Users } from 'lucide-react';
-import { User, Student } from '../../../types';
+import { KeyRound, Menu, PlusCircle, Search, Trash2, Edit2, Users } from 'lucide-react';
+import { User, Student, Class as SchoolClass } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import StudentFormModal from './StudentFormModal';
 import BulkStudentModal from './BulkStudentModal';
@@ -17,17 +17,110 @@ const mockUser: User = {
   avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj"
 };
 
+interface ResetPasswordModalProps {
+  student: Student;
+  isSubmitting: boolean;
+  error: string;
+  onClose: () => void;
+  onSubmit: (newPassword: string) => Promise<void>;
+}
+
+const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ student, isSubmitting, error, onClose, onSubmit }) => {
+  const [newPassword, setNewPassword] = useState('');
+  const [localError, setLocalError] = useState('');
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLocalError('');
+
+    if (newPassword.trim().length < 6) {
+      setLocalError('Mật khẩu mới phải có ít nhất 6 ký tự.');
+      return;
+    }
+
+    await onSubmit(newPassword.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-xl bg-white shadow-2xl border border-gray-200 dark:bg-gray-900 dark:border-gray-700">
+        <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Đặt Lại Mật Khẩu</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Học sinh: {student.name}</p>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 px-6 py-5">
+            {(localError || error) && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
+                {localError || error}
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu mới</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                minLength={6}
+                placeholder="Tối thiểu 6 ký tự"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-blue-500 dark:focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Đang cập nhật...' : 'Xác nhận'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'className' | 'dateCreated' | 'dateModified'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [studentForPasswordReset, setStudentForPasswordReset] = useState<Student | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [passwordResetError, setPasswordResetError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const fetchClasses = useCallback(async () => {
+    try {
+      const response = await fetchClient('/classes?pageNumber=1&pageSize=100');
+      if (!response.ok) {
+        throw new Error('Không thể tải danh sách lớp.');
+      }
+
+      const data = await response.json();
+      setClasses(Array.isArray(data) ? data : (data.items || data.data || []));
+    } catch (classError) {
+      console.error('Failed to fetch classes', classError);
+      setError('Không thể tải danh sách lớp học.');
+    }
+  }, []);
 
   const fetchStudents = useCallback(async () => {
     try {
@@ -40,6 +133,9 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
         sortBy,
         sortDirection,
       });
+      if (selectedClassId) {
+        query.set('schoolClassId', selectedClassId);
+      }
       const response = await fetchClient(`/students?${query.toString()}`);
 
       if (response.ok) {
@@ -52,7 +148,9 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
           schoolClassId: item.schoolClassId || '',
           schoolClassName: item.schoolClassName || item.schoolClassId || '',
           username: item.username,
-          dateCreated: item.dateCreated ? new Date(item.dateCreated).toLocaleDateString('vi-VN') : '',
+          avatarUrl: item.avatarUrl || null,
+          dateCreated: item.dateCreated || '',
+          dateModified: item.dateModified || '',
         }));
         setStudents(mapped);
       } else {
@@ -64,7 +162,11 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [sortBy, sortDirection]);
+  }, [selectedClassId, sortBy, sortDirection]);
+
+  useEffect(() => {
+    fetchClasses();
+  }, [fetchClasses]);
 
   useEffect(() => {
     fetchStudents();
@@ -116,6 +218,54 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
     }
   };
 
+  const handleAvatarUpdated = (studentId: string, avatarUrl: string | null) => {
+    setStudents((currentStudents) => currentStudents.map((student) => (
+      student.id === studentId ? { ...student, avatarUrl } : student
+    )));
+    setEditingStudent((currentStudent) => (
+      currentStudent?.id === studentId ? { ...currentStudent, avatarUrl } : currentStudent
+    ));
+  };
+
+  const handleOpenResetPassword = (student: Student) => {
+    setStudentForPasswordReset(student);
+    setPasswordResetError('');
+  };
+
+  const handleCloseResetPassword = () => {
+    setStudentForPasswordReset(null);
+    setPasswordResetError('');
+  };
+
+  const handleResetPassword = async (newPassword: string) => {
+    if (!studentForPasswordReset) return;
+
+    try {
+      setIsResettingPassword(true);
+      setPasswordResetError('');
+      setSuccessMessage('');
+
+      const response = await fetchClient(`/students/${studentForPasswordReset.id}/reset-password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword }),
+      });
+
+      const body = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(body?.message || (response.status === 404 ? 'Không tìm thấy học sinh.' : 'Không thể đặt lại mật khẩu.'));
+      }
+
+      setSuccessMessage('Mật khẩu đã được cập nhật. Vui lòng lưu lại mật khẩu mới để thông báo cho học sinh.');
+      handleCloseResetPassword();
+    } catch (resetError) {
+      setPasswordResetError(resetError instanceof Error ? resetError.message : 'Không thể đặt lại mật khẩu.');
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa học sinh này không?')) return;
     try {
@@ -148,17 +298,28 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
       <Sidebar user={mockUser} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={onLogout} />
 
       {isModalOpen && (
-        <StudentFormModal
-          student={editingStudent}
-          onClose={() => setIsModalOpen(false)}
-          onSubmit={handleFormSubmit}
-        />
-      )}
+          <StudentFormModal
+            student={editingStudent}
+            onClose={() => setIsModalOpen(false)}
+            onSubmit={handleFormSubmit}
+            onAvatarUpdated={handleAvatarUpdated}
+          />
+        )}
 
       {isBulkModalOpen && (
         <BulkStudentModal
           onClose={() => setIsBulkModalOpen(false)}
           onSuccess={fetchStudents}
+        />
+      )}
+
+      {studentForPasswordReset && (
+        <ResetPasswordModal
+          student={studentForPasswordReset}
+          isSubmitting={isResettingPassword}
+          error={passwordResetError}
+          onClose={handleCloseResetPassword}
+          onSubmit={handleResetPassword}
         />
       )}
 
@@ -199,6 +360,12 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
             </div>
           )}
 
+          {successMessage && (
+            <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm dark:bg-green-900/20 dark:border-green-800 dark:text-green-300">
+              {successMessage}
+            </div>
+          )}
+
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div className="relative w-full max-w-xs">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
@@ -212,7 +379,20 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
                 className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
               />
             </div>
-
+            <div className="w-full max-w-xs">
+              <select
+                value={selectedClassId}
+                onChange={(event) => setSelectedClassId(event.target.value)}
+                className="block h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-blue-500 dark:focus:ring-blue-500"
+              >
+                <option value="">Lọc theo lớp: Tất cả</option>
+                {classes.map((schoolClass) => (
+                  <option key={schoolClass.id} value={schoolClass.id}>
+                    {schoolClass.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -250,6 +430,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
                             title="Chỉnh sửa"
                           >
                             <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleOpenResetPassword(student)}
+                            className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors dark:text-amber-400"
+                            title="Đặt lại mật khẩu"
+                          >
+                            <KeyRound size={18} />
                           </button>
                           <button
                             onClick={() => handleDelete(student.id)}
