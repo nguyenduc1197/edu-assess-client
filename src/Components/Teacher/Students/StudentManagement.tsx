@@ -216,15 +216,6 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
     }
   };
 
-  const handleAvatarUpdated = (studentId: string, avatarUrl: string | null) => {
-    setStudents((currentStudents) => currentStudents.map((student) => (
-      student.id === studentId ? { ...student, avatarUrl } : student
-    )));
-    setEditingStudent((currentStudent) => (
-      currentStudent?.id === studentId ? { ...currentStudent, avatarUrl } : currentStudent
-    ));
-  };
-
   const handleOpenResetPassword = (student: Student) => {
     setStudentForPasswordReset(student);
     setPasswordResetError('');
@@ -300,7 +291,6 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
             student={editingStudent}
             onClose={() => setIsModalOpen(false)}
             onSubmit={handleFormSubmit}
-            onAvatarUpdated={handleAvatarUpdated}
           />
         )}
 
