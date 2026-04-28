@@ -16,6 +16,7 @@ import Sidebar from '../../Common/Sidebar/Sidebar';
 import CreateExamModal from '../Exam/CreateExamModal';
 import { fetchClient } from '../../../api/fetchClient';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
+import { formatCompetencyPercent } from '../../../utils/competencyPercent';
 
 let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
@@ -1051,19 +1052,19 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                         <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-800 dark:bg-violet-900/20">
                           <p className="text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400 mb-1">Điều chỉnh hành vi</p>
                           <p className="text-3xl font-bold text-violet-700 dark:text-violet-300">
-                            {examAnalytics.averageBehaviorAdjustmentScore !== null ? examAnalytics.averageBehaviorAdjustmentScore?.toFixed(2) : '--'}
+                            {formatCompetencyPercent(examAnalytics.averageBehaviorAdjustmentScore, { fractionDigits: 0 })}
                           </p>
                         </div>
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-900/20">
                           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1">Phát triển bản thân</p>
                           <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
-                            {examAnalytics.averageSelfDevelopmentScore !== null ? examAnalytics.averageSelfDevelopmentScore?.toFixed(2) : '--'}
+                            {formatCompetencyPercent(examAnalytics.averageSelfDevelopmentScore, { fractionDigits: 0 })}
                           </p>
                         </div>
                         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
                           <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">Tìm hiểu Tham gia KT-XH</p>
                           <p className="text-3xl font-bold text-amber-700 dark:text-amber-300">
-                            {examAnalytics.averageEconomicSocialParticipationScore !== null ? examAnalytics.averageEconomicSocialParticipationScore?.toFixed(2) : '--'}
+                            {formatCompetencyPercent(examAnalytics.averageEconomicSocialParticipationScore, { fractionDigits: 0 })}
                           </p>
                         </div>
                       </div>
