@@ -1,19 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, User as UserIcon, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { Student, Class } from '../../../types';
-import { fetchClient } from '../../../api/fetchClient';
-import { API_BASE_URL } from '../../../config/env';
-import { ALLOWED_AVATAR_TYPES, AVATAR_ACCEPT, MAX_AVATAR_SIZE, MIN_PASSWORD_LENGTH } from './constants';
+import { MIN_PASSWORD_LENGTH } from './constants';
 import { fetchAllClasses } from './studentApi';
 
 interface StudentFormModalProps {
   student?: Student | null;
   onClose: () => void;
   onSubmit: (data: any) => Promise<void>;
-  onAvatarUpdated?: (studentId: string, avatarUrl: string | null) => void;
 }
 
-const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, onSubmit, onAvatarUpdated }) => {
+const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, onSubmit }) => {
   const isEdit = !!student;
 
   const [name, setName] = useState('');
@@ -25,11 +22,6 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [classes, setClasses] = useState<Class[]>([]);
   const [isFetchingClasses, setIsFetchingClasses] = useState(true);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(student?.avatarUrl || null);
-  const [avatarError, setAvatarError] = useState('');
-  const [avatarSuccess, setAvatarSuccess] = useState('');
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const resetFormFields = () => {
     setName('');
@@ -63,69 +55,6 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
 
     resetFormFields();
   }, [student]);
-
-  useEffect(() => {
-    setAvatarUrl(student?.avatarUrl || null);
-    setAvatarError('');
-    setAvatarSuccess('');
-  }, [student]);
-
-  const resolvedAvatarUrl = useMemo(() => {
-    if (!avatarUrl) return '';
-    if (/^https?:\/\//i.test(avatarUrl)) return avatarUrl;
-    return `${API_BASE_URL}${avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`}`;
-  }, [avatarUrl]);
-
-  const handleAvatarClick = () => {
-    if (!student || isUploadingAvatar) return;
-    fileInputRef.current?.click();
-  };
-
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!student || !file) return;
-
-    setAvatarError('');
-    setAvatarSuccess('');
-
-    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
-      setAvatarError('Chỉ chấp nhận ảnh JPEG, PNG, GIF hoặc WEBP.');
-      return;
-    }
-
-    if (file.size > MAX_AVATAR_SIZE) {
-      setAvatarError('Ảnh đại diện không được vượt quá 5MB.');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      setIsUploadingAvatar(true);
-      const response = await fetchClient(`/students/${student.id}/avatar`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const body = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(body?.message || 'Cập nhật ảnh đại diện thất bại.');
-      }
-
-      const nextAvatarUrl = typeof body?.avatarUrl === 'string' ? body.avatarUrl : null;
-      setAvatarUrl(nextAvatarUrl);
-      setAvatarSuccess('Ảnh đại diện đã được cập nhật.');
-      onAvatarUpdated?.(student.id, nextAvatarUrl);
-    } catch (uploadError) {
-      setAvatarError(uploadError instanceof Error ? uploadError.message : 'Không thể tải ảnh lên.');
-    } finally {
-      setIsUploadingAvatar(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,55 +97,6 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
                 {error}
-              </div>
-            )}
-
-            {isEdit && student && (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ảnh Đại Diện</label>
-                <div className="flex items-center gap-4">
-                  <div className="group relative h-24 w-24 overflow-hidden rounded-full border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
-                    {resolvedAvatarUrl ? (
-                      <img src={resolvedAvatarUrl} alt={student.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-gray-400 dark:text-gray-500">
-                        <UserIcon size={36} />
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleAvatarClick}
-                      disabled={isUploadingAvatar}
-                      className="absolute inset-0 flex items-center justify-center bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-100"
-                    >
-                      <span className="flex items-center gap-2 text-xs font-semibold">
-                        <Camera size={16} />
-                        {isUploadingAvatar ? 'Đang tải...' : 'Thay ảnh'}
-                      </span>
-                    </button>
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    <p>JPEG, PNG, GIF, WEBP.</p>
-                    <p>Dung lượng tối đa 5MB.</p>
-                  </div>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={AVATAR_ACCEPT}
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                />
-                {avatarError && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
-                    {avatarError}
-                  </div>
-                )}
-                {avatarSuccess && (
-                  <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm dark:bg-green-900/20 dark:border-green-800 dark:text-green-300">
-                    {avatarSuccess}
-                  </div>
-                )}
               </div>
             )}
 
