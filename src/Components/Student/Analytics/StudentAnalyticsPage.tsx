@@ -3,6 +3,7 @@ import { Menu } from 'lucide-react';
 import { StudentAnalytics, AnalyticsProgressItem, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import { fetchClient, getCurrentProfileId } from '../../../api/fetchClient';
+import { formatCompetencyPercent } from '../../../utils/competencyPercent';
 
 interface StudentAnalyticsPageProps {
   onLogout?: () => void;
@@ -198,8 +199,8 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
     fetchAnalytics();
   }, [fetchAnalytics]);
 
-  const fmt = (v: number | null | undefined) =>
-    v !== null && v !== undefined ? v.toFixed(2) : '--';
+  const fmtCompetency = (v: number | null | undefined) =>
+    formatCompetencyPercent(v, { fractionDigits: 0 });
 
   return (
     <div className="relative flex min-h-screen w-full flex-col lg:flex-row group/design-root">
@@ -253,7 +254,7 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
                     Điều chỉnh hành vi
                   </p>
                   <p className="text-3xl font-bold text-violet-700 dark:text-violet-300">
-                    {fmt(analytics.behaviorAdjustmentAverageScore)}
+                    {fmtCompetency(analytics.behaviorAdjustmentAverageScore)}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Trung bình</p>
                 </div>
@@ -262,7 +263,7 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
                     Phát triển bản thân
                   </p>
                   <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
-                    {fmt(analytics.selfDevelopmentAverageScore)}
+                    {fmtCompetency(analytics.selfDevelopmentAverageScore)}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Trung bình</p>
                 </div>
@@ -271,7 +272,7 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
                     Tìm hiểu Tham gia KT-XH
                   </p>
                   <p className="text-3xl font-bold text-amber-700 dark:text-amber-300">
-                    {fmt(analytics.economicSocialParticipationAverageScore)}
+                    {fmtCompetency(analytics.economicSocialParticipationAverageScore)}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Trung bình</p>
                 </div>
@@ -316,13 +317,13 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
                             {item.score.toFixed(1)}
                           </td>
                           <td className="px-4 py-3 text-sm text-right text-violet-600 dark:text-violet-400">
-                            {fmt(item.behaviorAdjustmentScore)}
+                            {fmtCompetency(item.behaviorAdjustmentScore)}
                           </td>
                           <td className="px-4 py-3 text-sm text-right text-emerald-600 dark:text-emerald-400">
-                            {fmt(item.selfDevelopmentScore)}
+                            {fmtCompetency(item.selfDevelopmentScore)}
                           </td>
                           <td className="px-4 py-3 text-sm text-right text-amber-600 dark:text-amber-400">
-                            {fmt(item.economicSocialParticipationScore)}
+                            {fmtCompetency(item.economicSocialParticipationScore)}
                           </td>
                         </tr>
                       ))}

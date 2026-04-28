@@ -12,6 +12,7 @@ import {
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import { fetchClient } from '../../../api/fetchClient';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
+import { formatCompetencyPercent } from '../../../utils/competencyPercent';
 
 interface TeacherResultsProps {
   onLogout?: () => void;
@@ -31,14 +32,11 @@ const getFeedbackItems = (feedback?: string | null) =>
     .filter(Boolean);
 
 const formatScoreChipValue = (value?: number | null) => {
-  if (value === null || value === undefined) return '--';
-  return value.toFixed(1);
+  return formatCompetencyPercent(value, { fractionDigits: 0 });
 };
 
 const formatGainChipValue = (value?: number | null) => {
-  if (value === null || value === undefined) return '--';
-  if (value > 0) return `+${value.toFixed(1)}`;
-  return value.toFixed(1);
+  return formatCompetencyPercent(value, { fractionDigits: 0, signed: true });
 };
 
 const getGainChipTone = (value?: number | null) => {
@@ -403,7 +401,12 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                   <div className="space-y-3">
                     {selectedResult.behaviorAdjustmentScore !== null && (
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực điều chỉnh hành vi</p>
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Năng lực điều chỉnh hành vi</p>
+                          <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                            {formatCompetencyPercent(selectedResult.behaviorAdjustmentScore, { fractionDigits: 0, clamp: true })}
+                          </span>
+                        </div>
                         <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                           <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.behaviorAdjustmentScore / 10) * 100, 100))}%` }} />
                         </div>
@@ -411,7 +414,12 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                     )}
                     {selectedResult.selfDevelopmentScore !== null && (
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực phát triển bản thân</p>
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Năng lực phát triển bản thân</p>
+                          <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                            {formatCompetencyPercent(selectedResult.selfDevelopmentScore, { fractionDigits: 0, clamp: true })}
+                          </span>
+                        </div>
                         <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                           <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.selfDevelopmentScore / 10) * 100, 100))}%` }} />
                         </div>
@@ -419,7 +427,12 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                     )}
                     {selectedResult.economicSocialParticipationScore !== null && (
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội</p>
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội</p>
+                          <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                            {formatCompetencyPercent(selectedResult.economicSocialParticipationScore, { fractionDigits: 0, clamp: true })}
+                          </span>
+                        </div>
                         <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                           <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.economicSocialParticipationScore / 10) * 100, 100))}%` }} />
                         </div>
