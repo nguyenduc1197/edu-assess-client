@@ -12,7 +12,7 @@ import {
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import { fetchClient } from '../../../api/fetchClient';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
-import { formatCompetencyPercent } from '../../../utils/competencyPercent';
+import { competencyScoreToPercent, formatCompetencyPercent } from '../../../utils/competencyPercent';
 
 interface TeacherResultsProps {
   onLogout?: () => void;
@@ -408,7 +408,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                           </span>
                         </div>
                         <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                          <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.behaviorAdjustmentScore / 10) * 100, 100))}%` }} />
+                          <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${competencyScoreToPercent(selectedResult.behaviorAdjustmentScore, { clamp: true })}%` }} />
                         </div>
                       </div>
                     )}
@@ -421,7 +421,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                           </span>
                         </div>
                         <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                          <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.selfDevelopmentScore / 10) * 100, 100))}%` }} />
+                          <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${competencyScoreToPercent(selectedResult.selfDevelopmentScore, { clamp: true })}%` }} />
                         </div>
                       </div>
                     )}
@@ -434,7 +434,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                           </span>
                         </div>
                         <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                          <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selectedResult.economicSocialParticipationScore / 10) * 100, 100))}%` }} />
+                          <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${competencyScoreToPercent(selectedResult.economicSocialParticipationScore, { clamp: true })}%` }} />
                         </div>
                       </div>
                     )}

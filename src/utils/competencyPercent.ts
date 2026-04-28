@@ -4,6 +4,7 @@ export const competencyScoreToPercent = (
 ) => {
   if (value === null || value === undefined) return null;
 
+  // Backend returns competency scores on a 0-10 scale.
   const percent = value * 10;
   if (!options?.clamp) return percent;
 
