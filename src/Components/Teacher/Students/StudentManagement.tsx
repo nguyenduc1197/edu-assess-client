@@ -5,6 +5,8 @@ import Sidebar from '../../Common/Sidebar/Sidebar';
 import StudentFormModal from './StudentFormModal';
 import BulkStudentModal from './BulkStudentModal';
 import { fetchClient } from '../../../api/fetchClient';
+import { MIN_PASSWORD_LENGTH } from './constants';
+import { fetchAllClasses } from './studentApi';
 
 interface StudentManagementProps {
   onLogout?: () => void;
@@ -16,6 +18,8 @@ const mockUser: User = {
   email: localStorage.getItem('email') || 'an.nguyen@school.edu',
   avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj"
 };
+
+const formatDisplayDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('vi-VN') : '');
 
 interface ResetPasswordModalProps {
   student: Student;
@@ -33,8 +37,8 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ student, isSubm
     event.preventDefault();
     setLocalError('');
 
-    if (newPassword.trim().length < 6) {
-      setLocalError('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    if (newPassword.trim().length < MIN_PASSWORD_LENGTH) {
+      setLocalError(`Mật khẩu mới phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`);
       return;
     }
 
@@ -61,8 +65,8 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ student, isSubm
                 type="password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
-                minLength={6}
-                placeholder="Tối thiểu 6 ký tự"
+                minLength={MIN_PASSWORD_LENGTH}
+                placeholder={`Tối thiểu ${MIN_PASSWORD_LENGTH} ký tự`}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-blue-500 dark:focus:ring-blue-500"
               />
             </div>
@@ -109,16 +113,10 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
 
   const fetchClasses = useCallback(async () => {
     try {
-      const response = await fetchClient('/classes?pageNumber=1&pageSize=100');
-      if (!response.ok) {
-        throw new Error('Không thể tải danh sách lớp.');
-      }
-
-      const data = await response.json();
-      setClasses(Array.isArray(data) ? data : (data.items || data.data || []));
+      setClasses(await fetchAllClasses());
     } catch (classError) {
       console.error('Failed to fetch classes', classError);
-      setError('Không thể tải danh sách lớp học.');
+      setError(classError instanceof Error ? classError.message : 'Không thể tải danh sách lớp học.');
     }
   }, []);
 
@@ -149,8 +147,8 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onLogout }) => {
           schoolClassName: item.schoolClassName || item.schoolClassId || '',
           username: item.username,
           avatarUrl: item.avatarUrl || null,
-          dateCreated: item.dateCreated || '',
-          dateModified: item.dateModified || '',
+          dateCreated: formatDisplayDate(item.dateCreated),
+          dateModified: formatDisplayDate(item.dateModified),
         }));
         setStudents(mapped);
       } else {

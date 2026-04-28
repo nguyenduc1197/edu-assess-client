@@ -3,6 +3,8 @@ import { Camera, User as UserIcon, X } from 'lucide-react';
 import { Student, Class } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
 import { API_BASE_URL } from '../../../config/env';
+import { ALLOWED_AVATAR_TYPES, AVATAR_ACCEPT, MAX_AVATAR_SIZE, MIN_PASSWORD_LENGTH } from './constants';
+import { fetchAllClasses } from './studentApi';
 
 interface StudentFormModalProps {
   student?: Student | null;
@@ -10,9 +12,6 @@ interface StudentFormModalProps {
   onSubmit: (data: any) => Promise<void>;
   onAvatarUpdated?: (studentId: string, avatarUrl: string | null) => void;
 }
-
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
 const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, onSubmit, onAvatarUpdated }) => {
   const isEdit = !!student;
@@ -32,15 +31,19 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const resetFormFields = () => {
+    setName('');
+    setDateOfBirth('');
+    setSchoolClassId('');
+    setUsername('');
+    setPassword('');
+  };
+
   useEffect(() => {
     const fetchClasses = async () => {
       setIsFetchingClasses(true);
       try {
-        const response = await fetchClient('/classes?pageNumber=1&pageSize=100');
-        if (response.ok) {
-          const data = await response.json();
-          setClasses(Array.isArray(data) ? data : (data.items || data.data || []));
-        }
+        setClasses(await fetchAllClasses());
       } catch (err) {
         console.error('Error fetching classes:', err);
       } finally {
@@ -58,11 +61,7 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
       return;
     }
 
-    setName('');
-    setDateOfBirth('');
-    setSchoolClassId('');
-    setUsername('');
-    setPassword('');
+    resetFormFields();
   }, [student]);
 
   useEffect(() => {
@@ -91,7 +90,7 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
     setAvatarError('');
     setAvatarSuccess('');
 
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
       setAvatarError('Chỉ chấp nhận ảnh JPEG, PNG, GIF hoặc WEBP.');
       return;
     }
@@ -137,7 +136,7 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
     if (!schoolClassId.trim()) { setError('Vui lòng nhập mã lớp học'); return; }
     if (!isEdit && !username.trim()) { setError('Vui lòng nhập tên đăng nhập'); return; }
     if (!isEdit && !password.trim()) { setError('Vui lòng nhập mật khẩu'); return; }
-    if (!isEdit && password.trim().length < 6) { setError('Mật khẩu phải có ít nhất 6 ký tự'); return; }
+    if (!isEdit && password.trim().length < MIN_PASSWORD_LENGTH) { setError(`Mật khẩu phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự`); return; }
 
     setIsSubmitting(true);
     try {
@@ -204,7 +203,7 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onClose, o
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  accept={AVATAR_ACCEPT}
                   onChange={handleAvatarChange}
                   className="hidden"
                 />
