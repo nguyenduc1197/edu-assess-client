@@ -564,7 +564,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                     </label>
                     <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
                       <UploadCloud size={20} />
-                      <span>{scanFile ? scanFile.name : 'Tải lên ảnh scan hoặc file PDF (PNG, JPG, JPEG, WEBP, PDF)'}</span>
+                      <span>{scanFile ? scanFile.name : 'Tải lên file scan đề gốc (PNG, JPG, JPEG, WEBP, PDF)'}</span>
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
