@@ -83,7 +83,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   const validateSource = () => {
     if (activeTab === 'scan') {
       if (!scanFile) {
-        return 'Vui lòng tải lên ảnh scan đề bài.';
+        return 'Vui lòng tải lên ảnh scan hoặc file PDF của đề bài.';
       }
 
       if (variantCount < 1 || variantCount > 5) {
@@ -97,8 +97,8 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
       return 'Vui lòng chọn ít nhất một năng lực cần đánh giá.';
     }
 
-    if (questionCount < 1 || questionCount > 20) {
-      return 'Số lượng câu hỏi phải nằm trong khoảng từ 1 đến 20.';
+    if (questionCount < 1 || questionCount > 40) {
+      return 'Số câu hỏi phải từ 1 đến 40.';
     }
 
     if (sourceMode === 'text' && !sourceText.trim()) {
@@ -560,14 +560,14 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 <div className="space-y-4">
                   <div className="rounded-xl border border-dashed border-gray-300 bg-white p-4 dark:border-gray-600 dark:bg-gray-800/40">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Ảnh scan đề gốc
+                      Ảnh scan hoặc PDF đề gốc
                     </label>
                     <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
                       <UploadCloud size={20} />
-                      <span>{scanFile ? scanFile.name : 'Tải lên PNG, JPG, JPEG hoặc WEBP'}</span>
+                      <span>{scanFile ? scanFile.name : 'Tải lên ảnh scan hoặc file PDF (PNG, JPG, JPEG, WEBP, PDF)'}</span>
                       <input
                         type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
                         className="hidden"
                         onChange={(e) => setScanFile(e.target.files?.[0] || null)}
                       />
@@ -603,7 +603,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                   </div>
 
                   <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                    Ảnh scan chỉ dùng để sinh biến thể đề mới. Quy trình tạo bài thi hiện tại vẫn giữ nguyên, và nếu bật lưu vào ngân hàng câu hỏi thì bạn có thể nạp ngay mã câu hỏi của biến thể đã chọn vào biểu mẫu tạo bài thi này.
+                    Ảnh scan hoặc file PDF chỉ dùng để sinh biến thể đề mới. Quy trình tạo bài thi hiện tại vẫn giữ nguyên, và nếu bật lưu vào ngân hàng câu hỏi thì bạn có thể nạp ngay mã câu hỏi của biến thể đã chọn vào biểu mẫu tạo bài thi này.
                   </div>
                 </div>
               )}
@@ -704,7 +704,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                   <input
                     type="number"
                     min={1}
-                    max={20}
+                    max={40}
                     value={questionCount}
                     onChange={(e) => setQuestionCount(Number(e.target.value) || 1)}
                     className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
