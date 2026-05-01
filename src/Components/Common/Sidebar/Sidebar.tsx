@@ -7,7 +7,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { User } from '../../../types';
-import { getNavigationItems } from '../Navigation/navigation';
+import { getSidebarNavigationItems } from '../Navigation/navigation';
 
 interface SidebarProps {
   user: User;
@@ -20,7 +20,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role }) => {
   const currentPath = window.location.pathname;
   const isTeacher = role === 'Teacher' || localStorage.getItem('role') === 'Teacher';
-  const navItems = getNavigationItems(isTeacher).filter((item) => item.href !== '/settings');
+  const navItems = getSidebarNavigationItems(isTeacher);
   const email = localStorage.getItem('email');
   const displayEmail = isTeacher ? (email || user.email) : (email || 'Chưa cài đặt');
 

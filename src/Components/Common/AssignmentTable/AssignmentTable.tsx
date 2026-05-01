@@ -116,7 +116,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
                     <button
                       type="button"
                       onClick={() => handleAction(assignment)}
-                      className="inline-flex min-h-11 w-full items-center justify-center rounded-[1.2rem] bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-blue-500/25 transition-transform active:scale-[0.99]"
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-[1.2rem] bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-blue-500/25 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 active:scale-[0.99]"
                     >
                       {actionLabel || getActionText(assignment)}
                     </button>

@@ -34,6 +34,9 @@ export const studentNavItems: NavigationItem[] = [
 export const getNavigationItems = (isTeacher: boolean) =>
   isTeacher ? teacherNavItems : studentNavItems;
 
+export const getSidebarNavigationItems = (isTeacher: boolean) =>
+  getNavigationItems(isTeacher).filter((item) => item.href !== '/settings');
+
 export const getDockNavigationItems = (isTeacher: boolean) =>
   (isTeacher
     ? [teacherNavItems[0], teacherNavItems[1], teacherNavItems[2], teacherNavItems[5]]
