@@ -299,7 +299,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             <div className="flex flex-col gap-4">
               <div className="inline-flex w-fit items-center gap-2 rounded-full bg-cyan-100/90 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
                 <Sparkles size={14} />
-                Chế độ mobile premium
+                Chế độ di động cao cấp
               </div>
               <div className="flex flex-col gap-2">
                 <span className="inline-flex w-fit items-center rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">

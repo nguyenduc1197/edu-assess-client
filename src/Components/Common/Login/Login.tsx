@@ -135,7 +135,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300">
-                      App mode
+                      Chế độ app
                     </p>
                     <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
                       Giao diện mobile được tối ưu như app cài sẵn
