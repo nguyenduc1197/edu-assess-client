@@ -289,7 +289,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         onLogout={onLogout}
       />
 
-      <main className="h-screen flex-1 overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:p-8">
+      <main className="min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:h-screen lg:p-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 sm:gap-6">
           <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-cyan-50 to-blue-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <div className="flex flex-col gap-2">
@@ -306,9 +306,15 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <div
+            className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700"
+            role="tablist"
+            aria-label="Điều hướng tab, có thể cuộn ngang để xem thêm"
+          >
             <button
               onClick={() => setActiveTab('available')}
+              role="tab"
+              aria-selected={activeTab === 'available'}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'available'
                   ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
@@ -324,6 +330,8 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             </button>
             <button
               onClick={() => setActiveTab('completed')}
+              role="tab"
+              aria-selected={activeTab === 'completed'}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'completed'
                   ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
@@ -397,66 +405,115 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                   <p className="text-gray-500 dark:text-gray-400">Chưa có bài thi nào đã hoàn thành.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Bài thi</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Ngày nộp</th>
-                        <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">Điểm</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng thái</th>
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành động</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {completedExams.map((ce) => (
-                        <tr
-                          key={ce.studentExamId}
-                          className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                        >
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white max-w-[200px] truncate">
-                            {ce.examName}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                            {new Date(ce.finishedAt).toLocaleDateString('vi-VN')}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">
+                <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+                  <div className="space-y-3 p-3 sm:hidden">
+                    {completedExams.map((ce) => (
+                      <div
+                        key={ce.studentExamId}
+                        className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/40"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{ce.examName}</p>
+                          <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                             {ce.score !== null ? ce.score.toFixed(1) : '—'}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                              ce.assessmentStatus === 'Completed'
-                                ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
-                                : ce.assessmentStatus === 'Pending'
-                                ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'
-                                : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
-                            }`}>
-                              {ce.assessmentStatus === 'Completed'
-                                ? 'Đã đánh giá'
-                                : ce.assessmentStatus === 'Pending'
-                                ? 'Đang chấm'
-                                : ce.assessmentStatus === 'Failed'
-                                ? 'Lỗi đánh giá'
-                                : 'Chưa đánh giá'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {ce.assessmentStatus === 'Completed' ? (
-                              <button
-                                type="button"
-                                onClick={() => setViewingResultStudentExamId(ce.studentExamId)}
-                                className="text-primary hover:underline text-sm font-medium dark:text-blue-400"
-                              >
-                                Xem kết quả
-                              </button>
-                            ) : (
-                              <span className="text-gray-400 text-sm">—</span>
-                            )}
-                          </td>
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          Nộp ngày {new Date(ce.finishedAt).toLocaleDateString('vi-VN')}
+                        </p>
+                        <div className="mt-3 flex flex-col gap-3">
+                          <span className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                            ce.assessmentStatus === 'Completed'
+                              ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+                              : ce.assessmentStatus === 'Pending'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'
+                              : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+                          }`}>
+                            {ce.assessmentStatus === 'Completed'
+                              ? 'Đã đánh giá'
+                              : ce.assessmentStatus === 'Pending'
+                              ? 'Đang chấm'
+                              : ce.assessmentStatus === 'Failed'
+                              ? 'Lỗi đánh giá'
+                              : 'Chưa đánh giá'}
+                          </span>
+                          {ce.assessmentStatus === 'Completed' ? (
+                            <button
+                              type="button"
+                              onClick={() => setViewingResultStudentExamId(ce.studentExamId)}
+                              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
+                            >
+                              Xem kết quả
+                            </button>
+                          ) : (
+                            <span className="text-sm text-gray-400">Chưa thể xem kết quả</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden overflow-x-auto sm:block">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Bài thi</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Ngày nộp</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">Điểm</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng thái</th>
+                          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành động</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {completedExams.map((ce) => (
+                          <tr
+                            key={ce.studentExamId}
+                            className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                          >
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white max-w-[200px] truncate">
+                              {ce.examName}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                              {new Date(ce.finishedAt).toLocaleDateString('vi-VN')}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">
+                              {ce.score !== null ? ce.score.toFixed(1) : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                ce.assessmentStatus === 'Completed'
+                                  ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+                                  : ce.assessmentStatus === 'Pending'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'
+                                  : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+                              }`}>
+                                {ce.assessmentStatus === 'Completed'
+                                  ? 'Đã đánh giá'
+                                  : ce.assessmentStatus === 'Pending'
+                                  ? 'Đang chấm'
+                                  : ce.assessmentStatus === 'Failed'
+                                  ? 'Lỗi đánh giá'
+                                  : 'Chưa đánh giá'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {ce.assessmentStatus === 'Completed' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setViewingResultStudentExamId(ce.studentExamId)}
+                                  className="text-primary hover:underline text-sm font-medium dark:text-blue-400"
+                                >
+                                  Xem kết quả
+                                </button>
+                              ) : (
+                                <span className="text-gray-400 text-sm">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </>
