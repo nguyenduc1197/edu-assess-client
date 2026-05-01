@@ -1,5 +1,7 @@
 :root {
   color-scheme: light;
+  --mobile-app-header-height: 61px;
+  --mobile-modal-header-height: 73px;
 }
 
 * {
@@ -86,4 +88,3 @@ body {
     animation-delay: 200ms;
   }
 }
-

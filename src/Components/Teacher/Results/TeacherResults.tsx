@@ -254,7 +254,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
       <Sidebar user={mockUser} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={onLogout} />
 
-      <main className="min-h-[calc(100dvh-61px)] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8">
+      <main className="min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-amber-50 to-orange-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col gap-2">
@@ -415,7 +415,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
               </button>
             </div>
 
-            <div className="max-h-[calc(90dvh-73px)] space-y-4 overflow-y-auto p-4 sm:p-6">
+            <div className="max-h-[calc(90dvh-var(--mobile-modal-header-height))] space-y-4 overflow-y-auto p-4 sm:p-6">
               {isDetailLoading ? (
                 <p className="text-gray-500 dark:text-gray-400">Đang tải chi tiết...</p>
               ) : selectedResult && (

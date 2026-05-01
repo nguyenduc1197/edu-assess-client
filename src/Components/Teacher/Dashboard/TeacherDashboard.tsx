@@ -483,7 +483,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       )}
 
       {/* Main Content Area */}
-      <main className="min-h-[calc(100dvh-61px)] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8">
+      <main className="min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           
           {/* Page Heading */}
