@@ -18,10 +18,10 @@ export interface NavigationItem {
 export const teacherNavItems: NavigationItem[] = [
   { icon: LayoutDashboard, label: 'Tổng quan', href: '/teacherdashboard' },
   { icon: BookOpen, label: 'Câu Hỏi', href: '/teacher/questions' },
-  { icon: BarChart3, label: 'Kết quả', href: '/teacher/results' },
-  { icon: GraduationCap, label: 'Lớp học', href: '/teacher/classes' },
-  { icon: UserCog, label: 'Giáo viên', href: '/teacher/teachers' },
-  { icon: Users, label: 'Học sinh', href: '/teacher/students' },
+  { icon: BarChart3, label: 'Kết Quả', href: '/teacher/results' },
+  { icon: GraduationCap, label: 'Lớp Học', href: '/teacher/classes' },
+  { icon: UserCog, label: 'Giáo Viên', href: '/teacher/teachers' },
+  { icon: Users, label: 'Học Sinh', href: '/teacher/students' },
   { icon: Settings, label: 'Cài đặt', href: '/settings' },
 ];
 
