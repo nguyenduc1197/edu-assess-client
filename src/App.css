@@ -4,6 +4,7 @@
   --mobile-modal-header-height: 73px;
   --mobile-modal-max-height: 90dvh;
   --mobile-bottom-nav-height: 92px;
+  --mobile-safe-spacing: 1rem;
 }
 
 * {
@@ -57,7 +58,7 @@ body {
 }
 
 .mobile-safe-bottom {
-  padding-bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom) + 1rem);
+  padding-bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom) + var(--mobile-safe-spacing));
 }
 
 .mobile-surface {

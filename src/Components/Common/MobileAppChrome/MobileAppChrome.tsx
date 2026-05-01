@@ -58,7 +58,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) 
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] lg:hidden">
-      <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-2 rounded-[2rem] border border-white/60 bg-white/85 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/85">
+      <div
+        className="pointer-events-auto mx-auto flex max-w-md items-center gap-2 rounded-[2rem] border border-white/60 bg-white/85 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/85"
+        role="navigation"
+        aria-label="Điều hướng nhanh trên di động"
+      >
         {items.map((item) => {
           const active = isPathActive(currentPath, item.href);
 

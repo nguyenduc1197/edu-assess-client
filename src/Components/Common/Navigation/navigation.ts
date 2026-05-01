@@ -17,7 +17,7 @@ export interface NavigationItem {
 
 export const teacherNavItems: NavigationItem[] = [
   { icon: LayoutDashboard, label: 'Tổng quan', href: '/teacherdashboard' },
-  { icon: BookOpen, label: 'Câu hỏi', href: '/teacher/questions' },
+  { icon: BookOpen, label: 'Câu Hỏi', href: '/teacher/questions' },
   { icon: BarChart3, label: 'Kết quả', href: '/teacher/results' },
   { icon: GraduationCap, label: 'Lớp học', href: '/teacher/classes' },
   { icon: UserCog, label: 'Giáo viên', href: '/teacher/teachers' },
