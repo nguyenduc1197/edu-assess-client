@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, ChevronDown, Menu } from 'lucide-react';
+import { Search, ChevronDown, CheckCircle2, Clock3, Sparkles } from 'lucide-react';
 import { AppView, Assignment, AssignmentStatus, CompletedExam, LoginProps, SubjectLabel, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import AssignmentTable from '../../Common/AssignmentTable/AssignmentTable';
 import ExamSession from '../Exam/ExamSession';
 import { fetchClient, getCurrentProfileId } from '../../../api/fetchClient';
+import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 
 const mockUser: User = {
   id: localStorage.getItem('profileId') || 'student-user',
@@ -177,6 +178,15 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     });
   }, [assignments, searchQuery, sortBy, sortDirection]);
 
+  const pendingAssignments = useMemo(
+    () =>
+      assignments.filter(
+        (assignment) =>
+          assignment.status === AssignmentStatus.NEW || assignment.status === AssignmentStatus.IN_PROGRESS
+      ).length,
+    [assignments]
+  );
+
   const handleStartExam = (assignment: Assignment) => {
     setSelectedExam(assignment);
     setCurrentView('exam-session');
@@ -269,18 +279,11 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col lg:flex-row group/design-root">
-      <div className="lg:hidden flex items-center justify-start px-4 py-3 bg-white border-b border-gray-200 dark:bg-background-dark dark:border-gray-800 sticky top-0 z-20 shadow-sm gap-3">
-        <button
-          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg dark:text-gray-300 dark:hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700 transition-colors"
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Mở menu"
-        >
-          <Menu size={24} />
-        </button>
-        <span className="font-bold text-lg text-gray-900 dark:text-white tracking-tight">
-          StudentHub
-        </span>
-      </div>
+      <MobileHeaderBar
+        title="Không gian học tập"
+        subtitle="Theo dõi bài thi, tiến độ và kết quả như một ứng dụng riêng trên điện thoại."
+        onOpenMenu={() => setIsSidebarOpen(true)}
+      />
 
       <Sidebar
         user={mockUser}
@@ -288,26 +291,94 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         onClose={() => setIsSidebarOpen(false)}
         onLogout={onLogout}
       />
+      <MobileBottomNav onOpenMenu={() => setIsSidebarOpen(true)} />
 
-      <main className="min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:h-screen lg:p-8">
+      <main className="mobile-safe-bottom min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:h-screen lg:p-8 lg:pb-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 sm:gap-6">
-          <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-cyan-50 to-blue-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <div className="flex flex-col gap-2">
-              <span className="inline-flex w-fit items-center rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
-                Không gian học tập
-              </span>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-                Bài Thi Của Em
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 sm:text-base">
-                Theo dõi các bài thi khả dụng và lịch sử hoàn thành.
-              </p>
+          <div className="mobile-surface mobile-premium-enter rounded-[2rem] p-4 sm:p-6">
+            <div className="flex flex-col gap-4">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full bg-cyan-100/90 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
+                <Sparkles size={14} />
+                Chế độ mobile premium
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="inline-flex w-fit items-center rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
+                  Không gian học tập
+                </span>
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
+                  Bài Thi Của Em
+                </h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 sm:text-base">
+                  Theo dõi các bài thi khả dụng và lịch sử hoàn thành trong giao diện gọn, nổi khối và dễ thao tác hơn trên điện thoại.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-[1.5rem] border border-cyan-200/70 bg-cyan-50/90 p-3 dark:border-cyan-900/40 dark:bg-cyan-900/20">
+                  <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-300">
+                    <Clock3 size={16} />
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em]">Đang chờ</span>
+                  </div>
+                  <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">{pendingAssignments}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Bài cần xử lý</p>
+                </div>
+                <div className="rounded-[1.5rem] border border-emerald-200/70 bg-emerald-50/90 p-3 dark:border-emerald-900/40 dark:bg-emerald-900/20">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                    <CheckCircle2 size={16} />
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em]">Hoàn thành</span>
+                  </div>
+                  <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">{completedExams.length}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Bài đã chấm / nộp</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Tabs */}
+          <div className="mobile-premium-enter mobile-premium-delay-1 rounded-[1.75rem] border border-white/70 bg-white/70 p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 sm:hidden">
+            <div
+              className="grid grid-cols-2 gap-1"
+              role="tablist"
+              aria-label="Điều hướng tab, có thể cuộn ngang để xem thêm"
+            >
+              <button
+                onClick={() => setActiveTab('available')}
+                role="tab"
+                aria-selected={activeTab === 'available'}
+                className={`flex items-center justify-center gap-2 rounded-[1.25rem] px-4 py-3 text-sm font-semibold transition-all ${
+                  activeTab === 'available'
+                    ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-500/25'
+                    : 'text-gray-500 hover:bg-white/70 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100'
+                }`}
+              >
+                <span>Bài thi khả dụng</span>
+                {assignments.length > 0 && (
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${activeTab === 'available' ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary dark:bg-blue-900/30 dark:text-blue-300'}`}>
+                    {assignments.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('completed')}
+                role="tab"
+                aria-selected={activeTab === 'completed'}
+                className={`flex items-center justify-center gap-2 rounded-[1.25rem] px-4 py-3 text-sm font-semibold transition-all ${
+                  activeTab === 'completed'
+                    ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-500/25'
+                    : 'text-gray-500 hover:bg-white/70 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100'
+                }`}
+              >
+                <span>Đã hoàn thành</span>
+                {completedExams.length > 0 && (
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${activeTab === 'completed' ? 'bg-white/20 text-white' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'}`}>
+                    {completedExams.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
           <div
-            className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700"
+            className="hidden overflow-x-auto border-b border-gray-200 dark:border-gray-700 sm:flex"
             role="tablist"
             aria-label="Điều hướng tab, có thể cuộn ngang để xem thêm"
           >
@@ -355,7 +426,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                 </div>
               )}
 
-              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div className="mobile-premium-enter mobile-premium-delay-2 flex flex-col justify-between gap-4 rounded-[1.75rem] border border-white/70 bg-white/75 p-4 shadow-[0_18px_42px_rgba(15,23,42,0.07)] backdrop-blur-xl sm:flex-row sm:items-center dark:border-white/10 dark:bg-slate-900/70">
                 <div className="relative w-full max-w-none sm:max-w-xs">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                     <Search size={20} />
@@ -370,7 +441,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <button className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 sm:w-auto">
+                  <button className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 sm:w-auto">
                     <span>{isLoading ? 'Đang tải...' : `${filteredAssignments.length} bài thi`}</span>
                     <ChevronDown size={16} className="text-gray-500" />
                   </button>
@@ -405,12 +476,12 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                   <p className="text-gray-500 dark:text-gray-400">Chưa có bài thi nào đã hoàn thành.</p>
                 </div>
               ) : (
-                <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+                <div className="rounded-[1.75rem] border border-white/70 bg-white/80 shadow-[0_20px_45px_rgba(15,23,42,0.07)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
                   <div className="space-y-3 p-3 sm:hidden">
                     {completedExams.map((ce) => (
                       <div
                         key={ce.studentExamId}
-                        className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/40"
+                        className="rounded-[1.75rem] border border-gray-200 bg-gradient-to-b from-white via-slate-50 to-slate-100/80 p-4 shadow-sm dark:border-gray-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800/40"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">{ce.examName}</p>

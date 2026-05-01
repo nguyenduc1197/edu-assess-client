@@ -130,7 +130,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </div>
 
           <div className="flex items-center justify-center">
-            <div className="w-full max-w-md rounded-3xl border border-white/15 bg-white/95 p-6 shadow-2xl backdrop-blur-xl dark:border-gray-800 dark:bg-gray-900/95 sm:p-8">
+            <div className="w-full max-w-md rounded-[2rem] border border-white/30 bg-white/90 p-5 shadow-[0_28px_80px_rgba(15,23,42,0.22)] backdrop-blur-2xl dark:border-gray-800 dark:bg-gray-900/95 sm:p-8">
+              <div className="mb-5 rounded-[1.7rem] border border-slate-200/80 bg-gradient-to-r from-slate-50 via-cyan-50 to-violet-50 p-4 dark:border-slate-800 dark:bg-slate-900/60 lg:hidden">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-300">
+                      App mode
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                      Giao diện mobile được tối ưu như app cài sẵn
+                    </p>
+                  </div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-600/20">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                  <span className="rounded-full bg-white/80 px-3 py-1 dark:bg-white/5">Glass UI</span>
+                  <span className="rounded-full bg-white/80 px-3 py-1 dark:bg-white/5">Chạm dễ hơn</span>
+                  <span className="rounded-full bg-white/80 px-3 py-1 dark:bg-white/5">Dock navigation</span>
+                </div>
+              </div>
+
               <div className="mb-6 text-center">
                 <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg">
                   <ShieldCheck className="h-7 w-7" />

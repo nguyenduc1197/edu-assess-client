@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, PlusCircle, Menu, Trash2, Edit2, Sparkles } from 'lucide-react';
+import { Search, PlusCircle, Trash2, Edit2, Sparkles } from 'lucide-react';
 import { CompetencyOption, Question, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import AddQuestionMenu from '../Exam/AddQuestionMenu';
 import AIQuestionGeneratorModal from './AIQuestionGeneratorModal';
 import { fetchClient } from '../../../api/fetchClient';
+import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 
 interface QuestionManagementProps {
   onLogout?: () => void;
@@ -234,18 +235,11 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
 
   return (
     <div className="relative flex min-h-screen w-full flex-col lg:flex-row group/design-root">
-      <div className="lg:hidden flex items-center justify-start px-4 py-3 bg-white border-b border-gray-200 dark:bg-background-dark dark:border-gray-800 sticky top-0 z-20 shadow-sm gap-3">
-        <button
-          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg dark:text-gray-300 dark:hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700 transition-colors"
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Mở menu"
-        >
-          <Menu size={24} />
-        </button>
-        <span className="font-bold text-lg text-gray-900 dark:text-white tracking-tight">
-          StudentHub
-        </span>
-      </div>
+      <MobileHeaderBar
+        title="Quản lý câu hỏi"
+        subtitle="Duyệt và chỉnh sửa ngân hàng câu hỏi với điều hướng app-like."
+        onOpenMenu={() => setIsSidebarOpen(true)}
+      />
 
       <Sidebar
         user={mockUser}
@@ -253,6 +247,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         onClose={() => setIsSidebarOpen(false)}
         onLogout={onLogout}
       />
+      <MobileBottomNav onOpenMenu={() => setIsSidebarOpen(true)} />
 
       {isAddModalOpen && (
         <AddQuestionMenu
@@ -275,7 +270,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         />
       )}
 
-      <main className="flex-1 px-4 py-8 sm:px-8 lg:p-8 overflow-y-auto h-screen">
+      <main className="mobile-safe-bottom flex-1 overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8 lg:pb-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-violet-50 to-fuchsia-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
