@@ -222,7 +222,7 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
         onLogout={onLogout}
       />
 
-      <main className="h-screen flex-1 overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:p-8">
+      <main className="min-h-[calc(100dvh-61px)] flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:h-screen lg:p-8">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
           <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-violet-50 to-fuchsia-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
@@ -292,43 +292,76 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
 
               {/* Progress table */}
               {analytics.progressOverTime.length > 0 && (
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-800/60">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Bài thi</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Ngày</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Điểm</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-violet-500">HV</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-emerald-500">PT</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-amber-500">KT</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-transparent">
-                      {analytics.progressOverTime.map((item) => (
-                        <tr key={item.studentExamId} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white max-w-[180px] truncate">
-                            {item.examName}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                            {new Date(item.finishedAt).toLocaleDateString('vi-VN')}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">
-                            {item.score.toFixed(1)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-violet-600 dark:text-violet-400">
-                            {fmtCompetency(item.behaviorAdjustmentScore)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-emerald-600 dark:text-emerald-400">
-                            {fmtCompetency(item.selfDevelopmentScore)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-amber-600 dark:text-amber-400">
-                            {fmtCompetency(item.economicSocialParticipationScore)}
-                          </td>
+                <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                  <div className="space-y-3 p-3 sm:hidden">
+                    {analytics.progressOverTime.map((item) => (
+                      <div
+                        key={item.studentExamId}
+                        className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/40"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.examName}</p>
+                          <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{item.score.toFixed(1)}</span>
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(item.finishedAt).toLocaleDateString('vi-VN')}
+                        </p>
+                        <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                          <div className="rounded-xl bg-violet-50 px-2 py-2 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
+                            <p className="font-semibold">HV</p>
+                            <p>{fmtCompetency(item.behaviorAdjustmentScore)}</p>
+                          </div>
+                          <div className="rounded-xl bg-emerald-50 px-2 py-2 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+                            <p className="font-semibold">PT</p>
+                            <p>{fmtCompetency(item.selfDevelopmentScore)}</p>
+                          </div>
+                          <div className="rounded-xl bg-amber-50 px-2 py-2 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                            <p className="font-semibold">KT</p>
+                            <p>{fmtCompetency(item.economicSocialParticipationScore)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden overflow-x-auto sm:block">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-800/60">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Bài thi</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Ngày</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Điểm</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-violet-500">HV</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-emerald-500">PT</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-amber-500">KT</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-transparent">
+                        {analytics.progressOverTime.map((item) => (
+                          <tr key={item.studentExamId} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white max-w-[180px] truncate">
+                              {item.examName}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                              {new Date(item.finishedAt).toLocaleDateString('vi-VN')}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">
+                              {item.score.toFixed(1)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right text-violet-600 dark:text-violet-400">
+                              {fmtCompetency(item.behaviorAdjustmentScore)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right text-emerald-600 dark:text-emerald-400">
+                              {fmtCompetency(item.selfDevelopmentScore)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right text-amber-600 dark:text-amber-400">
+                              {fmtCompetency(item.economicSocialParticipationScore)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </>

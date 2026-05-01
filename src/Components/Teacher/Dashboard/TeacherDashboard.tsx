@@ -483,7 +483,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 px-4 py-8 sm:px-8 lg:p-8 overflow-y-auto h-screen">
+      <main className="min-h-[calc(100dvh-61px)] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           
           {/* Page Heading */}
@@ -557,92 +557,157 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           </div>
 
           {/* Table Data */}
-          <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tên bài thi</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Thời hạn</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng thái</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAssignments.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                      Chưa có bài thi nào.
-                    </td>
+          <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+            <div className="space-y-3 p-3 sm:hidden">
+              {filteredAssignments.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                  Chưa có bài thi nào.
+                </div>
+              ) : (
+                filteredAssignments.map((a) => (
+                  <div key={a.id} className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{a.title}</p>
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        a.status === AssignmentStatus.IN_PROGRESS
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
+                          : a.status === AssignmentStatus.GRADED
+                          ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+                      }`}>
+                        {a.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{a.deadlineDisplay}</p>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenExamStudents(a)}
+                        className="min-h-10 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                      >
+                        Học sinh
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { handleOpenExamStudents(a); setExamDetailTab('analytics'); fetchExamAnalytics(a.id); }}
+                        className="min-h-10 rounded-xl border border-violet-200 px-3 py-2 text-sm font-medium text-violet-700 dark:border-violet-800 dark:text-violet-300"
+                      >
+                        Phân tích
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleEditExam(a)}
+                        className="min-h-10 rounded-xl border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 dark:border-blue-800 dark:text-blue-300"
+                      >
+                        Chỉnh sửa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDuplicateExam(a.id)}
+                        className="min-h-10 rounded-xl border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:text-emerald-300"
+                      >
+                        Nhân đôi
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteExam(a.id)}
+                        className="col-span-2 min-h-10 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-800 dark:text-red-300"
+                      >
+                        Xóa bài thi
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tên bài thi</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Thời hạn</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng thái</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Hành động</th>
                   </tr>
-                ) : (
-                  filteredAssignments.map((a) => (
-                    <tr key={a.id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white max-w-[220px] truncate">
-                        {a.title}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                        {a.deadlineDisplay}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                          a.status === AssignmentStatus.IN_PROGRESS
-                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
-                            : a.status === AssignmentStatus.GRADED
-                            ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
-                            : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
-                        }`}>
-                          {a.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            type="button"
-                            title="Xem học sinh"
-                            onClick={() => handleOpenExamStudents(a)}
-                            className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors text-xs font-medium"
-                          >
-                            Học sinh
-                          </button>
-                          <button
-                            type="button"
-                            title="Phân tích"
-                            onClick={() => { handleOpenExamStudents(a); setExamDetailTab('analytics'); fetchExamAnalytics(a.id); }}
-                            className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20 transition-colors"
-                          >
-                            <BarChart2 size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            title="Chỉnh sửa"
-                            onClick={() => handleEditExam(a)}
-                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            title="Nhân đôi"
-                            onClick={() => handleDuplicateExam(a.id)}
-                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20 transition-colors"
-                          >
-                            <Copy size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            title="Xóa"
-                            onClick={() => handleDeleteExam(a.id)}
-                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                          </button>
-                        </div>
+                </thead>
+                <tbody>
+                  {filteredAssignments.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                        Chưa có bài thi nào.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredAssignments.map((a) => (
+                      <tr key={a.id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white max-w-[220px] truncate">
+                          {a.title}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          {a.deadlineDisplay}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                            a.status === AssignmentStatus.IN_PROGRESS
+                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
+                              : a.status === AssignmentStatus.GRADED
+                              ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+                              : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+                          }`}>
+                            {a.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              title="Xem học sinh"
+                              onClick={() => handleOpenExamStudents(a)}
+                              className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors text-xs font-medium"
+                            >
+                              Học sinh
+                            </button>
+                            <button
+                              type="button"
+                              title="Phân tích"
+                              onClick={() => { handleOpenExamStudents(a); setExamDetailTab('analytics'); fetchExamAnalytics(a.id); }}
+                              className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20 transition-colors"
+                            >
+                              <BarChart2 size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              title="Chỉnh sửa"
+                              onClick={() => handleEditExam(a)}
+                              className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              title="Nhân đôi"
+                              onClick={() => handleDuplicateExam(a.id)}
+                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20 transition-colors"
+                            >
+                              <Copy size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              title="Xóa"
+                              onClick={() => handleDeleteExam(a.id)}
+                              className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Pagination */}
@@ -687,9 +752,9 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       </main>
 
       {selectedExam && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-5xl rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-[90dvh] w-full flex-col rounded-t-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-5xl sm:rounded-xl">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700 sm:px-6">
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">{selectedExam.title}</h3>
               </div>
@@ -709,7 +774,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700 px-6">
+            <div className="flex overflow-x-auto border-b border-gray-200 px-4 dark:border-gray-700 sm:px-6">
               <button
                 onClick={() => setExamDetailTab('students')}
                 className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -735,7 +800,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+            <div className="space-y-6 overflow-y-auto p-4 sm:p-6">
               {examDetailTab === 'students' && (
                 <>
               {studentListError && (
@@ -769,66 +834,113 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-800/60">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('studentName')} className="hover:text-gray-700 dark:hover:text-gray-200">Học sinh {studentSortBy === 'studentName' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('schoolClassName')} className="hover:text-gray-700 dark:hover:text-gray-200">Lớp {studentSortBy === 'schoolClassName' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('assessmentStatus')} className="hover:text-gray-700 dark:hover:text-gray-200">Trạng thái {studentSortBy === 'assessmentStatus' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('score')} className="hover:text-gray-700 dark:hover:text-gray-200">Điểm {studentSortBy === 'score' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Hành động</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-transparent">
-                        {examStudents.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                              Chưa có học sinh nào trong bài thi này.
-                            </td>
-                          </tr>
-                        ) : (
-                          sortedExamStudents.map((item) => {
-                            const statusMeta = getStudentStatusMeta(item);
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="space-y-3 p-3 sm:hidden">
+                      {examStudents.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                          Chưa có học sinh nào trong bài thi này.
+                        </div>
+                      ) : (
+                        sortedExamStudents.map((item) => {
+                          const statusMeta = getStudentStatusMeta(item);
 
-                            return (
-                              <tr key={`${item.studentId}-${item.studentExamId || 'empty'}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                                  <div>
-                                    <p>{item.studentName}</p>
-                                    {item.assessmentError && (
-                                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{item.assessmentError}</p>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{item.schoolClassName || '—'}</td>
-                                <td className="px-4 py-3 text-sm">
-                                  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusMeta.className}`}>
-                                    {statusMeta.label}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          return (
+                            <div key={`${item.studentId}-${item.studentExamId || 'empty'}`} className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.studentName}</p>
+                                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.schoolClassName || '—'}</p>
+                                </div>
+                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                                   {typeof item.score === 'number' ? item.score.toFixed(1) : '—'}
-                                </td>
-                                <td className="px-4 py-3 text-sm">
-                                  {item.canViewResult && item.studentExamId ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleViewStudentResult(item)}
-                                      className="text-primary hover:text-primary-dark hover:underline transition-colors"
-                                    >
-                                      Xem kết quả
-                                    </button>
-                                  ) : (
-                                    <span className="text-gray-400 dark:text-gray-500">—</span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
+                                </span>
+                              </div>
+                              <div className="mt-3 flex flex-col gap-3">
+                                <span className={`inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusMeta.className}`}>
+                                  {statusMeta.label}
+                                </span>
+                                {item.assessmentError && (
+                                  <p className="text-xs text-amber-700 dark:text-amber-300">{item.assessmentError}</p>
+                                )}
+                                {item.canViewResult && item.studentExamId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleViewStudentResult(item)}
+                                    className="inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
+                                  >
+                                    Xem kết quả
+                                  </button>
+                                ) : (
+                                  <span className="text-sm text-gray-400 dark:text-gray-500">Chưa có kết quả</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="hidden overflow-x-auto sm:block">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-800/60">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('studentName')} className="hover:text-gray-700 dark:hover:text-gray-200">Học sinh {studentSortBy === 'studentName' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('schoolClassName')} className="hover:text-gray-700 dark:hover:text-gray-200">Lớp {studentSortBy === 'schoolClassName' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('assessmentStatus')} className="hover:text-gray-700 dark:hover:text-gray-200">Trạng thái {studentSortBy === 'assessmentStatus' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"><button type="button" onClick={() => handleStudentSort('score')} className="hover:text-gray-700 dark:hover:text-gray-200">Điểm {studentSortBy === 'score' ? (studentSortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Hành động</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-transparent">
+                          {examStudents.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                Chưa có học sinh nào trong bài thi này.
+                              </td>
+                            </tr>
+                          ) : (
+                            sortedExamStudents.map((item) => {
+                              const statusMeta = getStudentStatusMeta(item);
+
+                              return (
+                                <tr key={`${item.studentId}-${item.studentExamId || 'empty'}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                                    <div>
+                                      <p>{item.studentName}</p>
+                                      {item.assessmentError && (
+                                        <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{item.assessmentError}</p>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{item.schoolClassName || '—'}</td>
+                                  <td className="px-4 py-3 text-sm">
+                                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusMeta.className}`}>
+                                      {statusMeta.label}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                    {typeof item.score === 'number' ? item.score.toFixed(1) : '—'}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm">
+                                    {item.canViewResult && item.studentExamId ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleViewStudentResult(item)}
+                                        className="text-primary hover:text-primary-dark hover:underline transition-colors"
+                                      >
+                                        Xem kết quả
+                                      </button>
+                                    ) : (
+                                      <span className="text-gray-400 dark:text-gray-500">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                   {(isAssessmentLoading || selectedAssessment) && (
