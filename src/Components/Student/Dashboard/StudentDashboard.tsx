@@ -310,7 +310,6 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700"
             role="tablist"
             aria-label="Điều hướng tab, có thể cuộn ngang để xem thêm"
-            tabIndex={0}
           >
             <button
               onClick={() => setActiveTab('available')}

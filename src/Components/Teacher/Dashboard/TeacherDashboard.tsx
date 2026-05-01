@@ -778,7 +778,6 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               className="flex overflow-x-auto border-b border-gray-200 px-4 dark:border-gray-700 sm:px-6"
               role="tablist"
               aria-label="Điều hướng tab chi tiết bài thi, có thể cuộn ngang để xem thêm"
-              tabIndex={0}
             >
               <button
                 onClick={() => setExamDetailTab('students')}
