@@ -2,6 +2,7 @@
   color-scheme: light;
   --mobile-app-header-height: 61px;
   --mobile-modal-header-height: 73px;
+  --mobile-modal-max-height: 90dvh;
 }
 
 * {

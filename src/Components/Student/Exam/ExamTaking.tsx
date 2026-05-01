@@ -133,7 +133,10 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                 {remainingSeconds !== null ? formatCountdown(remainingSeconds) : '--:--'}
               </span>
             </div>
-            <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300 sm:hidden">
+            <div
+              className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300 sm:hidden"
+              aria-label="Thời gian còn lại"
+            >
               {remainingSeconds !== null ? formatCountdown(remainingSeconds) : '--:--'}
             </div>
             <button

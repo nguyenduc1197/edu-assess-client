@@ -407,7 +407,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
       {(selectedResult || isDetailLoading) && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
-          <div className="flex max-h-[90dvh] w-full flex-col rounded-t-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-2xl sm:rounded-xl">
+          <div className="flex max-h-[var(--mobile-modal-max-height)] w-full flex-col rounded-t-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-2xl sm:rounded-xl">
             <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700 sm:px-6">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Chi Tiết Đánh Giá</h3>
               <button type="button" onClick={() => setSelectedResult(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">

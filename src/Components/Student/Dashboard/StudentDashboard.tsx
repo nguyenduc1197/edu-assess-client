@@ -306,9 +306,15 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           </div>
 
           {/* Tabs */}
-          <div className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700">
+          <div
+            className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700"
+            role="tablist"
+            aria-label="Điều hướng tab, có thể cuộn ngang để xem thêm"
+          >
             <button
               onClick={() => setActiveTab('available')}
+              role="tab"
+              aria-selected={activeTab === 'available'}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'available'
                   ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
@@ -324,6 +330,8 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             </button>
             <button
               onClick={() => setActiveTab('completed')}
+              role="tab"
+              aria-selected={activeTab === 'completed'}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'completed'
                   ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'

@@ -753,7 +753,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
       {selectedExam && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
-          <div className="flex max-h-[90dvh] w-full flex-col rounded-t-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-5xl sm:rounded-xl">
+          <div className="flex max-h-[var(--mobile-modal-max-height)] w-full flex-col rounded-t-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-5xl sm:rounded-xl">
             <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700 sm:px-6">
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">{selectedExam.title}</h3>
@@ -774,9 +774,15 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             </div>
 
             {/* Tabs */}
-            <div className="flex overflow-x-auto border-b border-gray-200 px-4 dark:border-gray-700 sm:px-6">
+            <div
+              className="flex overflow-x-auto border-b border-gray-200 px-4 dark:border-gray-700 sm:px-6"
+              role="tablist"
+              aria-label="Điều hướng tab chi tiết bài thi, có thể cuộn ngang để xem thêm"
+            >
               <button
                 onClick={() => setExamDetailTab('students')}
+                role="tab"
+                aria-selected={examDetailTab === 'students'}
                 className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
                   examDetailTab === 'students'
                     ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
@@ -790,6 +796,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                   setExamDetailTab('analytics');
                   if (!examAnalytics && selectedExam) fetchExamAnalytics(selectedExam.id);
                 }}
+                role="tab"
+                aria-selected={examDetailTab === 'analytics'}
                 className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
                   examDetailTab === 'analytics'
                     ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
