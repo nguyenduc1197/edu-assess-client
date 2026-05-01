@@ -113,7 +113,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   if (!currentQuestion || !currentBlock) return <div>Loading questions...</div>;
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100">
+    <div className="flex min-h-[100dvh] flex-col bg-gray-50 text-gray-900 dark:bg-black dark:text-gray-100">
       {/* Header */}
       <header className="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-background-dark sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -133,9 +133,17 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                 {remainingSeconds !== null ? formatCountdown(remainingSeconds) : '--:--'}
               </span>
             </div>
+            <div
+              className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300 sm:hidden"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <span className="sr-only">Thời gian còn lại </span>
+              {remainingSeconds !== null ? formatCountdown(remainingSeconds) : '--:--'}
+            </div>
             <button
               onClick={onReview}
-              className="min-h-10 w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark sm:w-auto"
+              className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
             >
               Review & Nộp bài
             </button>
@@ -266,11 +274,11 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
             )}
 
             {/* Navigation Buttons */}
-            <div className="mt-10 flex items-center justify-between">
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
                 onClick={handlePrev}
                 disabled={currentBlockIndex === 0}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-background-dark dark:text-gray-200 dark:hover:bg-gray-800"
+                className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-background-dark dark:text-gray-200 dark:hover:bg-gray-800 sm:w-auto"
               >
                 <ChevronLeft size={16} />
                 Quay lại
@@ -279,7 +287,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
               <button
                 onClick={handleNext}
                 disabled={currentBlockIndex === questionBlocks.length - 1}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-background-dark dark:text-gray-200 dark:hover:bg-gray-800"
+                className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-background-dark dark:text-gray-200 dark:hover:bg-gray-800 sm:w-auto"
               >
                 Tiếp theo
                 <ChevronRight size={16} />

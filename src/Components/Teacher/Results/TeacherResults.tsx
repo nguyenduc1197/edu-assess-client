@@ -254,7 +254,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
       <Sidebar user={mockUser} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={onLogout} />
 
-      <main className="flex-1 px-4 py-8 sm:px-8 lg:p-8 overflow-y-auto h-screen">
+      <main className="min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-amber-50 to-orange-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col gap-2">
@@ -303,60 +303,99 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+          <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <p className="text-gray-500 dark:text-gray-400">Đang tải...</p>
               </div>
             ) : results.length > 0 ? (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('examName')} className="hover:text-gray-900 dark:hover:text-white">Bài Thi {sortBy === 'examName' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('studentName')} className="hover:text-gray-900 dark:hover:text-white">Học Sinh {sortBy === 'studentName' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Lớp</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('score')} className="hover:text-gray-900 dark:hover:text-white">Điểm {sortBy === 'score' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tiến độ</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng Thái</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('finishedAt')} className="hover:text-gray-900 dark:hover:text-white">Nộp Lúc {sortBy === 'finishedAt' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
-                    <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Chi Tiết</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                <div className="space-y-3 p-3 sm:hidden">
                   {results.map((result) => (
-                    <tr key={result.studentExamId} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">{result.examName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.studentName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.schoolClassName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.score ?? '—'}</td>
-                      <td className="px-6 py-4 align-top">
-                        <div className="min-w-[280px] space-y-2 text-sm text-gray-500 dark:text-gray-400">
-                          <div className="font-medium text-gray-700 dark:text-gray-200">
-                            {result.completedExamCount ? `${result.completedExamCount} bài đã tính` : 'Chưa có lịch sử'}
-                          </div>
-                          <div className="space-y-2">
-                            <ProgressChip label="Điều chỉnh hành vi" accumulation={result.behaviorAdjustmentAccumulation} />
-                            <ProgressChip label="Phát triển bản thân" accumulation={result.selfDevelopmentAccumulation} />
-                            <ProgressChip label="Tìm hiểu Tham gia KT-XH" accumulation={result.economicSocialParticipationAccumulation} />
-                          </div>
+                    <div key={result.studentExamId} className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{result.examName}</p>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{result.studentName} · {result.schoolClassName}</p>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{getAssessmentStatusLabel(result.assessmentStatus)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{formatDateTime(result.finishedAt)}</td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleViewDetails(result.studentExamId)}
-                          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
-                        >
-                          <Eye size={16} />
-                          Xem
-                        </button>
-                      </td>
-                    </tr>
+                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{result.score ?? '—'}</span>
+                      </div>
+                      <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                        {getAssessmentStatusLabel(result.assessmentStatus)} · {formatDateTime(result.finishedAt)}
+                      </p>
+                      <div className="mt-3 space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                        <div className="font-medium text-gray-700 dark:text-gray-200">
+                          {result.completedExamCount ? `${result.completedExamCount} bài đã tính` : 'Chưa có lịch sử'}
+                        </div>
+                        <div className="space-y-2">
+                          <ProgressChip label="Điều chỉnh hành vi" accumulation={result.behaviorAdjustmentAccumulation} />
+                          <ProgressChip label="Phát triển bản thân" accumulation={result.selfDevelopmentAccumulation} />
+                          <ProgressChip label="Tìm hiểu Tham gia KT-XH" accumulation={result.economicSocialParticipationAccumulation} />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleViewDetails(result.studentExamId)}
+                        className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
+                      >
+                        <Eye size={16} />
+                        Xem chi tiết
+                      </button>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+
+                <div className="hidden overflow-x-auto sm:block">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('examName')} className="hover:text-gray-900 dark:hover:text-white">Bài Thi {sortBy === 'examName' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('studentName')} className="hover:text-gray-900 dark:hover:text-white">Học Sinh {sortBy === 'studentName' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Lớp</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('score')} className="hover:text-gray-900 dark:hover:text-white">Điểm {sortBy === 'score' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tiến độ</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng Thái</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('finishedAt')} className="hover:text-gray-900 dark:hover:text-white">Nộp Lúc {sortBy === 'finishedAt' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
+                        <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Chi Tiết</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.map((result) => (
+                        <tr key={result.studentExamId} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">{result.examName}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.studentName}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.schoolClassName}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{result.score ?? '—'}</td>
+                          <td className="px-6 py-4 align-top">
+                            <div className="min-w-[280px] space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                              <div className="font-medium text-gray-700 dark:text-gray-200">
+                                {result.completedExamCount ? `${result.completedExamCount} bài đã tính` : 'Chưa có lịch sử'}
+                              </div>
+                              <div className="space-y-2">
+                                <ProgressChip label="Điều chỉnh hành vi" accumulation={result.behaviorAdjustmentAccumulation} />
+                                <ProgressChip label="Phát triển bản thân" accumulation={result.selfDevelopmentAccumulation} />
+                                <ProgressChip label="Tìm hiểu Tham gia KT-XH" accumulation={result.economicSocialParticipationAccumulation} />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{getAssessmentStatusLabel(result.assessmentStatus)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{formatDateTime(result.finishedAt)}</td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleViewDetails(result.studentExamId)}
+                              className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
+                            >
+                              <Eye size={16} />
+                              Xem
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               <div className="flex items-center justify-center py-12 text-gray-500 dark:text-gray-400">
                 Chưa có kết quả nào phù hợp với bộ lọc hiện tại.
@@ -367,16 +406,16 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
       </main>
 
       {(selectedResult || isDetailLoading) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-[var(--mobile-modal-max-height)] w-full flex-col rounded-t-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-2xl sm:rounded-xl">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700 sm:px-6">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Chi Tiết Đánh Giá</h3>
               <button type="button" onClick={() => setSelectedResult(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                 Đóng
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="max-h-[calc(90dvh-var(--mobile-modal-header-height))] space-y-4 overflow-y-auto p-4 sm:p-6">
               {isDetailLoading ? (
                 <p className="text-gray-500 dark:text-gray-400">Đang tải chi tiết...</p>
               ) : selectedResult && (
