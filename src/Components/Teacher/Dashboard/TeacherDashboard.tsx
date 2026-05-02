@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, PlusCircle, Menu, Copy, Edit2, BarChart2 } from 'lucide-react';
+import { Search, PlusCircle, Copy, Edit2, BarChart2 } from 'lucide-react';
 import {
   AssessmentResult,
   Assignment,
@@ -17,6 +17,7 @@ import CreateExamModal from '../Exam/CreateExamModal';
 import { fetchClient } from '../../../api/fetchClient';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 import { formatCompetencyPercent } from '../../../utils/competencyPercent';
+import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 
 let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
@@ -452,18 +453,11 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     <div className="relative flex min-h-screen w-full flex-col lg:flex-row group/design-root">
       
       {/* Mobile Header (Only visible on small screens) */}
-      <div className="lg:hidden flex items-center justify-start px-4 py-3 bg-white border-b border-gray-200 dark:bg-background-dark dark:border-gray-800 sticky top-0 z-20 shadow-sm gap-3">
-        <button 
-          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg dark:text-gray-300 dark:hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700 transition-colors"
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Mở menu"
-        >
-            <Menu size={24} />
-        </button>
-        <span className="font-bold text-lg text-gray-900 dark:text-white tracking-tight">
-          StudentHub
-        </span>
-      </div>
+      <MobileHeaderBar
+        title="Bảng điều khiển giáo viên"
+        subtitle="Quản lý bài thi với cảm giác như một app cài sẵn trên mobile."
+        onOpenMenu={() => setIsSidebarOpen(true)}
+      />
 
       <Sidebar 
         user={mockUser} 
@@ -471,6 +465,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         onClose={() => setIsSidebarOpen(false)} 
         onLogout={onLogout}
       />
+      <MobileBottomNav onOpenMenu={() => setIsSidebarOpen(true)} />
 {/* Create/Edit Exam Modal */}
       {(isCreateModalOpen || editingExam) && (
         <CreateExamModal 
@@ -483,7 +478,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       )}
 
       {/* Main Content Area */}
-      <main className="min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8">
+      <main className="mobile-safe-bottom min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8 lg:pb-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           
           {/* Page Heading */}

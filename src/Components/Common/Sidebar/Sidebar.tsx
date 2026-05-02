@@ -1,18 +1,13 @@
 import React from 'react';
 import {
-  LayoutDashboard,
-  BookOpen,
-  GraduationCap,
-  Users,
-  UserCog,
   Settings,
   X,
   LogOut,
-  BarChart3,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
 import { User } from '../../../types';
+import { getSidebarNavigationItems } from '../Navigation/navigation';
 
 interface SidebarProps {
   user: User;
@@ -25,22 +20,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role }) => {
   const currentPath = window.location.pathname;
   const isTeacher = role === 'Teacher' || localStorage.getItem('role') === 'Teacher';
-
-  const teacherNavItems = [
-    { icon: LayoutDashboard, label: 'Tổng quan', href: '/teacherdashboard' },
-    { icon: BookOpen, label: 'Câu Hỏi', href: '/teacher/questions' },
-    { icon: BarChart3, label: 'Kết Quả', href: '/teacher/results' },
-    { icon: GraduationCap, label: 'Lớp Học', href: '/teacher/classes' },
-    { icon: UserCog, label: 'Giáo Viên', href: '/teacher/teachers' },
-    { icon: Users, label: 'Học Sinh', href: '/teacher/students' },
-  ];
-
-  const studentNavItems = [
-    { icon: LayoutDashboard, label: 'Tổng quan', href: '/studentdashboard' },
-    { icon: BarChart3, label: 'Phân tích', href: '/student/analytics' },
-  ];
-
-  const navItems = isTeacher ? teacherNavItems : studentNavItems;
+  const navItems = getSidebarNavigationItems(isTeacher);
   const email = localStorage.getItem('email');
   const displayEmail = isTeacher ? (email || user.email) : (email || 'Chưa cài đặt');
 
@@ -55,11 +35,14 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-72 flex-col border-r border-slate-800 bg-slate-950 text-slate-100 shadow-2xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed bottom-3 left-3 top-3 z-50 flex h-auto w-[min(86vw,20rem)] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/95 text-slate-100 shadow-2xl shadow-slate-950/40 backdrop-blur-xl transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:left-0 lg:bottom-0 lg:z-0 lg:h-screen lg:w-72 lg:translate-x-0 lg:rounded-none lg:border-r lg:border-l-0 lg:border-t-0 lg:border-b-0 lg:bg-slate-950 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="border-b border-white/10 p-4">
+          <div className="mb-4 flex justify-center lg:hidden">
+            <div className="h-1.5 w-12 rounded-full bg-white/15" />
+          </div>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-violet-500 text-white shadow-lg shadow-cyan-500/20">
@@ -80,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role
              </button>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur">
+          <div className="mt-4 rounded-[1.75rem] border border-white/10 bg-white/5 p-3 backdrop-blur">
             <div className="flex items-start gap-3 overflow-hidden">
                <div
                  className="aspect-square size-11 shrink-0 rounded-2xl bg-cover bg-center ring-2 ring-white/10"
@@ -107,16 +90,19 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role
 
           <nav className="flex flex-col gap-1.5">
             {navItems.map((item) => {
-              const isActive = currentPath === item.href;
+              const isActive =
+                currentPath === item.href ||
+                currentPath.startsWith(`${item.href}/`) ||
+                (currentPath === '/' && item.href.endsWith('dashboard'));
 
               return (
                 <a
                   key={item.label}
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/20'
-                      : 'text-slate-300 hover:bg-white/8 hover:text-white'
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/20'
+                        : 'text-slate-300 hover:bg-white/8 hover:text-white'
                   }`}
                 >
                   <span className={`rounded-lg p-1.5 ${isActive ? 'bg-white/15' : 'bg-white/5'}`}>
@@ -128,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, isOpen, onClose, onLogout, role
             })}
           </nav>
 
-          <div className="mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-sm text-slate-300">
+          <div className="mt-6 rounded-[1.75rem] border border-cyan-500/20 bg-cyan-500/5 p-3 text-sm text-slate-300">
             <div className="mb-2 flex items-center gap-2 text-cyan-300">
               <ShieldCheck size={16} />
               <span className="font-semibold">Hệ thống ổn định</span>

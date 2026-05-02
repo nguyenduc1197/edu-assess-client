@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Eye, Menu } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import {
   AssessmentResult,
   Class as SchoolClass,
@@ -11,6 +11,7 @@ import {
 } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import { fetchClient } from '../../../api/fetchClient';
+import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 import { competencyScoreToPercent, formatCompetencyPercent } from '../../../utils/competencyPercent';
 
@@ -241,20 +242,16 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col lg:flex-row group/design-root">
-      <div className="lg:hidden flex items-center justify-start px-4 py-3 bg-white border-b border-gray-200 dark:bg-background-dark dark:border-gray-800 sticky top-0 z-20 shadow-sm gap-3">
-        <button
-          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg dark:text-gray-300 dark:hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700 transition-colors"
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Mở menu"
-        >
-          <Menu size={24} />
-        </button>
-        <span className="font-bold text-lg text-gray-900 dark:text-white tracking-tight">StudentHub</span>
-      </div>
+      <MobileHeaderBar
+        title="Kết quả học sinh"
+        subtitle="Theo dõi điểm số và phản hồi AI với bố cục tối ưu cho mobile."
+        onOpenMenu={() => setIsSidebarOpen(true)}
+      />
 
       <Sidebar user={mockUser} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={onLogout} />
+      <MobileBottomNav onOpenMenu={() => setIsSidebarOpen(true)} />
 
-      <main className="min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8">
+      <main className="mobile-safe-bottom min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-8 lg:h-screen lg:p-8 lg:pb-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-8">
           <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-amber-50 to-orange-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col gap-2">
