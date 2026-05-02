@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu } from 'lucide-react';
 import { StudentAnalytics, AnalyticsProgressItem, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import { fetchClient, getCurrentProfileId } from '../../../api/fetchClient';
 import { formatCompetencyPercent } from '../../../utils/competencyPercent';
+import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 
 interface StudentAnalyticsPageProps {
   onLogout?: () => void;
@@ -204,16 +204,11 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
 
   return (
     <div className="relative flex min-h-screen w-full flex-col lg:flex-row group/design-root">
-      <div className="lg:hidden flex items-center justify-start px-4 py-3 bg-white border-b border-gray-200 dark:bg-background-dark dark:border-gray-800 sticky top-0 z-20 shadow-sm gap-3">
-        <button
-          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg dark:text-gray-300 dark:hover:bg-white/5"
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Mở menu"
-        >
-          <Menu size={24} />
-        </button>
-        <span className="font-bold text-lg text-gray-900 dark:text-white tracking-tight">StudentHub</span>
-      </div>
+      <MobileHeaderBar
+        title="Phân tích năng lực"
+        subtitle="Xem tiến độ và điểm số trong bố cục tối ưu cho màn hình nhỏ."
+        onOpenMenu={() => setIsSidebarOpen(true)}
+      />
 
       <Sidebar
         user={sidebarUser}
@@ -221,8 +216,9 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
         onClose={() => setIsSidebarOpen(false)}
         onLogout={onLogout}
       />
+      <MobileBottomNav onOpenMenu={() => setIsSidebarOpen(true)} />
 
-      <main className="min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:h-screen lg:p-8">
+      <main className="mobile-safe-bottom min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:h-screen lg:p-8 lg:pb-8">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
           <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-violet-50 to-fuchsia-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
