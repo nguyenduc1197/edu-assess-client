@@ -61,7 +61,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [scanFile, setScanFile] = useState<File | null>(null);
   const [selectedCompetencies, setSelectedCompetencies] = useState<string[]>([]);
-  const [questionCount, setQuestionCount] = useState(5);
+  const [questionCount, setQuestionCount] = useState<number | ''>(40);
   const [variantCount, setVariantCount] = useState(3);
   const [saveToQuestionBank, setSaveToQuestionBank] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -97,7 +97,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
       return 'Vui lòng chọn ít nhất một năng lực cần đánh giá.';
     }
 
-    if (questionCount < 1 || questionCount > 40) {
+    if (!questionCount || questionCount < 1 || questionCount > 40) {
       return 'Số câu hỏi phải từ 1 đến 40.';
     }
 
@@ -706,7 +706,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                     min={1}
                     max={40}
                     value={questionCount}
-                    onChange={(e) => setQuestionCount(Number(e.target.value) || 1)}
+                    onChange={(e) => setQuestionCount(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                   />
                 </div>
