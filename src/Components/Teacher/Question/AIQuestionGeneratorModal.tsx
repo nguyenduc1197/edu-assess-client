@@ -548,7 +548,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
                     { value: 'text', label: 'Văn bản' },
-                     { value: 'pdf', label: sourceMode === 'pdf' && fileMode === 'exam' ? 'PDF/Ảnh' : 'PDF' },
+                     { value: 'pdf', label: fileMode === 'exam' ? 'PDF/Ảnh' : 'PDF' },
                     { value: 'url', label: 'Liên kết web' },
                     { value: 'youtube', label: 'YouTube' },
                   ].map((item) => (
@@ -1014,7 +1014,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 <div>
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Xem trước và chỉnh sửa</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Bạn có thể sửa nội dung trước khi lưu vào ngân hàng câu hỏi.</p>
-                  {(isExamFileMode || responseMeta?.sourceType === 'examPdf') && (
+                  {responseMeta?.sourceType === 'examPdf' && (
                     <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
                       Nếu AI chưa xác định chắc chắn đáp án đúng, hệ thống có thể chọn tạm phương án đầu tiên. Hãy rà soát kỹ trước khi lưu.
                     </p>
