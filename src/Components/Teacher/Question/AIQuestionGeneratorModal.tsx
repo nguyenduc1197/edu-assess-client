@@ -83,6 +83,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   };
 
   const isExamFileMode = activeTab === 'content' && sourceMode === 'pdf' && fileMode === 'exam';
+  const uploadSourceLabel = sourceMode === 'pdf' && fileMode === 'exam' ? 'PDF/Ảnh' : 'PDF';
 
   const validateSource = () => {
     if (activeTab === 'scan') {
@@ -548,7 +549,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
                     { value: 'text', label: 'Văn bản' },
-                     { value: 'pdf', label: fileMode === 'exam' ? 'PDF/Ảnh' : 'PDF' },
+                     { value: 'pdf', label: uploadSourceLabel },
                     { value: 'url', label: 'Liên kết web' },
                     { value: 'youtube', label: 'YouTube' },
                   ].map((item) => (
