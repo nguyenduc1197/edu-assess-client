@@ -68,15 +68,18 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) 
       root.style.setProperty('--mobile-bottom-nav-height', `${navElement.offsetHeight}px`);
     };
 
-    updateNavHeight();
+    const animationFrameId = window.requestAnimationFrame(updateNavHeight);
+    const handleResize = () => updateNavHeight();
+
     const resizeObserver =
       typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(() => updateNavHeight())
+        ? new ResizeObserver(handleResize)
         : null;
 
     resizeObserver?.observe(navElement);
 
     return () => {
+      window.cancelAnimationFrame(animationFrameId);
       resizeObserver?.disconnect();
       root.style.removeProperty('--mobile-bottom-nav-height');
     };
