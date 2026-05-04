@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Menu, Sparkles } from 'lucide-react';
 import { getDockNavigationItems } from '../Navigation/navigation';
 
@@ -55,10 +55,41 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) 
   const currentPath = window.location.pathname;
   const isTeacher = localStorage.getItem('role') === 'Teacher';
   const items = getDockNavigationItems(isTeacher);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const updateNavHeight = () => {
+      const navHeight = navRef.current?.offsetHeight;
+      if (navHeight) {
+        root.style.setProperty('--mobile-bottom-nav-height', `${navHeight}px`);
+      }
+    };
+
+    updateNavHeight();
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' && navRef.current
+        ? new ResizeObserver(() => updateNavHeight())
+        : null;
+
+    if (navRef.current && resizeObserver) {
+      resizeObserver.observe(navRef.current);
+    }
+
+    window.addEventListener('resize', updateNavHeight);
+
+    return () => {
+      window.removeEventListener('resize', updateNavHeight);
+      resizeObserver?.disconnect();
+      root.style.removeProperty('--mobile-bottom-nav-height');
+    };
+  }, []);
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] lg:hidden">
       <div
+        ref={navRef}
         className="pointer-events-auto mx-auto flex max-w-md items-center gap-2 rounded-[2rem] border border-white/60 bg-white/85 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/85"
         role="navigation"
         aria-label="Điều hướng nhanh trên di động"
