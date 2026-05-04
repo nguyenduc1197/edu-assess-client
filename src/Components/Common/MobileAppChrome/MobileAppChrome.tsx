@@ -60,19 +60,15 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) 
   useEffect(() => {
     const root = document.documentElement;
     const navElement = navRef.current;
-
-    const updateNavHeight = () => {
-      const navHeight = navElement?.offsetHeight;
-      if (navHeight) {
-        root.style.setProperty('--mobile-bottom-nav-height', `${navHeight}px`);
-      }
-    };
-
-    updateNavHeight();
     if (!navElement) {
       return undefined;
     }
 
+    const updateNavHeight = () => {
+      root.style.setProperty('--mobile-bottom-nav-height', `${navElement.offsetHeight}px`);
+    };
+
+    updateNavHeight();
     const resizeObserver =
       typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(() => updateNavHeight())
