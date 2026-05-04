@@ -548,7 +548,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
                     { value: 'text', label: 'Văn bản' },
-                     { value: 'pdf', label: 'PDF/Ảnh' },
+                     { value: 'pdf', label: sourceMode === 'pdf' && fileMode === 'exam' ? 'PDF/Ảnh' : 'PDF' },
                     { value: 'url', label: 'Liên kết web' },
                     { value: 'youtube', label: 'YouTube' },
                   ].map((item) => (
