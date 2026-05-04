@@ -278,7 +278,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col lg:flex-row group/design-root">
+    <div className="relative flex h-[100dvh] w-full flex-col lg:flex-row group/design-root">
       <MobileHeaderBar
         title="Không gian học tập"
         subtitle="Theo dõi bài thi, tiến độ và kết quả như một ứng dụng riêng trên điện thoại."
@@ -293,7 +293,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       />
       <MobileBottomNav onOpenMenu={() => setIsSidebarOpen(true)} />
 
-      <main className="mobile-safe-bottom min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:h-screen lg:p-8 lg:pb-8">
+      <main className="mobile-safe-bottom min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:p-8 lg:pb-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 sm:gap-6">
           <div className="mobile-surface mobile-premium-enter rounded-[2rem] p-4 sm:p-6">
             <div className="flex flex-col gap-4">
