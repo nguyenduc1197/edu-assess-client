@@ -548,7 +548,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
                     { value: 'text', label: 'Văn bản' },
-                     { value: 'pdf', label: 'Tệp' },
+                     { value: 'pdf', label: 'PDF/Ảnh' },
                     { value: 'url', label: 'Liên kết web' },
                     { value: 'youtube', label: 'YouTube' },
                   ].map((item) => (
@@ -717,7 +717,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                      </span>
                      <input
                        type="file"
-                       accept={isExamFileMode ? 'application/pdf,image/png,image/jpeg,image/jpg,image/webp' : 'application/pdf'}
+                       accept={isExamFileMode ? 'application/pdf,image/png,image/jpeg,image/webp' : 'application/pdf'}
                        className="hidden"
                        onChange={(e) => setFile(e.target.files?.[0] || null)}
                      />
