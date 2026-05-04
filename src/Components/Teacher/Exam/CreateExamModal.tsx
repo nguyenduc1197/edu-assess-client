@@ -50,24 +50,43 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   const fetchQuestions = useCallback(async () => {
     setIsFetchingQuestions(true);
     try {
-      const response = await fetchClient('/questions/without-exam?pageNumber=1&pageSize=100');
-
-      if (response.ok) {
-        const data = await response.json();
-        const questionsList = Array.isArray(data)
-          ? data
-          : (data.items || data.data || []);
-
-        setQuestions(questionsList);
-      } else {
-        console.error('Failed to fetch questions:', response.status);
+      const requests: Promise<Response>[] = [
+        fetchClient('/questions/without-exam?pageNumber=1&pageSize=100'),
+      ];
+      if (isEditing && examToEdit?.id) {
+        requests.push(fetchClient(`/questions?examId=${examToEdit.id}&pageNumber=1&pageSize=200`));
       }
+
+      const [availableRes, examQuestionsRes] = await Promise.all(requests);
+
+      let questionsList: Question[] = [];
+
+      if (availableRes.ok) {
+        const data = await availableRes.json();
+        questionsList = Array.isArray(data) ? data : (data.items || data.data || []);
+      } else {
+        console.error('Failed to fetch questions:', availableRes.status);
+      }
+
+      if (examQuestionsRes && examQuestionsRes.ok) {
+        const data = await examQuestionsRes.json();
+        const examQuestions: Question[] = Array.isArray(data) ? data : (data.items || data.data || []);
+        const existingIds = new Set(questionsList.map((q) => q.id));
+        examQuestions.forEach((q) => {
+          if (!existingIds.has(q.id)) {
+            questionsList.push(q);
+            existingIds.add(q.id);
+          }
+        });
+      }
+
+      setQuestions(questionsList);
     } catch (err) {
       console.error('Error fetching questions:', err);
     } finally {
       setIsFetchingQuestions(false);
     }
-  }, []);
+  }, [isEditing, examToEdit?.id]);
 
   const fetchCompetencies = useCallback(async () => {
     try {
