@@ -58,7 +58,7 @@ body {
 }
 
 .mobile-safe-bottom {
-  padding-bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom) + var(--mobile-safe-spacing));
+  padding-bottom: calc(var(--mobile-bottom-nav-height) + var(--mobile-safe-spacing));
 }
 
 .mobile-surface {
