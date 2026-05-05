@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Menu, Sparkles } from 'lucide-react';
 import { getDockNavigationItems } from '../Navigation/navigation';
 
@@ -53,61 +53,72 @@ export const MobileHeaderBar: React.FC<MobileHeaderBarProps> = ({
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) => {
   const navRef = useRef<HTMLDivElement | null>(null);
+  const [isHidden, setIsHidden] = useState(false);
+  const lastScrollY = useRef(0);
   const currentPath = window.location.pathname;
   const isTeacher = localStorage.getItem('role') === 'Teacher';
   const items = getDockNavigationItems(isTeacher);
 
+  // Measure real nav height (including safe-area padding) and write to CSS var.
+  // Uses ResizeObserver so it reacts to font-scaling / orientation changes too.
   useEffect(() => {
     const root = document.documentElement;
     const navElement = navRef.current;
-    if (!navElement) {
-      return undefined;
-    }
+    if (!navElement) return undefined;
 
     const updateNavHeight = () => {
-      root.style.setProperty('--mobile-bottom-nav-height', `${navElement.offsetHeight}px`);
+      const h = navElement.offsetHeight;
+      root.style.setProperty('--mobile-bottom-nav-height', `${h}px`);
     };
 
-    const animationFrameId = window.requestAnimationFrame(updateNavHeight);
-    const handleResize = () => updateNavHeight();
+    updateNavHeight();
 
     const resizeObserver =
       typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(handleResize)
+        ? new ResizeObserver(updateNavHeight)
         : null;
-
     resizeObserver?.observe(navElement);
 
+    window.addEventListener('orientationchange', updateNavHeight);
+
     return () => {
-      window.cancelAnimationFrame(animationFrameId);
       resizeObserver?.disconnect();
-      root.style.removeProperty('--mobile-bottom-nav-height');
+      window.removeEventListener('orientationchange', updateNavHeight);
     };
   }, []);
 
+  // Auto-hide nav when scrolling down, reveal when scrolling up.
+  // Listens with capture so it catches scroll on any overflow container (e.g. <main>).
   useEffect(() => {
-    const updateNavHeightVar = () => {
-      const navHeight = navRef.current?.offsetHeight || 92;
-      document.documentElement.style.setProperty('--mobile-bottom-nav-height', `${navHeight}px`);
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const scrollY =
+        target !== (document as unknown as HTMLElement) && target.scrollTop > 0
+          ? target.scrollTop
+          : window.scrollY;
+      const delta = scrollY - lastScrollY.current;
+
+      if (delta > 8 && scrollY > 60) {
+        setIsHidden(true);
+      } else if (delta < -8) {
+        setIsHidden(false);
+      }
+
+      lastScrollY.current = scrollY;
     };
 
-    updateNavHeightVar();
-    window.addEventListener('resize', updateNavHeightVar);
-    window.addEventListener('orientationchange', updateNavHeightVar);
-
-    return () => {
-      window.removeEventListener('resize', updateNavHeightVar);
-      window.removeEventListener('orientationchange', updateNavHeightVar);
-    };
+    document.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    return () => document.removeEventListener('scroll', handleScroll, { capture: true });
   }, []);
 
   return (
     <div
       ref={navRef}
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] lg:hidden"
+      className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] transition-transform duration-300 ease-in-out lg:hidden ${
+        isHidden ? 'translate-y-full' : 'translate-y-0'
+      }`}
     >
       <div
-        ref={navRef}
         className="pointer-events-auto mx-auto flex max-w-md items-center gap-2 rounded-[2rem] border border-white/60 bg-white/85 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/85"
         role="navigation"
         aria-label="Điều hướng nhanh trên di động"
