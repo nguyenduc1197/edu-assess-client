@@ -14,8 +14,6 @@ type AntiCheatMetadataValue = string | number | boolean | null | undefined;
 export interface AntiCheatEventPayload {
   occurredAt: string;
   eventType: AntiCheatEventType;
-  type: AntiCheatEventType;
-  eventCode: AntiCheatEventType;
   details: string;
   metadata?: Record<string, string | number | boolean | null>;
 }
@@ -58,8 +56,6 @@ export const buildAntiCheatEventPayload = (
 ): AntiCheatEventPayload => ({
   occurredAt,
   eventType,
-  type: eventType,
-  eventCode: eventType,
   details,
   metadata: sanitizeMetadata(metadata),
 });

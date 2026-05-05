@@ -22,8 +22,6 @@ describe('antiCheat helpers', () => {
     expect(payload).toEqual({
       occurredAt,
       eventType: 'VisibilityHidden',
-      type: 'VisibilityHidden',
-      eventCode: 'VisibilityHidden',
       details: 'Rời khỏi tab hoặc thu nhỏ cửa sổ bài thi.',
       metadata: {
         visibilityState: 'hidden',
