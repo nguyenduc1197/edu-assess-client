@@ -3,6 +3,7 @@ import { AnswerState, Assignment, AssessmentResult, Question, WrongAnswerReview 
 import ExamReview from './ExamReview';
 import ExamTaking from './ExamTaking';
 import { fetchClient } from '../../../api/fetchClient';
+import { useAntiCheatMonitoring } from './useAntiCheatMonitoring';
 
 
 interface ExamSessionProps {
@@ -65,6 +66,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
+  const [currentStudentExamId, setCurrentStudentExamId] = useState<string | null>(assignment.studentExamId || null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveDraftIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answersRef = useRef(answers);
@@ -72,6 +74,15 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
+
+  useEffect(() => {
+    setCurrentStudentExamId(assignment.studentExamId || null);
+  }, [assignment.studentExamId]);
+
+  const antiCheatMonitoring = useAntiCheatMonitoring({
+    enabled: step === 'taking' || step === 'review',
+    studentExamId: currentStudentExamId,
+  });
 
   const saveDraft = async () => {
     try {
@@ -167,6 +178,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       }
 
       onSubmitted?.();
+      setCurrentStudentExamId(retryData.studentExamId);
       await startPolling(retryData.studentExamId);
     } catch (error) {
       console.error('Error retrying assessment:', error);
@@ -245,6 +257,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
         const submitData = await response.json();
         const studentExamId: string = submitData.studentExamId;
         onSubmitted?.();
+        setCurrentStudentExamId(studentExamId);
         setStep('assessing');
         startPolling(studentExamId);
       } else {
@@ -276,6 +289,10 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
         answers={answers}
         onBackToExam={() => setStep('taking')}
         onSubmit={handleSubmit}
+        antiCheatEvents={antiCheatMonitoring.recentEvents}
+        antiCheatEventCount={antiCheatMonitoring.totalEventCount}
+        antiCheatSyncErrorCount={antiCheatMonitoring.syncErrorCount}
+        isAntiCheatMonitoring={antiCheatMonitoring.isMonitoring}
       />
     );
   }
@@ -647,6 +664,10 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       onAnswer={handleAnswer}
       onReview={() => setStep('review')}
       onExit={onExit}
+      antiCheatEvents={antiCheatMonitoring.recentEvents}
+      antiCheatEventCount={antiCheatMonitoring.totalEventCount}
+      antiCheatSyncErrorCount={antiCheatMonitoring.syncErrorCount}
+      isAntiCheatMonitoring={antiCheatMonitoring.isMonitoring}
     />
   );
 };
