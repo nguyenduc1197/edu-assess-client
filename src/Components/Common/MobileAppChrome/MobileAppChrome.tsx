@@ -56,7 +56,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) 
   const currentPath = window.location.pathname;
   const isTeacher = localStorage.getItem('role') === 'Teacher';
   const items = getDockNavigationItems(isTeacher);
-  const navRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const root = document.documentElement;
