@@ -58,7 +58,13 @@ body {
 }
 
 .mobile-safe-bottom {
-  padding-bottom: calc(var(--mobile-bottom-nav-height) + var(--mobile-safe-spacing));
+  /* max() ensures a minimum safe clearance on devices with large text scaling
+     where the measured --mobile-bottom-nav-height might not have updated yet.
+     120px ≈ tallest expected bottom nav + safe area on high-DPI Samsung devices. */
+  padding-bottom: max(
+    calc(var(--mobile-bottom-nav-height) + var(--mobile-safe-spacing)),
+    120px
+  );
 }
 
 .mobile-surface {
