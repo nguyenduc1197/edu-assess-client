@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnswerState, Question } from '../../../types';
+import { AntiCheatUiEvent } from './antiCheat';
 
 interface ExamTakingProps {
   examTitle: string;
@@ -10,6 +11,10 @@ interface ExamTakingProps {
   onAnswer: (questionId: string, id: string, content: string) => void;
   onReview: () => void;
   onExit: () => void;
+  antiCheatEvents?: AntiCheatUiEvent[];
+  antiCheatEventCount?: number;
+  antiCheatSyncErrorCount?: number;
+  isAntiCheatMonitoring?: boolean;
 }
 
 const ExamTaking: React.FC<ExamTakingProps> = ({ 
@@ -19,7 +24,11 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   answers, 
   onAnswer, 
   onReview,
-  onExit
+  onExit,
+  antiCheatEvents = [],
+  antiCheatEventCount = 0,
+  antiCheatSyncErrorCount = 0,
+  isAntiCheatMonitoring = false,
 }) => {
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(() => {
@@ -167,6 +176,44 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                   style={{ width: `${progress}%` }}
                 />
               </div>
+            </div>
+
+            <div className={`mb-6 rounded-2xl border p-4 shadow-sm ${
+              antiCheatEventCount > 0
+                ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200'
+                : 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/40 dark:text-sky-200'
+            }`}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold">
+                    {isAntiCheatMonitoring ? 'Giám sát chống gian lận đang bật' : 'Giám sát chống gian lận đang chờ đồng bộ'}
+                  </p>
+                  <p className="text-xs opacity-80">
+                    Hệ thống sẽ ghi nhận thao tác rời tab, chuyển cửa sổ, thoát toàn màn hình và sao chép / dán trong lúc làm bài.
+                  </p>
+                </div>
+                <div className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold dark:bg-slate-900/40">
+                  Số lần ghi nhận: {antiCheatEventCount}
+                </div>
+              </div>
+
+              {antiCheatEvents.length > 0 && (
+                <ul className="mt-3 space-y-2 text-xs">
+                  {antiCheatEvents.map((event) => (
+                    <li key={event.id} className="rounded-xl bg-white/70 px-3 py-2 dark:bg-slate-900/40">
+                      <span className="font-semibold">{event.label}</span>
+                      <span className="mx-2 opacity-60">•</span>
+                      <span>{event.details}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {antiCheatSyncErrorCount > 0 && (
+                <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                  Một số sự kiện chưa gửi được lên hệ thống và sẽ được thử lại trong phiên hiện tại.
+                </p>
+              )}
             </div>
 
             <div className="mb-8">
