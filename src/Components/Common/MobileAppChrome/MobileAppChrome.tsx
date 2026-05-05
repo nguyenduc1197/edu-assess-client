@@ -52,6 +52,7 @@ export const MobileHeaderBar: React.FC<MobileHeaderBarProps> = ({
 );
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) => {
+  const navRef = useRef<HTMLDivElement | null>(null);
   const currentPath = window.location.pathname;
   const isTeacher = localStorage.getItem('role') === 'Teacher';
   const items = getDockNavigationItems(isTeacher);
@@ -85,8 +86,27 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenMenu }) 
     };
   }, []);
 
+  useEffect(() => {
+    const updateNavHeightVar = () => {
+      const navHeight = navRef.current?.offsetHeight || 92;
+      document.documentElement.style.setProperty('--mobile-bottom-nav-height', `${navHeight}px`);
+    };
+
+    updateNavHeightVar();
+    window.addEventListener('resize', updateNavHeightVar);
+    window.addEventListener('orientationchange', updateNavHeightVar);
+
+    return () => {
+      window.removeEventListener('resize', updateNavHeightVar);
+      window.removeEventListener('orientationchange', updateNavHeightVar);
+    };
+  }, []);
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] lg:hidden">
+    <div
+      ref={navRef}
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] lg:hidden"
+    >
       <div
         ref={navRef}
         className="pointer-events-auto mx-auto flex max-w-md items-center gap-2 rounded-[2rem] border border-white/60 bg-white/85 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/85"
