@@ -865,7 +865,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách học sinh...</p>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
                       <p className="text-sm text-gray-500 dark:text-gray-400">Chưa làm bài</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -882,6 +882,12 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                       <p className="text-sm text-red-700 dark:text-red-300">Chấm lỗi</p>
                       <p className="text-2xl font-bold text-red-800 dark:text-red-200">
                         {examStudents.filter((item) => item.assessmentStatus === 'Failed').length}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-green-200 dark:border-green-800 p-4 bg-green-50 dark:bg-green-900/20">
+                      <p className="text-sm text-green-700 dark:text-green-300">Đã có kết quả</p>
+                      <p className="text-2xl font-bold text-green-800 dark:text-green-200">
+                        {examStudents.filter((item) => item.assessmentStatus === 'Completed' || item.canViewResult === true).length}
                       </p>
                     </div>
                   </div>
