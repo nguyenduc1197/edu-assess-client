@@ -9,6 +9,7 @@ interface ExamToEdit {
   name: string;
   start: string;
   end: string;
+  durationMinutes?: number;
   questionIds: string[];
   schoolClassId: string;
 }
@@ -28,8 +29,23 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
+  const calculateDurationMinutes = (startIso?: string, endIso?: string) => {
+    if (!startIso || !endIso) return 45;
+    const diffMinutes = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000);
+    return diffMinutes > 0 ? diffMinutes : 45;
+  };
+  const calculateEndDatetime = (startValue: string, durationValue: string) => {
+    const parsedDuration = Number(durationValue);
+    if (!startValue || !Number.isInteger(parsedDuration) || parsedDuration <= 0) return '';
+
+    const endDate = new Date(startValue);
+    endDate.setMinutes(endDate.getMinutes() + parsedDuration);
+    return toLocalDatetime(endDate.toISOString());
+  };
   const [start, setStart] = useState(examToEdit ? toLocalDatetime(examToEdit.start) : '');
-  const [end, setEnd] = useState(examToEdit ? toLocalDatetime(examToEdit.end) : '');
+  const [durationMinutes, setDurationMinutes] = useState(
+    examToEdit ? String(examToEdit.durationMinutes ?? calculateDurationMinutes(examToEdit.start, examToEdit.end)) : '45'
+  );
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>(examToEdit?.questionIds || []);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -46,6 +62,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const end = calculateEndDatetime(start, durationMinutes);
 
   const fetchQuestions = useCallback(async () => {
     setIsFetchingQuestions(true);
@@ -147,8 +164,16 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     setError(null);
     setIsLoading(true);
 
-    if (!name || !start || !end || !selectedClassId) {
-      setError('Vui lòng nhập đầy đủ tên bài thi, thời gian và lớp học.');
+    if (!name || !start || !selectedClassId) {
+      setError('Vui lòng nhập đầy đủ tên bài thi, thời gian bắt đầu và lớp học.');
+      setIsLoading(false);
+      return;
+    }
+
+    const normalizedDurationMinutes = durationMinutes.trim();
+    const parsedDurationMinutes = Number(normalizedDurationMinutes);
+    if (!normalizedDurationMinutes || !Number.isInteger(parsedDurationMinutes) || parsedDurationMinutes <= 0) {
+      setError('Thời lượng bài thi phải là số nguyên lớn hơn 0 phút.');
       setIsLoading(false);
       return;
     }
@@ -162,7 +187,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     const payload = {
       name,
       start: new Date(start).toISOString(),
-      end: new Date(end).toISOString(),
+      durationMinutes: parsedDurationMinutes,
       questionIds: selectedQuestionIds,
       schoolClassId: selectedClassId
     };
@@ -295,7 +320,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label htmlFor="start" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Thời Gian Bắt Dầu
@@ -310,6 +335,21 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
               </div>
 
               <div className="space-y-2">
+                <label htmlFor="durationMinutes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Thời Lượng (phút)
+                </label>
+                <input
+                  type="number"
+                  id="durationMinutes"
+                  min={1}
+                  step={1}
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <label htmlFor="end" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Thời Gian Kết Thúc
                 </label>
@@ -317,8 +357,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   type="datetime-local"
                   id="end"
                   value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
+                  readOnly
+                  className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-400 cursor-not-allowed dark:[color-scheme:dark]"
                 />
               </div>
             </div>
