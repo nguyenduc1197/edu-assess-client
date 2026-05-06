@@ -179,6 +179,8 @@ export interface StudentResultSummary {
   economicSocialParticipationAccumulation?: CompetencyAccumulation | null;
   finishedAt?: string;
   assessedAt?: string | null;
+  assessmentError?: string | null;
+  canRetryAssessment?: boolean;
 }
 
 export type AntiCheatStatus = 'Normal' | 'Suspicious' | 'Violated';
@@ -236,6 +238,7 @@ export interface ExamStudentStatusItem {
   canViewResult?: boolean;
   assessmentError?: string | null;
   finishedAt?: string | null;
+  canRetryAssessment?: boolean;
 }
 
 export interface WrongAnswerReview {
