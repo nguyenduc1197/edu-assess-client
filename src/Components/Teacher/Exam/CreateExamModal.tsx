@@ -39,7 +39,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   const isValidDurationMinutes = (value: string) => /^\d+$/.test(value) && Number(value) > 0;
   const calculateEndDatetime = (startValue: string, durationValue: string) => {
     const parsedDuration = Number(durationValue);
-    if (!startValue || !isValidDurationMinutes(durationValue) || !Number.isInteger(parsedDuration)) return '';
+    if (!startValue || !isValidDurationMinutes(durationValue)) return '';
 
     const endDate = new Date(startValue);
     endDate.setMinutes(endDate.getMinutes() + parsedDuration);
@@ -175,7 +175,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
 
     const normalizedDurationMinutes = durationMinutes.trim();
     const parsedDurationMinutes = Number(normalizedDurationMinutes);
-    if (!isValidDurationMinutes(normalizedDurationMinutes) || !Number.isInteger(parsedDurationMinutes)) {
+    if (!isValidDurationMinutes(normalizedDurationMinutes)) {
       setError('Thời lượng bài thi phải là số nguyên lớn hơn 0 phút.');
       setIsLoading(false);
       return;
