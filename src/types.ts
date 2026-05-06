@@ -181,7 +181,7 @@ export interface StudentResultSummary {
   assessedAt?: string | null;
 }
 
-export type AntiCheatStatus = 'Normal' | 'Suspicious' | 'Violated' | string;
+export type AntiCheatStatus = 'Normal' | 'Suspicious' | 'Violated';
 
 export interface AntiCheatDetailSummary {
   studentExamId: string;

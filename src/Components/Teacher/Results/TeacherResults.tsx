@@ -25,6 +25,8 @@ interface TeacherResultsProps {
 
 type DetailTab = 'assessment' | 'antiCheat';
 
+const RECENT_ANTI_CHEAT_EVENT_LIMIT = 50;
+
 const mockUser: User = {
   id: '81114DB7-EF7C-4CEC-97B1-4428AA7AADA6',
   name: localStorage.getItem('name') || 'An Nguyen',
@@ -324,7 +326,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
       setAntiCheatError('');
       setIsAntiCheatEmpty(false);
 
-      const response = await fetchClient(`/student-exams/${studentExamId}/anti-cheat/details?recentEventLimit=50`);
+      const response = await fetchClient(`/student-exams/${studentExamId}/anti-cheat/details?recentEventLimit=${RECENT_ANTI_CHEAT_EVENT_LIMIT}`);
 
       if (response.status === 404) {
         setAntiCheatDetail(null);

@@ -112,7 +112,6 @@ export const postAntiCheatEvent = async (
   const response = await fetch(`${API_BASE_URL}/student-exams/${studentExamId}/anti-cheat/events`, {
     ...options,
     method: 'POST',
-    keepalive: options.keepalive,
     headers: {
       accept: '*/*',
       'Content-Type': 'application/json',
