@@ -54,7 +54,7 @@ export const useAntiCheatMonitoring = ({
   const trackEvent = useCallback(
       (
         eventType: AntiCheatEventType,
-        details: string,
+        uiDetails: string,
         metadata?: Record<string, string | number | boolean | null | undefined>,
         options?: RequestInit
       ) => {
@@ -68,7 +68,7 @@ export const useAntiCheatMonitoring = ({
       recentTimestampsRef.current[eventType] = now;
 
         const occurredAt = new Date(now).toISOString();
-        const uiEvent = createAntiCheatUiEvent(eventType, details, occurredAt);
+        const uiEvent = createAntiCheatUiEvent(eventType, uiDetails, occurredAt);
         const payload = buildAntiCheatEventPayload(eventType, metadata, occurredAt);
 
         setRecentEvents((current) => [uiEvent, ...current].slice(0, maxVisibleEvents));

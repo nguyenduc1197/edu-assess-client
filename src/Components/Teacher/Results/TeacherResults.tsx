@@ -349,15 +349,15 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
     }
   }, []);
 
-  const handleViewDetails = async (result: StudentResultSummary) => {
+  const handleViewDetails = async (resultSummary: StudentResultSummary) => {
     setDetailTab('assessment');
-    setSelectedResultSummary(result);
+    setSelectedResultSummary(resultSummary);
     setAntiCheatDetail(null);
     setAntiCheatError('');
     setIsAntiCheatEmpty(false);
     await Promise.all([
-      fetchAssessmentDetail(result.studentExamId),
-      fetchAntiCheatDetail(result.studentExamId),
+      fetchAssessmentDetail(resultSummary.studentExamId),
+      fetchAntiCheatDetail(resultSummary.studentExamId),
     ]);
   };
 
