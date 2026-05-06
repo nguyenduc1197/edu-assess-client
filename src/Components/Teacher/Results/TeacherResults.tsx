@@ -211,8 +211,18 @@ const getAntiCheatSummaryToneClassName = (status?: AntiCheatStatus | null) => {
   return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20';
 };
 
-const isAntiCheatEnabled = (detail?: AntiCheatDetailsResponse | null) =>
-  detail?.isEnabled ?? detail?.summary?.isEnabled ?? true;
+const isAntiCheatEnabled = (detail?: AntiCheatDetailsResponse | null) => {
+  const explicitFlag = detail?.isEnabled ?? detail?.summary?.isEnabled;
+  if (typeof explicitFlag === 'boolean') {
+    return explicitFlag;
+  }
+
+  return (
+    (detail?.summary?.totalEventCount ?? 0) > 0 ||
+    (detail?.breakdown?.length ?? 0) > 0 ||
+    (detail?.recentEvents?.length ?? 0) > 0
+  );
+};
 
 const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
