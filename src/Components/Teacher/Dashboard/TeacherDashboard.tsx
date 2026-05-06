@@ -151,10 +151,10 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           }
 
           return {
-             id: item.id,
-             title: item.name,
-             subject: SubjectLabel.GD_KTPL,
-             deadline: item.end,
+            id: item.id,
+            title: item.name,
+            subject: SubjectLabel.GD_KTPL,
+            deadline: item.end,
             deadlineDisplay: endDate.toLocaleString('vi-VN', {
               hour: '2-digit',
               minute: '2-digit',
@@ -163,11 +163,11 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               month: '2-digit',
               year: 'numeric'
             }),
-             status: status,
-             isOverdue: now > endDate,
-             antiCheatEnabled: item.antiCheatEnabled === true,
-           };
-         });
+            status: status,
+            isOverdue: now > endDate,
+            antiCheatEnabled: item.antiCheatEnabled === true,
+          };
+        });
         
         setAssignments(mappedAssignments);
       }
