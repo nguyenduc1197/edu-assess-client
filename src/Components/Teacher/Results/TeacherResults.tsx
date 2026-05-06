@@ -313,8 +313,9 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
   const fetchAssessmentDetail = useCallback(async (studentExamId: string, silent = false) => {
     try {
       if (!silent) setIsDetailLoading(true);
+      const encodedStudentExamId = encodeURIComponent(studentExamId);
 
-      const response = await fetchClient(`/student-exams/${studentExamId}/assessment`);
+      const response = await fetchClient(`/student-exams/${encodedStudentExamId}/assessment`);
 
       if (!response.ok) {
         throw new Error('Load detail failed');
@@ -337,8 +338,9 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
       setIsAntiCheatLoading(true);
       setAntiCheatError('');
       setIsAntiCheatEmpty(false);
+      const encodedStudentExamId = encodeURIComponent(studentExamId);
 
-      const response = await fetchClient(`/student-exams/${studentExamId}/anti-cheat/details?recentEventLimit=${RECENT_ANTI_CHEAT_EVENT_LIMIT}`);
+      const response = await fetchClient(`/student-exams/${encodedStudentExamId}/anti-cheat/details?recentEventLimit=${RECENT_ANTI_CHEAT_EVENT_LIMIT}`);
 
       if (response.status === 404) {
         setAntiCheatDetail(null);

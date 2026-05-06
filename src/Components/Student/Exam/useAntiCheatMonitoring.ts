@@ -199,7 +199,7 @@ export const useAntiCheatMonitoring = ({
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
     };
-  }, [enabled, studentExamId, trackEvent]);
+  }, [enabled, trackEvent]);
 
   return {
     isMonitoring: enabled && !!studentExamId,
