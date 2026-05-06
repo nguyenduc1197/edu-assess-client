@@ -97,7 +97,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; questionIds: string[]; schoolClassId: string } | null>(null);
+  const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; durationMinutes?: number; questionIds: string[]; schoolClassId: string } | null>(null);
   const [selectedExam, setSelectedExam] = useState<Assignment | null>(null);
   const [examStudents, setExamStudents] = useState<ExamStudentStatusItem[]>([]);
   const [isStudentListLoading, setIsStudentListLoading] = useState(false);
@@ -389,6 +389,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         name: examData.name || assignment.title,
         start: examData.start || assignment.deadline,
         end: examData.end || assignment.deadline,
+        durationMinutes: typeof examData.durationMinutes === 'number' ? examData.durationMinutes : undefined,
         questionIds: questionItems.map((q: any) => q.id),
         schoolClassId: examData.schoolClassId || '',
       });
@@ -399,6 +400,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         name: assignment.title,
         start: '',
         end: assignment.deadline,
+        durationMinutes: undefined,
         questionIds: [],
         schoolClassId: '',
       });
