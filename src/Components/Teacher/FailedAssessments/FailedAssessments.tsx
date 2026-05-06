@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { AlertTriangle, RotateCw } from 'lucide-react';
 import { StudentResultSummary, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
-import { fetchClient } from '../../../api/fetchClient';
+import { fetchClient, getCurrentUserId } from '../../../api/fetchClient';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 
@@ -11,7 +11,7 @@ interface FailedAssessmentsProps {
 }
 
 const mockUser: User = {
-  id: '81114DB7-EF7C-4CEC-97B1-4428AA7AADA6',
+  id: getCurrentUserId() || localStorage.getItem('accountId') || 'teacher-user',
   name: localStorage.getItem('name') || 'An Nguyen',
   email: localStorage.getItem('email') || 'an.nguyen@school.edu',
   avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj',
@@ -88,13 +88,14 @@ const FailedAssessments: React.FC<FailedAssessmentsProps> = ({ onLogout }) => {
   const handleRetryAssessment = useCallback(async (studentExamId: string) => {
     try {
       setRetryingIds((current) => [...current, studentExamId]);
+      setError('');
 
       const response = await fetchClient(`/student-exams/${studentExamId}/retry-assessment`, {
         method: 'POST',
       });
-      const retryData = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        const retryData = await response.json().catch(() => ({}));
         throw new Error(retryData?.message || `API returned ${response.status}`);
       }
 

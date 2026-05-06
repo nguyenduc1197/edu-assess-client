@@ -306,28 +306,16 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
     try {
       setRetryingStudentExamIds((current) => [...current, item.studentExamId as string]);
+      setStudentListError('');
 
       const response = await fetchClient(`/student-exams/${item.studentExamId}/retry-assessment`, {
         method: 'POST',
       });
-      const retryData = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        const retryData = await response.json().catch(() => ({}));
         throw new Error(retryData?.message || `API returned ${response.status}`);
       }
-
-      setExamStudents((current) =>
-        current.map((student) =>
-          student.studentExamId === item.studentExamId
-            ? {
-                ...student,
-                assessmentStatus: 'Pending',
-                assessmentError: null,
-                canRetryAssessment: false,
-              }
-            : student
-        )
-      );
 
       await loadExamStudents(selectedExam);
     } catch (retryError) {
