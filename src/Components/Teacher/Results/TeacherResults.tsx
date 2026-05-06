@@ -199,6 +199,18 @@ const AntiCheatMetricCard: React.FC<{
   </div>
 );
 
+const getAntiCheatSummaryToneClassName = (status?: AntiCheatStatus | null) => {
+  if (status === 'Normal') {
+    return 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20';
+  }
+
+  if (status === 'Suspicious') {
+    return 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20';
+  }
+
+  return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20';
+};
+
 const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [results, setResults] = useState<StudentResultSummary[]>([]);
@@ -357,7 +369,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
     setAntiCheatDetail(null);
     setAntiCheatError('');
     setIsAntiCheatEmpty(false);
-    await Promise.all([
+    await Promise.allSettled([
       fetchAssessmentDetail(resultSummary.studentExamId),
       fetchAntiCheatDetail(resultSummary.studentExamId),
     ]);
@@ -803,8 +815,8 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                 ) : antiCheatDetail ? (
                   <>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-                        <p className="text-sm text-red-700 dark:text-red-300">Trạng thái vi phạm</p>
+                      <div className={`rounded-xl border p-4 ${getAntiCheatSummaryToneClassName(antiCheatDetail.summary.violationStatus)}`}>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">Trạng thái vi phạm</p>
                         <div className="mt-2">
                           <AntiCheatStatusBadge status={antiCheatDetail.summary.violationStatus} />
                         </div>

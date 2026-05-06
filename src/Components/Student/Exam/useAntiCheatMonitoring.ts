@@ -32,7 +32,6 @@ export const useAntiCheatMonitoring = ({
   const recentTimestampsRef = useRef<Partial<Record<AntiCheatEventType, number>>>({});
   const pendingEventsRef = useRef<PendingAntiCheatEvent[]>([]);
   const sendQueueRef = useRef(Promise.resolve());
-  const hasTrackedResumeRef = useRef(false);
 
   const enqueueSend = useCallback((
     targetStudentExamId: string,
@@ -115,13 +114,6 @@ export const useAntiCheatMonitoring = ({
 
     if (navigationEntry?.type === 'reload') {
       trackEvent('Reload', 'Trang làm bài vừa được tải lại.', {
-        page: window.location.pathname,
-      });
-    }
-
-    if (studentExamId && !hasTrackedResumeRef.current) {
-      hasTrackedResumeRef.current = true;
-      trackEvent('AttemptResumed', 'Tiếp tục phiên làm bài.', {
         page: window.location.pathname,
       });
     }

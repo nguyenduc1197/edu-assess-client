@@ -115,8 +115,8 @@ export const postAntiCheatEvent = async (
     headers: {
       accept: '*/*',
       'Content-Type': 'application/json',
-      ...(options.headers || {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
     },
     body: JSON.stringify(payload),
   });
