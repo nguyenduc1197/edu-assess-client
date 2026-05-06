@@ -36,6 +36,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     const diffMinutes = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000);
     return diffMinutes > 0 ? diffMinutes : DEFAULT_DURATION_MINUTES;
   };
+  const getInitialDurationMinutes = () => {
+    if (!examToEdit) return String(DEFAULT_DURATION_MINUTES);
+    return String(examToEdit.durationMinutes ?? calculateDurationMinutes(examToEdit.start, examToEdit.end));
+  };
   const isValidDurationMinutes = (value: string) => /^\d+$/.test(value) && Number(value) > 0;
   const calculateEndDatetime = (startValue: string, durationValue: string) => {
     const parsedDuration = Number(durationValue);
@@ -46,9 +50,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     return toLocalDatetime(endDate.toISOString());
   };
   const [start, setStart] = useState(examToEdit ? toLocalDatetime(examToEdit.start) : '');
-  const [durationMinutes, setDurationMinutes] = useState(
-    examToEdit ? String(examToEdit.durationMinutes ?? calculateDurationMinutes(examToEdit.start, examToEdit.end)) : String(DEFAULT_DURATION_MINUTES)
-  );
+  const [durationMinutes, setDurationMinutes] = useState(getInitialDurationMinutes);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>(examToEdit?.questionIds || []);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
