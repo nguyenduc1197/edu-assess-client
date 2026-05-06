@@ -256,6 +256,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       if (response.ok) {
         const submitData = await response.json();
         const studentExamId: string = submitData.studentExamId;
+        await antiCheatMonitoring.flushPendingEvents(studentExamId);
+        await antiCheatMonitoring.waitForPendingSends();
         onSubmitted?.();
         setCurrentStudentExamId(studentExamId);
         setStep('assessing');
