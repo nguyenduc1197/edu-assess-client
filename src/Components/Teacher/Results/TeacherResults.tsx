@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Eye } from 'lucide-react';
 import {
+  AntiCheatBreakdownItem,
+  AntiCheatDetailsResponse,
+  AntiCheatRecentEvent,
+  AntiCheatStatus,
   AssessmentResult,
   Class as SchoolClass,
   CompetencyAccumulation,
@@ -18,6 +22,8 @@ import { competencyScoreToPercent, formatCompetencyPercent } from '../../../util
 interface TeacherResultsProps {
   onLogout?: () => void;
 }
+
+type DetailTab = 'assessment' | 'antiCheat';
 
 const mockUser: User = {
   id: '81114DB7-EF7C-4CEC-97B1-4428AA7AADA6',
@@ -104,6 +110,93 @@ const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
   return groups;
 };
 
+const formatAntiCheatStatusLabel = (status?: AntiCheatStatus | null) => {
+  if (!status) return 'Chưa có dữ liệu';
+
+  switch (status) {
+    case 'Normal':
+      return 'Bình thường';
+    case 'Suspicious':
+      return 'Khả nghi';
+    case 'Violated':
+      return 'Vi phạm';
+    default:
+      return status;
+  }
+};
+
+const getAntiCheatStatusClassName = (status?: AntiCheatStatus | null) => {
+  if (!status) {
+    return 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300';
+  }
+
+  if (status === 'Normal') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300';
+  }
+
+  if (status === 'Suspicious') {
+    return 'border-amber-300 bg-amber-50 text-amber-800 ring-1 ring-amber-200 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800';
+  }
+
+  return 'border-red-300 bg-red-50 text-red-700 ring-1 ring-red-200 dark:border-red-700 dark:bg-red-900/30 dark:text-red-200 dark:ring-red-800';
+};
+
+const AntiCheatStatusBadge: React.FC<{
+  status?: AntiCheatStatus | null;
+}> = ({ status }) => (
+  <span className={`inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs font-semibold ${getAntiCheatStatusClassName(status)}`}>
+    {formatAntiCheatStatusLabel(status)}
+  </span>
+);
+
+const formatEventTypeLabel = (eventType: string) => {
+  const labels: Record<string, string> = {
+    PageHidden: 'Ẩn trang',
+    PageVisible: 'Hiện lại trang',
+    WindowBlur: 'Mất focus cửa sổ',
+    WindowFocus: 'Lấy lại focus cửa sổ',
+    FullscreenExited: 'Thoát toàn màn hình',
+    FullscreenEntered: 'Vào toàn màn hình',
+    Copy: 'Sao chép',
+    Paste: 'Dán',
+    Reload: 'Tải lại trang',
+    Offline: 'Mất mạng',
+    Online: 'Có mạng lại',
+    AttemptOpenedInAnotherTab: 'Mở ở tab khác',
+    AttemptResumed: 'Tiếp tục phiên',
+  };
+
+  return labels[eventType] || eventType;
+};
+
+const formatMetadata = (metadata?: string | null) => {
+  if (!metadata) return '—';
+
+  try {
+    const parsed = JSON.parse(metadata) as Record<string, unknown>;
+    return Object.entries(parsed)
+      .map(([key, value]) => `${key}: ${String(value)}`)
+      .join(' • ');
+  } catch {
+    return metadata;
+  }
+};
+
+const AntiCheatMetricCard: React.FC<{
+  label: string;
+  value: string | number;
+  tone?: 'default' | 'warning';
+}> = ({ label, value, tone = 'default' }) => (
+  <div className={`rounded-xl border p-4 ${
+    tone === 'warning'
+      ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
+      : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+  }`}>
+    <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+    <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+  </div>
+);
+
 const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [results, setResults] = useState<StudentResultSummary[]>([]);
@@ -116,9 +209,15 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [sortBy, setSortBy] = useState<'finishedAt' | 'assessedAt' | 'score' | 'studentName' | 'examName'>('finishedAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [detailTab, setDetailTab] = useState<DetailTab>('assessment');
+  const [selectedResultSummary, setSelectedResultSummary] = useState<StudentResultSummary | null>(null);
   const [selectedResult, setSelectedResult] = useState<AssessmentResult | null>(null);
+  const [antiCheatDetail, setAntiCheatDetail] = useState<AntiCheatDetailsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [isAntiCheatLoading, setIsAntiCheatLoading] = useState(false);
+  const [antiCheatError, setAntiCheatError] = useState('');
+  const [isAntiCheatEmpty, setIsAntiCheatEmpty] = useState(false);
   const [error, setError] = useState('');
 
   const fetchMetadata = useCallback(async () => {
@@ -219,8 +318,47 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
     }
   }, []);
 
-  const handleViewDetails = async (studentExamId: string) => {
-    await fetchAssessmentDetail(studentExamId);
+  const fetchAntiCheatDetail = useCallback(async (studentExamId: string) => {
+    try {
+      setIsAntiCheatLoading(true);
+      setAntiCheatError('');
+      setIsAntiCheatEmpty(false);
+
+      const response = await fetchClient(`/student-exams/${studentExamId}/anti-cheat/details?recentEventLimit=50`);
+
+      if (response.status === 404) {
+        setAntiCheatDetail(null);
+        setIsAntiCheatEmpty(true);
+        return null;
+      }
+
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+
+      const data: AntiCheatDetailsResponse = await response.json();
+      setAntiCheatDetail(data);
+      return data;
+    } catch (detailError) {
+      console.error('Failed to load anti-cheat detail', detailError);
+      setAntiCheatDetail(null);
+      setAntiCheatError('Không thể tải dữ liệu vi phạm.');
+      return null;
+    } finally {
+      setIsAntiCheatLoading(false);
+    }
+  }, []);
+
+  const handleViewDetails = async (result: StudentResultSummary) => {
+    setDetailTab('assessment');
+    setSelectedResultSummary(result);
+    setAntiCheatDetail(null);
+    setAntiCheatError('');
+    setIsAntiCheatEmpty(false);
+    await Promise.all([
+      fetchAssessmentDetail(result.studentExamId),
+      fetchAntiCheatDetail(result.studentExamId),
+    ]);
   };
 
   useEffect(() => {
@@ -234,6 +372,15 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
     return () => window.clearInterval(intervalId);
   }, [fetchAssessmentDetail, selectedResult?.assessmentStatus, selectedResult?.studentExamId]);
+
+  useEffect(() => {
+    if (!selectedResultSummary && !selectedResult) {
+      setDetailTab('assessment');
+      setAntiCheatDetail(null);
+      setAntiCheatError('');
+      setIsAntiCheatEmpty(false);
+    }
+  }, [selectedResult, selectedResultSummary]);
 
   const formatDateTime = (value?: string | null) => {
     if (!value) return '—';
@@ -314,6 +461,9 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                         <div>
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">{result.examName}</p>
                           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{result.studentName} · {result.schoolClassName}</p>
+                          <div className="mt-2">
+                            <AntiCheatStatusBadge status={result.antiCheatStatus} />
+                          </div>
                         </div>
                         <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{result.score ?? '—'}</span>
                       </div>
@@ -332,7 +482,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleViewDetails(result.studentExamId)}
+                        onClick={() => handleViewDetails(result)}
                         className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
                       >
                         <Eye size={16} />
@@ -352,6 +502,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                         <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('score')} className="hover:text-gray-900 dark:hover:text-white">Điểm {sortBy === 'score' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                         <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Tiến độ</th>
                         <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Trạng Thái</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Anti-cheat</th>
                         <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300"><button type="button" onClick={() => handleSort('finishedAt')} className="hover:text-gray-900 dark:hover:text-white">Nộp Lúc {sortBy === 'finishedAt' ? (sortDirection === 'asc' ? '^' : 'v') : '<->'}</button></th>
                         <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Chi Tiết</th>
                       </tr>
@@ -376,11 +527,14 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{getAssessmentStatusLabel(result.assessmentStatus)}</td>
+                          <td className="px-6 py-4">
+                            <AntiCheatStatusBadge status={result.antiCheatStatus} />
+                          </td>
                           <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{formatDateTime(result.finishedAt)}</td>
                           <td className="px-6 py-4 text-center">
                             <button
                               type="button"
-                              onClick={() => handleViewDetails(result.studentExamId)}
+                              onClick={() => handleViewDetails(result)}
                               className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
                             >
                               <Eye size={16} />
@@ -402,20 +556,67 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
         </div>
       </main>
 
-      {(selectedResult || isDetailLoading) && (
+      {(selectedResultSummary || selectedResult || isDetailLoading) && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
           <div className="flex max-h-[var(--mobile-modal-max-height)] w-full flex-col rounded-t-3xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-2xl sm:rounded-xl">
             <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700 sm:px-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Chi Tiết Đánh Giá</h3>
-              <button type="button" onClick={() => setSelectedResult(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Chi Tiết Kết Quả</h3>
+                {selectedResultSummary?.antiCheatStatus && (
+                  <div className="mt-2">
+                    <AntiCheatStatusBadge status={selectedResultSummary.antiCheatStatus} />
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedResult(null);
+                  setSelectedResultSummary(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
                 Đóng
               </button>
             </div>
 
+            <div
+              className="flex overflow-x-auto border-b border-gray-200 px-4 dark:border-gray-700 sm:px-6"
+              role="tablist"
+              aria-label="Điều hướng tab chi tiết kết quả"
+            >
+              <button
+                type="button"
+                onClick={() => setDetailTab('assessment')}
+                role="tab"
+                aria-selected={detailTab === 'assessment'}
+                className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  detailTab === 'assessment'
+                    ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
+              >
+                Đánh giá
+              </button>
+              <button
+                type="button"
+                onClick={() => setDetailTab('antiCheat')}
+                role="tab"
+                aria-selected={detailTab === 'antiCheat'}
+                className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  detailTab === 'antiCheat'
+                    ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
+              >
+                Vi phạm
+              </button>
+            </div>
+
             <div className="max-h-[calc(90dvh-var(--mobile-modal-header-height))] space-y-4 overflow-y-auto p-4 sm:p-6">
-              {isDetailLoading ? (
+              {detailTab === 'assessment' && isDetailLoading ? (
                 <p className="text-gray-500 dark:text-gray-400">Đang tải chi tiết...</p>
-              ) : selectedResult && (
+              ) : detailTab === 'assessment' && selectedResult ? (
                 <>
                   <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-200 dark:border-blue-800">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Điểm tổng</p>
@@ -586,7 +787,134 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                     )}
                   </div>
                 </>
-              )}
+              ) : detailTab === 'antiCheat' ? (
+                isAntiCheatLoading ? (
+                  <p className="text-gray-500 dark:text-gray-400">Đang tải dữ liệu vi phạm...</p>
+                ) : antiCheatError ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                    {antiCheatError}
+                  </div>
+                ) : isAntiCheatEmpty ? (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                    Chưa có dữ liệu vi phạm.
+                  </div>
+                ) : antiCheatDetail ? (
+                  <>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+                        <p className="text-sm text-red-700 dark:text-red-300">Trạng thái vi phạm</p>
+                        <div className="mt-2">
+                          <AntiCheatStatusBadge status={antiCheatDetail.summary.violationStatus} />
+                        </div>
+                      </div>
+                      <AntiCheatMetricCard
+                        label="Điểm nghi vấn"
+                        value={antiCheatDetail.summary.suspiciousScore ?? '—'}
+                        tone={(antiCheatDetail.summary.suspiciousScore ?? 0) > 0 ? 'warning' : 'default'}
+                      />
+                      <AntiCheatMetricCard label="Tổng sự kiện" value={antiCheatDetail.summary.totalEventCount} />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <AntiCheatMetricCard label="Rời tab / ẩn trang" value={antiCheatDetail.summary.hiddenIncidentCount} />
+                      <AntiCheatMetricCard label="Mất focus cửa sổ" value={antiCheatDetail.summary.blurIncidentCount} />
+                      <AntiCheatMetricCard label="Sao chép" value={antiCheatDetail.summary.copyCount} />
+                      <AntiCheatMetricCard label="Dán" value={antiCheatDetail.summary.pasteCount} />
+                      <AntiCheatMetricCard label="Chuyển tab" value={antiCheatDetail.summary.tabSwitchCount} />
+                      <AntiCheatMetricCard label="Thoát toàn màn hình" value={antiCheatDetail.summary.fullscreenExitCount} />
+                      <AntiCheatMetricCard label="Tải lại trang" value={antiCheatDetail.summary.reloadCount} />
+                      <AntiCheatMetricCard label="Mất mạng" value={antiCheatDetail.summary.offlineCount} />
+                      <AntiCheatMetricCard label="Ẩn trang (giây)" value={antiCheatDetail.summary.totalHiddenSeconds} />
+                      <AntiCheatMetricCard label="Mất focus (giây)" value={antiCheatDetail.summary.totalBlurSeconds} />
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Phân rã theo loại sự kiện</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Cập nhật: {formatDateTime(antiCheatDetail.summary.lastUpdatedAt)}
+                        </p>
+                      </div>
+                      {antiCheatDetail.breakdown.length === 0 ? (
+                        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Chưa có dữ liệu phân rã.</p>
+                      ) : (
+                        <div className="mt-3 overflow-x-auto">
+                          <table className="w-full min-w-[520px] text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-200 text-left dark:border-gray-700">
+                                <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Sự kiện</th>
+                                <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Hợp lệ</th>
+                                <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Trùng lặp</th>
+                                <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Nhận được</th>
+                                <th className="py-2 font-semibold text-gray-700 dark:text-gray-300">Gần nhất</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {antiCheatDetail.breakdown.map((item: AntiCheatBreakdownItem) => (
+                                <tr key={item.eventType} className="border-b border-gray-100 dark:border-gray-800">
+                                  <td className="py-2 pr-3 text-gray-900 dark:text-white">{formatEventTypeLabel(item.eventType)}</td>
+                                  <td className="py-2 pr-3 text-gray-600 dark:text-gray-300">{item.acceptedCount}</td>
+                                  <td className="py-2 pr-3 text-amber-700 dark:text-amber-300">{item.duplicateCount}</td>
+                                  <td className="py-2 pr-3 text-gray-600 dark:text-gray-300">{item.totalReceivedCount}</td>
+                                  <td className="py-2 text-gray-600 dark:text-gray-300">{formatDateTime(item.lastOccurredAt)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">Sự kiện gần đây</p>
+                      {antiCheatDetail.recentEvents.length === 0 ? (
+                        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Chưa có sự kiện gần đây.</p>
+                      ) : (
+                        <div className="mt-3 space-y-3">
+                          {antiCheatDetail.recentEvents.map((event: AntiCheatRecentEvent) => (
+                            <div
+                              key={event.id}
+                              className={`rounded-xl border p-4 ${
+                                event.isDuplicate
+                                  ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
+                                  : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                              }`}
+                            >
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                    {formatEventTypeLabel(event.eventType)}
+                                  </span>
+                                  {event.isDuplicate && (
+                                    <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
+                                      Trùng lặp / nhiễu
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {formatDateTime(event.occurredAt)}
+                                </span>
+                              </div>
+                              <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-gray-600 dark:text-gray-300 sm:grid-cols-2">
+                                <p>
+                                  <span className="font-semibold">Ghi nhận:</span> {formatDateTime(event.receivedAt)}
+                                </p>
+                                <p>
+                                  <span className="font-semibold">Metadata:</span> {formatMetadata(event.metadata)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                    Chưa có dữ liệu vi phạm.
+                  </div>
+                )
+              ) : null}
             </div>
           </div>
         </div>

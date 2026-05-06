@@ -8,8 +8,7 @@ describe('antiCheat helpers', () => {
   it('builds a backend payload with compatible anti-cheat keys', () => {
     const occurredAt = '2026-05-05T00:00:00.000Z';
     const payload = buildAntiCheatEventPayload(
-      'VisibilityHidden',
-      'Rời khỏi tab hoặc thu nhỏ cửa sổ bài thi.',
+      'PageHidden',
       {
         visibilityState: 'hidden',
         count: 2,
@@ -21,29 +20,30 @@ describe('antiCheat helpers', () => {
 
     expect(payload).toEqual({
       occurredAt,
-      eventType: 'VisibilityHidden',
-      details: 'Rời khỏi tab hoặc thu nhỏ cửa sổ bài thi.',
-      metadata: {
+      eventType: 'PageHidden',
+      sessionFingerprint: expect.any(String),
+      userAgent: expect.any(String),
+      metadata: JSON.stringify({
         visibilityState: 'hidden',
         count: 2,
         retryable: true,
-      },
+      }),
     });
   });
 
   it('creates readable event labels for the UI', () => {
     const occurredAt = '2026-05-05T00:00:00.000Z';
     const uiEvent = createAntiCheatUiEvent(
-      'PasteAttempt',
+      'Paste',
       'Cố gắng dán nội dung trong bài thi.',
       occurredAt
     );
 
-    expect(getAntiCheatEventLabel('PasteAttempt')).toBe('Dán nội dung');
+    expect(getAntiCheatEventLabel('Paste')).toBe('Dán nội dung');
     expect(uiEvent).toEqual({
-      id: `PasteAttempt-${occurredAt}`,
+      id: `Paste-${occurredAt}`,
       occurredAt,
-      eventType: 'PasteAttempt',
+      eventType: 'Paste',
       label: 'Dán nội dung',
       details: 'Cố gắng dán nội dung trong bài thi.',
     });

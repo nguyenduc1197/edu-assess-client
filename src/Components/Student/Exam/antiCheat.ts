@@ -1,21 +1,28 @@
-import { fetchClient } from '../../../api/fetchClient';
+import { API_BASE_URL } from '../../../config/env';
 
 export type AntiCheatEventType =
-  | 'VisibilityHidden'
+  | 'PageHidden'
+  | 'PageVisible'
   | 'WindowBlur'
+  | 'WindowFocus'
   | 'FullscreenExited'
-  | 'CopyAttempt'
-  | 'CutAttempt'
-  | 'PasteAttempt'
-  | 'ContextMenuAttempt';
+  | 'FullscreenEntered'
+  | 'Copy'
+  | 'Paste'
+  | 'Reload'
+  | 'Offline'
+  | 'Online'
+  | 'AttemptOpenedInAnotherTab'
+  | 'AttemptResumed';
 
 type AntiCheatMetadataValue = string | number | boolean | null | undefined;
 
 export interface AntiCheatEventPayload {
   occurredAt: string;
   eventType: AntiCheatEventType;
-  details: string;
-  metadata?: Record<string, string | number | boolean | null>;
+  sessionFingerprint?: string;
+  userAgent?: string;
+  metadata?: string;
 }
 
 export interface AntiCheatUiEvent {
@@ -27,13 +34,19 @@ export interface AntiCheatUiEvent {
 }
 
 const EVENT_LABELS: Record<AntiCheatEventType, string> = {
-  VisibilityHidden: 'Rời khỏi bài thi',
+  PageHidden: 'Ẩn bài thi',
+  PageVisible: 'Quay lại bài thi',
   WindowBlur: 'Chuyển cửa sổ',
+  WindowFocus: 'Quay lại cửa sổ',
   FullscreenExited: 'Thoát toàn màn hình',
-  CopyAttempt: 'Sao chép nội dung',
-  CutAttempt: 'Cắt nội dung',
-  PasteAttempt: 'Dán nội dung',
-  ContextMenuAttempt: 'Mở menu chuột phải',
+  FullscreenEntered: 'Vào toàn màn hình',
+  Copy: 'Sao chép nội dung',
+  Paste: 'Dán nội dung',
+  Reload: 'Tải lại trang',
+  Offline: 'Mất kết nối mạng',
+  Online: 'Khôi phục kết nối mạng',
+  AttemptOpenedInAnotherTab: 'Mở bài ở tab khác',
+  AttemptResumed: 'Tiếp tục phiên làm bài',
 };
 
 const sanitizeMetadata = (metadata?: Record<string, AntiCheatMetadataValue>) => {
@@ -46,18 +59,36 @@ const sanitizeMetadata = (metadata?: Record<string, AntiCheatMetadataValue>) => 
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
+const serializeMetadata = (metadata?: Record<string, AntiCheatMetadataValue>) => {
+  const sanitized = sanitizeMetadata(metadata);
+  return sanitized ? JSON.stringify(sanitized) : undefined;
+};
+
+export const getSessionFingerprint = () => {
+  if (typeof window === 'undefined') return undefined;
+
+  const screenSize = `${window.screen?.width || 0}x${window.screen?.height || 0}`;
+  return [
+    navigator.userAgent,
+    navigator.language,
+    navigator.platform,
+    navigator.hardwareConcurrency ?? 'na',
+    screenSize,
+  ].join('|');
+};
+
 export const getAntiCheatEventLabel = (eventType: AntiCheatEventType) => EVENT_LABELS[eventType];
 
 export const buildAntiCheatEventPayload = (
   eventType: AntiCheatEventType,
-  details: string,
   metadata?: Record<string, AntiCheatMetadataValue>,
   occurredAt = new Date().toISOString()
 ): AntiCheatEventPayload => ({
   occurredAt,
   eventType,
-  details,
-  metadata: sanitizeMetadata(metadata),
+  sessionFingerprint: getSessionFingerprint(),
+  userAgent: typeof navigator === 'undefined' ? undefined : navigator.userAgent,
+  metadata: serializeMetadata(metadata),
 });
 
 export const createAntiCheatUiEvent = (
@@ -74,11 +105,20 @@ export const createAntiCheatUiEvent = (
 
 export const postAntiCheatEvent = async (
   studentExamId: string,
-  payload: AntiCheatEventPayload
+  payload: AntiCheatEventPayload,
+  options: RequestInit = {}
 ) => {
-  const response = await fetchClient(`/student-exams/${studentExamId}/anti-cheat/events`, {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/student-exams/${studentExamId}/anti-cheat/events`, {
+    ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    keepalive: options.keepalive,
+    headers: {
+      accept: '*/*',
+      'Content-Type': 'application/json',
+      Authorization: token ? `Bearer ${token}` : '',
+      ...(options.headers || {}),
+    },
     body: JSON.stringify(payload),
   });
 
