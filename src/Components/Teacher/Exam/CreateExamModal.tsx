@@ -12,6 +12,7 @@ interface ExamToEdit {
   durationMinutes?: number;
   questionIds: string[];
   schoolClassId: string;
+  antiCheatEnabled?: boolean;
 }
 
 interface CreateExamModalProps {
@@ -63,6 +64,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   // State for fetching classes
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>(examToEdit?.schoolClassId || '');
+  const [antiCheatEnabled, setAntiCheatEnabled] = useState<boolean>(examToEdit?.antiCheatEnabled === true);
   const [isFetchingClasses, setIsFetchingClasses] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -194,7 +196,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
       start: new Date(start).toISOString(),
       durationMinutes: parsedDurationMinutes,
       questionIds: selectedQuestionIds,
-      schoolClassId: selectedClassId
+      schoolClassId: selectedClassId,
+      antiCheatEnabled,
     };
 
     try {
@@ -365,6 +368,26 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   readOnly
                   className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-400 cursor-not-allowed dark:[color-scheme:dark]"
                 />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Bật giám sát vi phạm</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Ghi nhận các hành vi rời tab, chuyển cửa sổ, sao chép hoặc dán khi học sinh làm bài.
+                  </p>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={antiCheatEnabled}
+                    onChange={(e) => setAntiCheatEnabled(e.target.checked)}
+                  />
+                  <span className="h-6 w-11 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-5 dark:bg-gray-600" />
+                </label>
               </div>
             </div>
 

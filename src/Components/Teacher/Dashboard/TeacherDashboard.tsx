@@ -97,7 +97,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; durationMinutes?: number; questionIds: string[]; schoolClassId: string } | null>(null);
+  const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; durationMinutes?: number; questionIds: string[]; schoolClassId: string; antiCheatEnabled?: boolean } | null>(null);
   const [selectedExam, setSelectedExam] = useState<Assignment | null>(null);
   const [examStudents, setExamStudents] = useState<ExamStudentStatusItem[]>([]);
   const [isStudentListLoading, setIsStudentListLoading] = useState(false);
@@ -164,7 +164,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               year: 'numeric'
             }),
             status: status,
-            isOverdue: now > endDate
+            isOverdue: now > endDate,
+            antiCheatEnabled: item.antiCheatEnabled === true,
           };
         });
         
@@ -439,6 +440,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         durationMinutes: typeof examData.durationMinutes === 'number' ? examData.durationMinutes : undefined,
         questionIds: questionItems.map((q: any) => q.id),
         schoolClassId: examData.schoolClassId || '',
+        antiCheatEnabled: examData.antiCheatEnabled ?? assignment.antiCheatEnabled ?? false,
       });
     } catch (err) {
       console.error('Failed to load exam for editing', err);
@@ -450,6 +452,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         durationMinutes: undefined,
         questionIds: [],
         schoolClassId: '',
+        antiCheatEnabled: assignment.antiCheatEnabled ?? false,
       });
     }
   };

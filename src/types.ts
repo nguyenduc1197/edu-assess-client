@@ -123,6 +123,7 @@ export interface Assignment {
   statusMessage?: string;
   studentExamId?: string | null;
   isSubmitted?: boolean;
+  antiCheatEnabled?: boolean;
 }
 
 export interface User {
@@ -187,6 +188,7 @@ export type AntiCheatStatus = 'Normal' | 'Suspicious' | 'Violated';
 
 export interface AntiCheatDetailSummary {
   studentExamId: string;
+  isEnabled?: boolean;
   violationStatus: AntiCheatStatus;
   suspiciousScore: number | null;
   totalEventCount: number;
@@ -221,6 +223,7 @@ export interface AntiCheatRecentEvent {
 }
 
 export interface AntiCheatDetailsResponse {
+  isEnabled?: boolean;
   summary: AntiCheatDetailSummary;
   breakdown: AntiCheatBreakdownItem[];
   recentEvents: AntiCheatRecentEvent[];
@@ -294,6 +297,7 @@ export interface CompletedExam {
   assessmentStatus: 'NotStarted' | 'Pending' | 'Completed' | 'Failed';
   overallFeedback: string | null;
   canRetryAssessment: boolean;
+  antiCheatEnabled?: boolean;
 }
 
 export interface AnalyticsProgressItem {
