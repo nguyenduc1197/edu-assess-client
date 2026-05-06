@@ -211,6 +211,9 @@ const getAntiCheatSummaryToneClassName = (status?: AntiCheatStatus | null) => {
   return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20';
 };
 
+const isAntiCheatEnabled = (detail?: AntiCheatDetailsResponse | null) =>
+  detail?.isEnabled ?? detail?.summary?.isEnabled ?? true;
+
 const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [results, setResults] = useState<StudentResultSummary[]>([]);
@@ -816,114 +819,122 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                   </div>
                 ) : antiCheatDetail ? (
                   <>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <div className={`rounded-xl border p-4 ${getAntiCheatSummaryToneClassName(antiCheatDetail.summary.violationStatus)}`}>
-                        <p className="text-sm text-gray-700 dark:text-gray-300">Trạng thái vi phạm</p>
-                        <div className="mt-2">
-                          <AntiCheatStatusBadge status={antiCheatDetail.summary.violationStatus} />
-                        </div>
+                    {!isAntiCheatEnabled(antiCheatDetail) ? (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                        Giám sát vi phạm đang tắt.
                       </div>
-                      <AntiCheatMetricCard
-                        label="Điểm nghi vấn"
-                        value={antiCheatDetail.summary.suspiciousScore ?? '—'}
-                        tone={(antiCheatDetail.summary.suspiciousScore ?? 0) > 0 ? 'warning' : 'default'}
-                      />
-                      <AntiCheatMetricCard label="Tổng sự kiện" value={antiCheatDetail.summary.totalEventCount} />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      <AntiCheatMetricCard label="Rời tab / ẩn trang" value={antiCheatDetail.summary.hiddenIncidentCount} />
-                      <AntiCheatMetricCard label="Mất focus cửa sổ" value={antiCheatDetail.summary.blurIncidentCount} />
-                      <AntiCheatMetricCard label="Sao chép" value={antiCheatDetail.summary.copyCount} />
-                      <AntiCheatMetricCard label="Dán" value={antiCheatDetail.summary.pasteCount} />
-                      <AntiCheatMetricCard label="Chuyển tab" value={antiCheatDetail.summary.tabSwitchCount} />
-                      <AntiCheatMetricCard label="Thoát toàn màn hình" value={antiCheatDetail.summary.fullscreenExitCount} />
-                      <AntiCheatMetricCard label="Tải lại trang" value={antiCheatDetail.summary.reloadCount} />
-                      <AntiCheatMetricCard label="Mất mạng" value={antiCheatDetail.summary.offlineCount} />
-                      <AntiCheatMetricCard label="Ẩn trang (giây)" value={antiCheatDetail.summary.totalHiddenSeconds} />
-                      <AntiCheatMetricCard label="Mất focus (giây)" value={antiCheatDetail.summary.totalBlurSeconds} />
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Phân rã theo loại sự kiện</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Cập nhật: {formatDateTime(antiCheatDetail.summary.lastUpdatedAt)}
-                        </p>
-                      </div>
-                      {antiCheatDetail.breakdown.length === 0 ? (
-                        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Chưa có dữ liệu phân rã.</p>
-                      ) : (
-                        <div className="mt-3 overflow-x-auto">
-                          <table className="w-full min-w-[520px] text-sm">
-                            <thead>
-                              <tr className="border-b border-gray-200 text-left dark:border-gray-700">
-                                <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Sự kiện</th>
-                                <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Hợp lệ</th>
-                                <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Trùng lặp</th>
-                                <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Nhận được</th>
-                                <th className="py-2 font-semibold text-gray-700 dark:text-gray-300">Gần nhất</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {antiCheatDetail.breakdown.map((item: AntiCheatBreakdownItem) => (
-                                <tr key={item.eventType} className="border-b border-gray-100 dark:border-gray-800">
-                                  <td className="py-2 pr-3 text-gray-900 dark:text-white">{formatEventTypeLabel(item.eventType)}</td>
-                                  <td className="py-2 pr-3 text-gray-600 dark:text-gray-300">{item.acceptedCount}</td>
-                                  <td className="py-2 pr-3 text-amber-700 dark:text-amber-300">{item.duplicateCount}</td>
-                                  <td className="py-2 pr-3 text-gray-600 dark:text-gray-300">{item.totalReceivedCount}</td>
-                                  <td className="py-2 text-gray-600 dark:text-gray-300">{formatDateTime(item.lastOccurredAt)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">Sự kiện gần đây</p>
-                      {antiCheatDetail.recentEvents.length === 0 ? (
-                        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Chưa có sự kiện gần đây.</p>
-                      ) : (
-                        <div className="mt-3 space-y-3">
-                          {antiCheatDetail.recentEvents.map((event: AntiCheatRecentEvent) => (
-                            <div
-                              key={event.id}
-                              className={`rounded-xl border p-4 ${
-                                event.isDuplicate
-                                  ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
-                                  : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
-                              }`}
-                            >
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {formatEventTypeLabel(event.eventType)}
-                                  </span>
-                                  {event.isDuplicate && (
-                                    <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
-                                      Trùng lặp / nhiễu
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {formatDateTime(event.occurredAt)}
-                                </span>
-                              </div>
-                              <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-gray-600 dark:text-gray-300 sm:grid-cols-2">
-                                <p>
-                                  <span className="font-semibold">Ghi nhận:</span> {formatDateTime(event.receivedAt)}
-                                </p>
-                                <p>
-                                  <span className="font-semibold">Metadata:</span> {formatMetadata(event.metadata)}
-                                </p>
-                              </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <div className={`rounded-xl border p-4 ${getAntiCheatSummaryToneClassName(antiCheatDetail.summary.violationStatus)}`}>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">Trạng thái vi phạm</p>
+                            <div className="mt-2">
+                              <AntiCheatStatusBadge status={antiCheatDetail.summary.violationStatus} />
                             </div>
-                          ))}
+                          </div>
+                          <AntiCheatMetricCard
+                            label="Điểm nghi vấn"
+                            value={antiCheatDetail.summary.suspiciousScore ?? '—'}
+                            tone={(antiCheatDetail.summary.suspiciousScore ?? 0) > 0 ? 'warning' : 'default'}
+                          />
+                          <AntiCheatMetricCard label="Tổng sự kiện" value={antiCheatDetail.summary.totalEventCount} />
                         </div>
-                      )}
-                    </div>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          <AntiCheatMetricCard label="Rời tab / ẩn trang" value={antiCheatDetail.summary.hiddenIncidentCount} />
+                          <AntiCheatMetricCard label="Mất focus cửa sổ" value={antiCheatDetail.summary.blurIncidentCount} />
+                          <AntiCheatMetricCard label="Sao chép" value={antiCheatDetail.summary.copyCount} />
+                          <AntiCheatMetricCard label="Dán" value={antiCheatDetail.summary.pasteCount} />
+                          <AntiCheatMetricCard label="Chuyển tab" value={antiCheatDetail.summary.tabSwitchCount} />
+                          <AntiCheatMetricCard label="Thoát toàn màn hình" value={antiCheatDetail.summary.fullscreenExitCount} />
+                          <AntiCheatMetricCard label="Tải lại trang" value={antiCheatDetail.summary.reloadCount} />
+                          <AntiCheatMetricCard label="Mất mạng" value={antiCheatDetail.summary.offlineCount} />
+                          <AntiCheatMetricCard label="Ẩn trang (giây)" value={antiCheatDetail.summary.totalHiddenSeconds} />
+                          <AntiCheatMetricCard label="Mất focus (giây)" value={antiCheatDetail.summary.totalBlurSeconds} />
+                        </div>
+
+                        <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Phân rã theo loại sự kiện</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Cập nhật: {formatDateTime(antiCheatDetail.summary.lastUpdatedAt)}
+                            </p>
+                          </div>
+                          {antiCheatDetail.breakdown.length === 0 ? (
+                            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Chưa có dữ liệu phân rã.</p>
+                          ) : (
+                            <div className="mt-3 overflow-x-auto">
+                              <table className="w-full min-w-[520px] text-sm">
+                                <thead>
+                                  <tr className="border-b border-gray-200 text-left dark:border-gray-700">
+                                    <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Sự kiện</th>
+                                    <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Hợp lệ</th>
+                                    <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Trùng lặp</th>
+                                    <th className="py-2 pr-3 font-semibold text-gray-700 dark:text-gray-300">Nhận được</th>
+                                    <th className="py-2 font-semibold text-gray-700 dark:text-gray-300">Gần nhất</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {antiCheatDetail.breakdown.map((item: AntiCheatBreakdownItem) => (
+                                    <tr key={item.eventType} className="border-b border-gray-100 dark:border-gray-800">
+                                      <td className="py-2 pr-3 text-gray-900 dark:text-white">{formatEventTypeLabel(item.eventType)}</td>
+                                      <td className="py-2 pr-3 text-gray-600 dark:text-gray-300">{item.acceptedCount}</td>
+                                      <td className="py-2 pr-3 text-amber-700 dark:text-amber-300">{item.duplicateCount}</td>
+                                      <td className="py-2 pr-3 text-gray-600 dark:text-gray-300">{item.totalReceivedCount}</td>
+                                      <td className="py-2 text-gray-600 dark:text-gray-300">{formatDateTime(item.lastOccurredAt)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Sự kiện gần đây</p>
+                          {antiCheatDetail.recentEvents.length === 0 ? (
+                            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Chưa có sự kiện gần đây.</p>
+                          ) : (
+                            <div className="mt-3 space-y-3">
+                              {antiCheatDetail.recentEvents.map((event: AntiCheatRecentEvent) => (
+                                <div
+                                  key={event.id}
+                                  className={`rounded-xl border p-4 ${
+                                    event.isDuplicate
+                                      ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
+                                      : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                                  }`}
+                                >
+                                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                        {formatEventTypeLabel(event.eventType)}
+                                      </span>
+                                      {event.isDuplicate && (
+                                        <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
+                                          Trùng lặp / nhiễu
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {formatDateTime(event.occurredAt)}
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-gray-600 dark:text-gray-300 sm:grid-cols-2">
+                                    <p>
+                                      <span className="font-semibold">Ghi nhận:</span> {formatDateTime(event.receivedAt)}
+                                    </p>
+                                    <p>
+                                      <span className="font-semibold">Metadata:</span> {formatMetadata(event.metadata)}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </>
                 ) : (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
