@@ -118,6 +118,10 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
   };
 
   const isActionDisabled = (assignment: Assignment) => {
+    if (assignment.isSubmitted) {
+      return false;
+    }
+
     if (assignment.canStartAttempt === false && !assignment.startedAt && !assignment.isSubmitted) {
       return true;
     }
