@@ -343,7 +343,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
 
               <div className="space-y-2">
                 <label htmlFor="durationMinutes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Thời Lượng Mỗi Lượt Làm (phút)
+                  Thời Lượng
                 </label>
                 <input
                   type="number"
