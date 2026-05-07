@@ -129,6 +129,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           statusMessage,
           studentExamId: item.studentExamId || null,
           isSubmitted,
+          antiCheatEnabled: item.antiCheatEnabled === true,
         };
       });
 
@@ -255,6 +256,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       studentExamId: viewingResultStudentExamId,
       isSubmitted: true,
       assessmentStatus: 'Completed',
+      antiCheatEnabled: examForResult?.antiCheatEnabled === true,
     };
     return (
       <ExamSession

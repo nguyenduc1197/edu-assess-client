@@ -9,8 +9,10 @@ interface ExamToEdit {
   name: string;
   start: string;
   end: string;
+  durationMinutes?: number;
   questionIds: string[];
   schoolClassId: string;
+  antiCheatEnabled?: boolean;
 }
 
 interface CreateExamModalProps {
@@ -18,6 +20,8 @@ interface CreateExamModalProps {
   onSuccess?: () => void;
   examToEdit?: ExamToEdit | null;
 }
+
+const DEFAULT_DURATION_MINUTES = 45;
 
 const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, examToEdit }) => {
   const isEditing = !!examToEdit;
@@ -28,8 +32,26 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
+  const calculateDurationMinutes = (startIso?: string, endIso?: string) => {
+    if (!startIso || !endIso) return DEFAULT_DURATION_MINUTES;
+    const diffMinutes = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000);
+    return diffMinutes > 0 ? diffMinutes : DEFAULT_DURATION_MINUTES;
+  };
+  const getInitialDurationMinutes = () => {
+    if (!examToEdit) return String(DEFAULT_DURATION_MINUTES);
+    return String(examToEdit.durationMinutes ?? calculateDurationMinutes(examToEdit.start, examToEdit.end));
+  };
+  const isValidDurationMinutes = (value: string) => /^\d+$/.test(value) && Number(value) > 0;
+  const calculateEndDatetime = (startValue: string, durationValue: string) => {
+    const parsedDuration = Number(durationValue);
+    if (!startValue || !isValidDurationMinutes(durationValue)) return '';
+
+    const endDate = new Date(startValue);
+    endDate.setMinutes(endDate.getMinutes() + parsedDuration);
+    return toLocalDatetime(endDate.toISOString());
+  };
   const [start, setStart] = useState(examToEdit ? toLocalDatetime(examToEdit.start) : '');
-  const [end, setEnd] = useState(examToEdit ? toLocalDatetime(examToEdit.end) : '');
+  const [durationMinutes, setDurationMinutes] = useState(getInitialDurationMinutes);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>(examToEdit?.questionIds || []);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -42,10 +64,12 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   // State for fetching classes
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>(examToEdit?.schoolClassId || '');
+  const [antiCheatEnabled, setAntiCheatEnabled] = useState<boolean>(examToEdit?.antiCheatEnabled === true);
   const [isFetchingClasses, setIsFetchingClasses] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const end = calculateEndDatetime(start, durationMinutes);
 
   const fetchQuestions = useCallback(async () => {
     setIsFetchingQuestions(true);
@@ -147,8 +171,16 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     setError(null);
     setIsLoading(true);
 
-    if (!name || !start || !end || !selectedClassId) {
-      setError('Vui lòng nhập đầy đủ tên bài thi, thời gian và lớp học.');
+    if (!name || !start || !selectedClassId) {
+      setError('Vui lòng nhập đầy đủ tên bài thi, thời gian bắt đầu và lớp học.');
+      setIsLoading(false);
+      return;
+    }
+
+    const normalizedDurationMinutes = durationMinutes.trim();
+    const parsedDurationMinutes = Number(normalizedDurationMinutes);
+    if (!isValidDurationMinutes(normalizedDurationMinutes)) {
+      setError('Thời lượng bài thi phải là số nguyên lớn hơn 0 phút.');
       setIsLoading(false);
       return;
     }
@@ -162,9 +194,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     const payload = {
       name,
       start: new Date(start).toISOString(),
-      end: new Date(end).toISOString(),
+      durationMinutes: parsedDurationMinutes,
       questionIds: selectedQuestionIds,
-      schoolClassId: selectedClassId
+      schoolClassId: selectedClassId,
+      antiCheatEnabled,
     };
 
     try {
@@ -295,16 +328,31 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label htmlFor="start" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Thời Gian Bắt Dầu
+                  Thời Gian Bắt Đầu
                 </label>
                 <input
                   type="datetime-local"
                   id="start"
                   value={start}
                   onChange={(e) => setStart(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="durationMinutes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Thời Lượng (phút)
+                </label>
+                <input
+                  type="number"
+                  id="durationMinutes"
+                  min={1}
+                  step={1}
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
                 />
               </div>
@@ -317,9 +365,29 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   type="datetime-local"
                   id="end"
                   value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
+                  readOnly
+                  className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-400 cursor-not-allowed dark:[color-scheme:dark]"
                 />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Bật giám sát vi phạm</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Ghi nhận các hành vi rời tab, chuyển cửa sổ, sao chép hoặc dán khi học sinh làm bài.
+                  </p>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={antiCheatEnabled}
+                    onChange={(e) => setAntiCheatEnabled(e.target.checked)}
+                  />
+                  <span className="h-6 w-11 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-5 dark:bg-gray-600" />
+                </label>
               </div>
             </div>
 

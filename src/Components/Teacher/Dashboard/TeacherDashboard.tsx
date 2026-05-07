@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, PlusCircle, Copy, Edit2, BarChart2 } from 'lucide-react';
+import { Search, PlusCircle, Copy, Edit2, BarChart2, RotateCw } from 'lucide-react';
 import {
   AssessmentResult,
   Assignment,
@@ -97,11 +97,12 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; questionIds: string[]; schoolClassId: string } | null>(null);
+  const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; durationMinutes?: number; questionIds: string[]; schoolClassId: string; antiCheatEnabled?: boolean } | null>(null);
   const [selectedExam, setSelectedExam] = useState<Assignment | null>(null);
   const [examStudents, setExamStudents] = useState<ExamStudentStatusItem[]>([]);
   const [isStudentListLoading, setIsStudentListLoading] = useState(false);
   const [studentListError, setStudentListError] = useState('');
+  const [retryingStudentExamIds, setRetryingStudentExamIds] = useState<string[]>([]);
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentResult | null>(null);
   const [isAssessmentLoading, setIsAssessmentLoading] = useState(false);
   const [selectedStudentName, setSelectedStudentName] = useState('');
@@ -163,7 +164,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               year: 'numeric'
             }),
             status: status,
-            isOverdue: now > endDate
+            isOverdue: now > endDate,
+            antiCheatEnabled: item.antiCheatEnabled === true,
           };
         });
         
@@ -206,6 +208,27 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   }, [studentSortBy]);
 
   const getStudentStatusMeta = (item: ExamStudentStatusItem) => {
+    if (item.assessmentStatus === 'Failed') {
+      return {
+        label: 'Chấm lỗi',
+        className: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
+      };
+    }
+
+    if (item.assessmentStatus === 'Completed' || item.canViewResult === true) {
+      return {
+        label: 'Đã có kết quả',
+        className: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
+      };
+    }
+
+    if (item.assessmentStatus === 'Pending') {
+      return {
+        label: 'Đã nộp, đang chấm',
+        className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
+      };
+    }
+
     if (item.isSubmitted === false) {
       return {
         label: 'Chưa làm bài',
@@ -213,20 +236,15 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       };
     }
 
-    if (item.isSubmitted === true && item.canViewResult === true) {
-      return {
-        label: 'Đã có kết quả',
-        className: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
-      };
-    }
-
     return {
-      label: 'Đã nộp, đang chấm',
-      className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
+      label: item.isSubmitted ? 'Đã nộp, đang chấm' : 'Chưa làm bài',
+      className: item.isSubmitted
+        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'
+        : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
     };
   };
 
-  const handleOpenExamStudents = async (assignment: Assignment) => {
+  const loadExamStudents = useCallback(async (assignment: Assignment) => {
     try {
       setSelectedExam(assignment);
       setSelectedAssessment(null);
@@ -264,6 +282,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         canViewResult: !!item.canViewResult,
         assessmentError: item.assessmentError || null,
         finishedAt: item.finishedAt || null,
+        canRetryAssessment: !!item.canRetryAssessment,
       }));
 
       setExamStudents(mappedStudents);
@@ -277,7 +296,36 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     } finally {
       setIsStudentListLoading(false);
     }
-  };
+  }, []);
+
+  const handleOpenExamStudents = useCallback(async (assignment: Assignment) => {
+    await loadExamStudents(assignment);
+  }, [loadExamStudents]);
+
+  const handleRetryStudentAssessment = useCallback(async (item: ExamStudentStatusItem) => {
+    if (!item.studentExamId || !selectedExam) return;
+
+    try {
+      setRetryingStudentExamIds((current) => [...current, item.studentExamId as string]);
+      setStudentListError('');
+
+      const response = await fetchClient(`/student-exams/${item.studentExamId}/retry-assessment`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const retryData = await response.json().catch(() => ({}));
+        throw new Error(retryData?.message || `API returned ${response.status}`);
+      }
+
+      await loadExamStudents(selectedExam);
+    } catch (retryError) {
+      console.error('Failed to retry student assessment', retryError);
+      setStudentListError('Không thể yêu cầu chấm lại. Vui lòng thử lại sau.');
+    } finally {
+      setRetryingStudentExamIds((current) => current.filter((id) => id !== item.studentExamId));
+    }
+  }, [loadExamStudents, selectedExam]);
 
   const fetchAssessmentDetail = useCallback(async (studentExamId: string, silent = false) => {
     try {
@@ -389,8 +437,10 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         name: examData.name || assignment.title,
         start: examData.start || assignment.deadline,
         end: examData.end || assignment.deadline,
+        durationMinutes: typeof examData.durationMinutes === 'number' ? examData.durationMinutes : undefined,
         questionIds: questionItems.map((q: any) => q.id),
         schoolClassId: examData.schoolClassId || '',
+        antiCheatEnabled: examData.antiCheatEnabled ?? assignment.antiCheatEnabled ?? false,
       });
     } catch (err) {
       console.error('Failed to load exam for editing', err);
@@ -399,8 +449,10 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         name: assignment.title,
         start: '',
         end: assignment.deadline,
+        durationMinutes: undefined,
         questionIds: [],
         schoolClassId: '',
+        antiCheatEnabled: assignment.antiCheatEnabled ?? false,
       });
     }
   };
@@ -816,7 +868,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách học sinh...</p>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
                       <p className="text-sm text-gray-500 dark:text-gray-400">Chưa làm bài</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -826,13 +878,19 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     <div className="rounded-lg border border-amber-200 dark:border-amber-800 p-4 bg-amber-50 dark:bg-amber-900/20">
                       <p className="text-sm text-amber-700 dark:text-amber-300">Đã nộp, đang chấm</p>
                       <p className="text-2xl font-bold text-amber-800 dark:text-amber-200">
-                        {examStudents.filter((item) => getStudentStatusMeta(item).label === 'Đã nộp, đang chấm').length}
+                        {examStudents.filter((item) => item.assessmentStatus === 'Pending').length}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-red-200 dark:border-red-800 p-4 bg-red-50 dark:bg-red-900/20">
+                      <p className="text-sm text-red-700 dark:text-red-300">Chấm lỗi</p>
+                      <p className="text-2xl font-bold text-red-800 dark:text-red-200">
+                        {examStudents.filter((item) => item.assessmentStatus === 'Failed').length}
                       </p>
                     </div>
                     <div className="rounded-lg border border-green-200 dark:border-green-800 p-4 bg-green-50 dark:bg-green-900/20">
                       <p className="text-sm text-green-700 dark:text-green-300">Đã có kết quả</p>
                       <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-                        {examStudents.filter((item) => getStudentStatusMeta(item).label === 'Đã có kết quả').length}
+                        {examStudents.filter((item) => item.assessmentStatus === 'Completed' || item.canViewResult === true).length}
                       </p>
                     </div>
                   </div>
@@ -846,6 +904,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                       ) : (
                         sortedExamStudents.map((item) => {
                           const statusMeta = getStudentStatusMeta(item);
+                          const isRetrying = item.studentExamId ? retryingStudentExamIds.includes(item.studentExamId) : false;
 
                           return (
                             <div key={`${item.studentId}-${item.studentExamId || 'empty'}`} className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
@@ -865,17 +924,31 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                 {item.assessmentError && (
                                   <p className="text-xs text-amber-700 dark:text-amber-300">{item.assessmentError}</p>
                                 )}
-                                {item.canViewResult && item.studentExamId ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleViewStudentResult(item)}
-                                    className="inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
-                                  >
-                                    Xem kết quả
-                                  </button>
-                                ) : (
-                                  <span className="text-sm text-gray-400 dark:text-gray-500">Chưa có kết quả</span>
-                                )}
+                                <div className="flex flex-col gap-2">
+                                  {item.canViewResult && item.studentExamId ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleViewStudentResult(item)}
+                                      className="inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
+                                    >
+                                      Xem kết quả
+                                    </button>
+                                  ) : (
+                                    <span className="text-sm text-gray-400 dark:text-gray-500">Chưa có kết quả</span>
+                                  )}
+
+                                  {item.canRetryAssessment && item.studentExamId && (
+                                    <button
+                                      type="button"
+                                      disabled={isRetrying}
+                                      onClick={() => handleRetryStudentAssessment(item)}
+                                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/20"
+                                    >
+                                      <RotateCw size={16} className={isRetrying ? 'animate-spin' : ''} />
+                                      {isRetrying ? 'Đang gửi...' : 'Chấm lại'}
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
@@ -904,6 +977,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                           ) : (
                             sortedExamStudents.map((item) => {
                               const statusMeta = getStudentStatusMeta(item);
+                              const isRetrying = item.studentExamId ? retryingStudentExamIds.includes(item.studentExamId) : false;
 
                               return (
                                 <tr key={`${item.studentId}-${item.studentExamId || 'empty'}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
@@ -926,12 +1000,35 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                   </td>
                                   <td className="px-4 py-3 text-sm">
                                     {item.canViewResult && item.studentExamId ? (
+                                      <div className="flex flex-wrap items-center gap-3">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleViewStudentResult(item)}
+                                          className="text-primary hover:text-primary-dark hover:underline transition-colors"
+                                        >
+                                          Xem kết quả
+                                        </button>
+                                        {item.canRetryAssessment && item.studentExamId && (
+                                          <button
+                                            type="button"
+                                            disabled={isRetrying}
+                                            onClick={() => handleRetryStudentAssessment(item)}
+                                            className="inline-flex items-center gap-2 text-blue-600 transition-colors hover:text-blue-700 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-blue-400 dark:hover:text-blue-300"
+                                          >
+                                            <RotateCw size={14} className={isRetrying ? 'animate-spin' : ''} />
+                                            {isRetrying ? 'Đang gửi...' : 'Chấm lại'}
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : item.canRetryAssessment && item.studentExamId ? (
                                       <button
                                         type="button"
-                                        onClick={() => handleViewStudentResult(item)}
-                                        className="text-primary hover:text-primary-dark hover:underline transition-colors"
+                                        disabled={isRetrying}
+                                        onClick={() => handleRetryStudentAssessment(item)}
+                                        className="inline-flex items-center gap-2 text-blue-600 transition-colors hover:text-blue-700 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-blue-400 dark:hover:text-blue-300"
                                       >
-                                        Xem kết quả
+                                        <RotateCw size={14} className={isRetrying ? 'animate-spin' : ''} />
+                                        {isRetrying ? 'Đang gửi...' : 'Chấm lại'}
                                       </button>
                                     ) : (
                                       <span className="text-gray-400 dark:text-gray-500">—</span>

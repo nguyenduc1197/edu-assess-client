@@ -82,7 +82,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   }, [assignment.studentExamId]);
 
   const antiCheatMonitoring = useAntiCheatMonitoring({
-    enabled: step === 'taking' || step === 'review',
+    enabled: assignment.antiCheatEnabled === true && (step === 'taking' || step === 'review'),
     studentExamId: currentStudentExamId,
   });
 
@@ -264,6 +264,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       if (response.ok) {
         const submitData = await response.json();
         const studentExamId: string = submitData.studentExamId;
+        await antiCheatMonitoring.flushPendingEvents(studentExamId);
+        await antiCheatMonitoring.waitForPendingSends();
         onSubmitted?.();
         setCurrentStudentExamId(studentExamId);
         setStep('assessing');
@@ -302,6 +304,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
         antiCheatEventCount={antiCheatMonitoring.totalEventCount}
         antiCheatSyncErrorCount={antiCheatMonitoring.syncErrorCount}
         isAntiCheatMonitoring={antiCheatMonitoring.isMonitoring}
+        antiCheatEnabled={assignment.antiCheatEnabled === true}
       />
     );
   }
@@ -707,6 +710,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       antiCheatEventCount={antiCheatMonitoring.totalEventCount}
       antiCheatSyncErrorCount={antiCheatMonitoring.syncErrorCount}
       isAntiCheatMonitoring={antiCheatMonitoring.isMonitoring}
+      antiCheatEnabled={assignment.antiCheatEnabled === true}
     />
   );
 };

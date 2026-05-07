@@ -123,6 +123,7 @@ export interface Assignment {
   statusMessage?: string;
   studentExamId?: string | null;
   isSubmitted?: boolean;
+  antiCheatEnabled?: boolean;
 }
 
 export interface User {
@@ -173,11 +174,59 @@ export interface StudentResultSummary {
   score: number | null;
   assessmentStatus: 'Pending' | 'Completed' | 'Failed';
   completedExamCount?: number;
+  antiCheatStatus?: AntiCheatStatus | null;
   behaviorAdjustmentAccumulation?: CompetencyAccumulation | null;
   selfDevelopmentAccumulation?: CompetencyAccumulation | null;
   economicSocialParticipationAccumulation?: CompetencyAccumulation | null;
   finishedAt?: string;
   assessedAt?: string | null;
+  assessmentError?: string | null;
+  canRetryAssessment?: boolean;
+}
+
+export type AntiCheatStatus = 'Normal' | 'Suspicious' | 'Violated';
+
+export interface AntiCheatDetailSummary {
+  studentExamId: string;
+  isEnabled?: boolean;
+  violationStatus: AntiCheatStatus;
+  suspiciousScore: number | null;
+  totalEventCount: number;
+  hiddenIncidentCount: number;
+  blurIncidentCount: number;
+  pasteCount: number;
+  copyCount: number;
+  tabSwitchCount: number;
+  fullscreenExitCount: number;
+  reloadCount: number;
+  offlineCount: number;
+  totalHiddenSeconds: number;
+  totalBlurSeconds: number;
+  lastUpdatedAt: string | null;
+}
+
+export interface AntiCheatBreakdownItem {
+  eventType: string;
+  acceptedCount: number;
+  duplicateCount: number;
+  totalReceivedCount: number;
+  lastOccurredAt: string | null;
+}
+
+export interface AntiCheatRecentEvent {
+  id: string;
+  eventType: string;
+  occurredAt: string;
+  receivedAt: string;
+  isDuplicate: boolean;
+  metadata?: string | null;
+}
+
+export interface AntiCheatDetailsResponse {
+  isEnabled?: boolean;
+  summary: AntiCheatDetailSummary;
+  breakdown: AntiCheatBreakdownItem[];
+  recentEvents: AntiCheatRecentEvent[];
 }
 
 export interface ExamStudentStatusItem {
@@ -192,6 +241,7 @@ export interface ExamStudentStatusItem {
   canViewResult?: boolean;
   assessmentError?: string | null;
   finishedAt?: string | null;
+  canRetryAssessment?: boolean;
 }
 
 export interface WrongAnswerReview {
@@ -247,6 +297,7 @@ export interface CompletedExam {
   assessmentStatus: 'NotStarted' | 'Pending' | 'Completed' | 'Failed';
   overallFeedback: string | null;
   canRetryAssessment: boolean;
+  antiCheatEnabled?: boolean;
 }
 
 export interface AnalyticsProgressItem {
