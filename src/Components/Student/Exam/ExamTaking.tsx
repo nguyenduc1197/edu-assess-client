@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnswerState, Question } from '../../../types';
 import { AntiCheatUiEvent } from './antiCheat';
+import { parseApiDateTime } from '../../../utils/apiDateTime';
 
 interface ExamTakingProps {
   examTitle: string;
@@ -36,12 +37,16 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   disableExamActions = false,
   lockMessage = null,
 }) => {
-  const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
-  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(() => {
-    if (!attemptDeadlineUtc) return null;
-    const diff = Math.floor((new Date(attemptDeadlineUtc).getTime() - Date.now()) / 1000);
+  const getRemainingSeconds = (deadlineValue?: string | null) => {
+    const deadline = parseApiDateTime(deadlineValue);
+    if (!deadline) return null;
+
+    const diff = Math.floor((deadline.getTime() - Date.now()) / 1000);
     return diff > 0 ? diff : 0;
-  });
+  };
+
+  const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(() => getRemainingSeconds(attemptDeadlineUtc));
 
   useEffect(() => {
     if (!attemptDeadlineUtc) {
@@ -49,8 +54,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
       return;
     }
 
-    const diff = Math.floor((new Date(attemptDeadlineUtc).getTime() - Date.now()) / 1000);
-    setRemainingSeconds(diff > 0 ? diff : 0);
+    setRemainingSeconds(getRemainingSeconds(attemptDeadlineUtc));
   }, [attemptDeadlineUtc]);
 
   useEffect(() => {

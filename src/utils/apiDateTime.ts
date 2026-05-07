@@ -1,10 +1,7 @@
-const HAS_TIMEZONE_SUFFIX = /(Z|[+-]\d{2}:\d{2})$/i;
-
 export const parseApiDateTime = (value?: string | null): Date | null => {
   if (!value) return null;
 
-  const normalizedValue = HAS_TIMEZONE_SUFFIX.test(value) ? value : `${value}Z`;
-  const parsedDate = new Date(normalizedValue);
+  const parsedDate = new Date(value);
 
   return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
 };
