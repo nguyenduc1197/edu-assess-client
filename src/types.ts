@@ -93,6 +93,7 @@ export type AnswerState = {
 export enum AssignmentStatus {
   NEW = 'Mới giao',
   IN_PROGRESS = 'Đang làm',
+  EXPIRED = 'Hết giờ',
   SUBMITTED = 'Đã nộp',
   GRADED = 'Đã chấm điểm',
   LATE = 'Trễ hạn',
@@ -111,10 +112,16 @@ export interface Assignment {
   id: string;
   title: string;
   subject: SubjectLabel;
-  deadline: string; // ISO date string or formatted string
-  deadlineDisplay: string; // The pretty string shown in UI
+  deadline: string;
+  deadlineDisplay: string;
   status: AssignmentStatus;
   isOverdue?: boolean;
+  start?: string;
+  end?: string;
+  durationMinutes?: number;
+  startedAt?: string | null;
+  attemptDeadlineUtc?: string | null;
+  isAttemptExpired?: boolean;
   score?: number | null;
   assessmentStatus?: 'NotStarted' | 'Pending' | 'Completed' | 'Failed';
   canRetry?: boolean;

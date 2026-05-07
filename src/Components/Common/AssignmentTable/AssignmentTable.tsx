@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import StatusBadge from '../StatusBadge/StatusBadge';
 import { Assignment, AssignmentStatus } from '../../../types';
 import { Clock3, Sparkles, Trash2 } from 'lucide-react';
@@ -24,6 +24,59 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
   sortDirection,
   onSort,
 }) => {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const formatShortDateTime = (iso?: string | null) => {
+    if (!iso) return '--';
+    return new Date(iso).toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const formatCountdown = (seconds: number) => {
+    const safeSeconds = Math.max(0, seconds);
+    const hour = Math.floor(safeSeconds / 3600);
+    const minute = Math.floor((safeSeconds % 3600) / 60);
+    const second = safeSeconds % 60;
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return hour > 0 ? `${pad(hour)}:${pad(minute)}:${pad(second)}` : `${pad(minute)}:${pad(second)}`;
+  };
+
+  const getAttemptRemainingSeconds = (assignment: Assignment) => {
+    if (!assignment.attemptDeadlineUtc) return null;
+    return Math.floor((new Date(assignment.attemptDeadlineUtc).getTime() - nowMs) / 1000);
+  };
+
+  const getTimingDisplay = (assignment: Assignment) => {
+    const remainingSeconds = getAttemptRemainingSeconds(assignment);
+
+    if (assignment.startedAt) {
+      return {
+        primary:
+          remainingSeconds !== null
+            ? remainingSeconds > 0
+              ? `Còn lại ${formatCountdown(remainingSeconds)}`
+              : 'Đã hết thời gian làm bài'
+            : 'Đang đồng bộ thời gian làm bài...',
+        secondary: `Bắt đầu: ${formatShortDateTime(assignment.startedAt)}`,
+      };
+    }
+
+    return {
+      primary: `Nhận đề: ${formatShortDateTime(assignment.start)} - ${formatShortDateTime(assignment.end)}`,
+      secondary: assignment.durationMinutes ? `Thời lượng làm bài: ${assignment.durationMinutes} phút` : null,
+    };
+  };
+
   const getSortIndicator = (column: string) => {
     if (sortBy !== column) return '<->';
     return sortDirection === 'asc' ? '^' : 'v';
@@ -57,12 +110,21 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
     switch (assignment.status) {
       case AssignmentStatus.NEW: return 'Làm bài';
       case AssignmentStatus.IN_PROGRESS: return 'Tiếp tục';
+      case AssignmentStatus.EXPIRED: return 'Hết giờ';
       case AssignmentStatus.SUBMITTED: return 'Đang chấm';
       case AssignmentStatus.GRADED: return 'Xem kết quả';
-      case AssignmentStatus.LATE: return 'Nộp bài';
+      case AssignmentStatus.LATE: return 'Hết giờ';
       case AssignmentStatus.RETRY: return 'Chấm lại';
       default: return 'Chi tiết';
     }
+  };
+
+  const isActionDisabled = (assignment: Assignment) => {
+    if (assignment.status === AssignmentStatus.EXPIRED || assignment.isAttemptExpired) {
+      return true;
+    }
+
+    return false;
   };
 
   const handleAction = (assignment: Assignment) => {
@@ -100,9 +162,14 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
                   </div>
                 </div>
 
-                <div className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs ${assignment.isOverdue ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-300' : 'bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-slate-300'}`}>
-                  <Clock3 size={13} />
-                  <span>{assignment.deadlineDisplay}</span>
+                <div className={`mt-3 rounded-2xl px-3 py-2 text-xs ${assignment.isOverdue ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-300' : 'bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-slate-300'}`}>
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Clock3 size={13} />
+                    <span>{getTimingDisplay(assignment).primary}</span>
+                  </div>
+                  {getTimingDisplay(assignment).secondary && (
+                    <p className="mt-1 pl-5 text-[11px] opacity-80">{getTimingDisplay(assignment).secondary}</p>
+                  )}
                 </div>
 
                 {assignment.statusMessage && (
@@ -116,7 +183,8 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
                     <button
                       type="button"
                       onClick={() => handleAction(assignment)}
-                      className="inline-flex min-h-11 w-full items-center justify-center rounded-[1.2rem] bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-blue-500/25 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 active:scale-[0.99]"
+                      disabled={isActionDisabled(assignment)}
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-[1.2rem] bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-blue-500/25 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-950 active:scale-[0.99]"
                     >
                       {actionLabel || getActionText(assignment)}
                     </button>
@@ -160,8 +228,11 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
                           {assignment.subject}
                         </span>
                         <span className={`mt-0.5 text-xs @md:hidden ${assignment.isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
-                          {assignment.deadlineDisplay}
+                          {getTimingDisplay(assignment).primary}
                         </span>
+                        {getTimingDisplay(assignment).secondary && (
+                          <span className="mt-0.5 text-[11px] text-gray-400 @md:hidden">{getTimingDisplay(assignment).secondary}</span>
+                        )}
                         {assignment.statusMessage && (
                           <span className={`mt-1 text-xs ${assignment.canRetryAssessment ? 'text-amber-700 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400'}`}>
                             {assignment.statusMessage}
@@ -173,7 +244,12 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
                       {assignment.subject}
                     </td>
                     <td className={`hidden px-6 py-4 text-sm font-medium @md:table-cell ${assignment.isOverdue ? 'text-red-600 dark:text-red-400' : (assignment.status === AssignmentStatus.IN_PROGRESS ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400')}`}>
-                      {assignment.deadlineDisplay}
+                      <div className="flex flex-col gap-1">
+                        <span>{getTimingDisplay(assignment).primary}</span>
+                        {getTimingDisplay(assignment).secondary && (
+                          <span className="text-xs font-normal text-gray-400 dark:text-gray-500">{getTimingDisplay(assignment).secondary}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={assignment.status} />
@@ -184,7 +260,8 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
                           <button
                             type="button"
                             onClick={() => handleAction(assignment)}
-                            className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
+                            disabled={isActionDisabled(assignment)}
+                            className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:scale-[1.02] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {actionLabel || getActionText(assignment)}
                           </button>
