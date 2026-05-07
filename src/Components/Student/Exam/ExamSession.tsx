@@ -67,7 +67,9 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
   const [currentStudentExamId, setCurrentStudentExamId] = useState<string | null>(assignment.studentExamId || null);
+  const [pollingSecondsElapsed, setPollingSecondsElapsed] = useState(0);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveDraftIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answersRef = useRef(answers);
 
@@ -128,9 +130,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     const data: AssessmentResult = await response.json();
 
     if (data.assessmentStatus === 'Completed' || data.assessmentStatus === 'Failed') {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
 
       setAssessmentResult(data);
       setStep('result');
@@ -143,10 +144,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
   const startPolling = async (studentExamId: string) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    setPollingSecondsElapsed(0);
 
     try {
       const initialResult = await fetchAssessmentResult(studentExamId);
-
       if (initialResult?.assessmentStatus === 'Completed' || initialResult?.assessmentStatus === 'Failed') {
         return;
       }
@@ -154,13 +156,19 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       // keep polling; transient errors shouldn't stop us
     }
 
+    // Start elapsed-time counter so the assessing screen can show meaningful wait hints
+    elapsedTimerRef.current = setInterval(() => {
+      setPollingSecondsElapsed((prev) => prev + 1);
+    }, 1000);
+
+    // Poll every 5 s — background assessment is not instant, 3 s is unnecessarily aggressive
     pollIntervalRef.current = setInterval(async () => {
       try {
         await fetchAssessmentResult(studentExamId);
       } catch {
         // keep polling; transient errors shouldn't stop us
       }
-    }, 3000);
+    }, 5000);
   };
 
   const handleRetryAssessment = async (studentExamId: string) => {
@@ -270,10 +278,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     }
   };
 
-  // Clean up intervals on unmount
+  // Clean up all intervals on unmount
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
       if (saveDraftIntervalRef.current) clearInterval(saveDraftIntervalRef.current);
     };
   }, []);
@@ -298,14 +307,44 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   }
 
   if (step === 'assessing') {
+    const isLongWait = pollingSecondsElapsed > 60;
+
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white p-6 dark:from-gray-950 dark:to-gray-950 sm:bg-gray-50 dark:sm:bg-gray-950">
         <div className="flex max-w-md flex-col items-center gap-5 rounded-2xl border border-slate-200 bg-white/80 p-6 text-center shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/70 sm:gap-6 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
           <div className="h-16 w-16 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Đang đánh giá bài làm</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Đang chấm bài trong nền</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 sm:text-base">
-            Vui lòng chờ trong giây lát, bài làm đang được đánh giá...
+            Hệ thống đang đánh giá bài làm của em. Trang sẽ tự cập nhật khi có kết quả — em không cần làm gì thêm.
           </p>
+
+          {pollingSecondsElapsed > 5 && (
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Đã chờ {pollingSecondsElapsed} giây...
+            </p>
+          )}
+
+          {isLongWait && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+              Đang mất nhiều thời gian hơn bình thường. Em có thể chờ tiếp hoặc quay lại kiểm tra sau.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={() => currentStudentExamId && fetchAssessmentResult(currentStudentExamId)}
+            className="rounded-xl border border-blue-300 px-5 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+          >
+            Kiểm tra kết quả ngay
+          </button>
+
+          <button
+            type="button"
+            onClick={onExit}
+            className="text-sm text-gray-400 underline underline-offset-2 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          >
+            Về trang chủ
+          </button>
         </div>
       </div>
     );
