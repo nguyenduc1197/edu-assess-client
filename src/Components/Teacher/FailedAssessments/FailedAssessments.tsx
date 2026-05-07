@@ -11,10 +11,10 @@ interface FailedAssessmentsProps {
 }
 
 const mockUser: User = {
-  id: getCurrentUserId() ?? localStorage.getItem('accountId') ?? 'teacher-user',
+  id: '81114DB7-EF7C-4CEC-97B1-4428AA7AADA6',
   name: localStorage.getItem('name') || 'An Nguyen',
   email: localStorage.getItem('email') || 'an.nguyen@school.edu',
-  avatarUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" rx="24" fill="%231d4ed8"/><text x="50%25" y="54%25" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="34" font-weight="700">GV</text></svg>',
+  avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj',
 };
 
 const formatDateTime = (value?: string | null) => {

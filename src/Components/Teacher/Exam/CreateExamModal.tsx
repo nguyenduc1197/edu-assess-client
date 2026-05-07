@@ -42,15 +42,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     return String(examToEdit.durationMinutes ?? calculateDurationMinutes(examToEdit.start, examToEdit.end));
   };
   const isValidDurationMinutes = (value: string) => /^\d+$/.test(value) && Number(value) > 0;
-  const calculateEndDatetime = (startValue: string, durationValue: string) => {
-    const parsedDuration = Number(durationValue);
-    if (!startValue || !isValidDurationMinutes(durationValue)) return '';
-
-    const endDate = new Date(startValue);
-    endDate.setMinutes(endDate.getMinutes() + parsedDuration);
-    return toLocalDatetime(endDate.toISOString());
-  };
   const [start, setStart] = useState(examToEdit ? toLocalDatetime(examToEdit.start) : '');
+  const [end, setEnd] = useState(examToEdit ? toLocalDatetime(examToEdit.end) : '');
   const [durationMinutes, setDurationMinutes] = useState(getInitialDurationMinutes);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>(examToEdit?.questionIds || []);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
@@ -69,7 +62,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const end = calculateEndDatetime(start, durationMinutes);
 
   const fetchQuestions = useCallback(async () => {
     setIsFetchingQuestions(true);
@@ -171,8 +163,14 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     setError(null);
     setIsLoading(true);
 
-    if (!name || !start || !selectedClassId) {
-      setError('Vui lòng nhập đầy đủ tên bài thi, thời gian bắt đầu và lớp học.');
+    if (!name || !start || !end || !selectedClassId) {
+      setError('Vui lòng nhập đầy đủ tên bài thi, thời gian giao bài và lớp học.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (new Date(end).getTime() <= new Date(start).getTime()) {
+      setError('Thời gian kết thúc giao bài phải sau thời gian bắt đầu.');
       setIsLoading(false);
       return;
     }
@@ -194,6 +192,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     const payload = {
       name,
       start: new Date(start).toISOString(),
+      end: new Date(end).toISOString(),
       durationMinutes: parsedDurationMinutes,
       questionIds: selectedQuestionIds,
       schoolClassId: selectedClassId,
@@ -344,7 +343,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
 
               <div className="space-y-2">
                 <label htmlFor="durationMinutes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Thời Lượng (phút)
+                  Thời Lượng Mỗi Lượt Làm (phút)
                 </label>
                 <input
                   type="number"
@@ -355,19 +354,25 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   onChange={(e) => setDurationMinutes(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Thời gian giới hạn tính từ lúc học sinh bấm bắt đầu làm bài.
+                </p>
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="end" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Thời Gian Kết Thúc
+                  Thời Gian Kết Thúc Giao Bài
                 </label>
                 <input
                   type="datetime-local"
                   id="end"
                   value={end}
-                  readOnly
-                  className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 focus:border-primary focus:outline-none dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-400 cursor-not-allowed dark:[color-scheme:dark]"
+                  onChange={(e) => setEnd(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Đây là khung thời gian bài được phép bắt đầu làm.
+                </p>
               </div>
             </div>
 
