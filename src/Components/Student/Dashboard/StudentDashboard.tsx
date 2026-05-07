@@ -168,6 +168,33 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     fetchAssignments();
   }, [fetchAssignments]);
 
+  useEffect(() => {
+    if (currentView !== 'dashboard') return undefined;
+
+    const refreshExamLists = () => {
+      fetchAssignments();
+      fetchCompletedExams();
+    };
+
+    const handleWindowFocus = () => {
+      refreshExamLists();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshExamLists();
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentView, fetchAssignments, fetchCompletedExams]);
+
   const handleSort = useCallback((column: string) => {
     if (sortBy === column) {
       setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));

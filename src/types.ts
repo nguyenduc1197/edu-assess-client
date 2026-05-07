@@ -251,8 +251,11 @@ export interface ExamStudentStatusItem {
   assessmentStatus?: 'NotStarted' | 'Pending' | 'Completed' | 'Failed' | string;
   canViewResult?: boolean;
   assessmentError?: string | null;
+  startedAt?: string | null;
   finishedAt?: string | null;
+  assessedAt?: string | null;
   canRetryAssessment?: boolean;
+  canReactivateAttempt?: boolean;
 }
 
 export interface WrongAnswerReview {

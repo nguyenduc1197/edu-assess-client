@@ -112,6 +112,9 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [isStudentListLoading, setIsStudentListLoading] = useState(false);
   const [studentListError, setStudentListError] = useState('');
   const [retryingStudentExamIds, setRetryingStudentExamIds] = useState<string[]>([]);
+  const [reactivatingStudentExamIds, setReactivatingStudentExamIds] = useState<string[]>([]);
+  const [reactivateCandidate, setReactivateCandidate] = useState<ExamStudentStatusItem | null>(null);
+  const [toast, setToast] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentResult | null>(null);
   const [isAssessmentLoading, setIsAssessmentLoading] = useState(false);
   const [selectedStudentName, setSelectedStudentName] = useState('');
@@ -125,6 +128,16 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    if (!toast) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setToast(null);
+    }, 4000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
 
   const fetchAssignments = useCallback(async (page = 1, classId = '', keyword = '') => {
     try {
@@ -286,8 +299,11 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           (item.canViewResult ? 'Completed' : item.isSubmitted ? 'Pending' : 'NotStarted'),
         canViewResult: !!item.canViewResult,
         assessmentError: item.assessmentError || null,
+        startedAt: item.startedAt || null,
         finishedAt: item.finishedAt || null,
+        assessedAt: item.assessedAt || null,
         canRetryAssessment: !!item.canRetryAssessment,
+        canReactivateAttempt: item.canReactivateAttempt === true,
       }));
 
       setExamStudents(mappedStudents);
@@ -331,6 +347,46 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       setRetryingStudentExamIds((current) => current.filter((id) => id !== item.studentExamId));
     }
   }, [loadExamStudents, selectedExam]);
+
+  const handleConfirmReactivateAttempt = useCallback(async () => {
+    if (!reactivateCandidate?.studentExamId || !selectedExam) return;
+
+    try {
+      setReactivatingStudentExamIds((current) => [...current, reactivateCandidate.studentExamId as string]);
+      setStudentListError('');
+
+      const response = await fetchClient(`/student-exams/${reactivateCandidate.studentExamId}/reactivate`, {
+        method: 'POST',
+      });
+
+      const responseData = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(responseData?.message || `API returned ${response.status}`);
+      }
+
+      if (selectedAssessment?.studentExamId === reactivateCandidate.studentExamId) {
+        setSelectedAssessment(null);
+        setSelectedStudentName('');
+      }
+
+      setReactivateCandidate(null);
+      await loadExamStudents(selectedExam);
+    } catch (reactivateError) {
+      console.error('Failed to reactivate student exam attempt', reactivateError);
+      setToast({
+        type: 'error',
+        message:
+          reactivateError instanceof Error && reactivateError.message
+            ? reactivateError.message
+            : 'Không thể cho học sinh làm lại. Vui lòng thử lại sau.',
+      });
+    } finally {
+      setReactivatingStudentExamIds((current) =>
+        current.filter((id) => id !== reactivateCandidate.studentExamId)
+      );
+    }
+  }, [loadExamStudents, reactivateCandidate, selectedAssessment, selectedExam]);
 
   const fetchAssessmentDetail = useCallback(async (studentExamId: string, silent = false) => {
     try {
@@ -508,6 +564,13 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col lg:flex-row group/design-root">
+      {toast && (
+        <div className="pointer-events-none fixed right-4 top-4 z-[70] max-w-sm rounded-2xl border border-red-200 bg-white px-4 py-3 shadow-xl dark:border-red-800 dark:bg-gray-900">
+          <p className={`text-sm font-medium ${toast.type === 'error' ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>
+            {toast.message}
+          </p>
+        </div>
+      )}
       
       {/* Mobile Header (Only visible on small screens) */}
       <MobileHeaderBar
@@ -532,6 +595,39 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           }}
           examToEdit={editingExam}
         />
+      )}
+
+      {reactivateCandidate && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="w-full rounded-t-3xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-lg sm:rounded-2xl">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Cho học sinh làm lại?</h3>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              Lượt làm của <span className="font-semibold text-gray-900 dark:text-white">{reactivateCandidate.studentName}</span> sẽ được mở lại cho bài thi này.
+            </p>
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+              <p>Kết quả cũ sẽ bị xóa.</p>
+              <p className="mt-1">Câu trả lời cũ sẽ bị xóa.</p>
+              <p className="mt-1">Học sinh sẽ làm lại từ đầu.</p>
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setReactivateCandidate(null)}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={reactivatingStudentExamIds.includes(reactivateCandidate.studentExamId || '')}
+                onClick={handleConfirmReactivateAttempt}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {reactivatingStudentExamIds.includes(reactivateCandidate.studentExamId || '') ? 'Đang xử lý...' : 'Cho làm lại'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Main Content Area */}
@@ -931,6 +1027,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                         sortedExamStudents.map((item) => {
                           const statusMeta = getStudentStatusMeta(item);
                           const isRetrying = item.studentExamId ? retryingStudentExamIds.includes(item.studentExamId) : false;
+                          const isReactivating = item.studentExamId ? reactivatingStudentExamIds.includes(item.studentExamId) : false;
 
                           return (
                             <div key={`${item.studentId}-${item.studentExamId || 'empty'}`} className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
@@ -974,6 +1071,17 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                       {isRetrying ? 'Đang gửi...' : 'Chấm lại'}
                                     </button>
                                   )}
+
+                                  {item.canReactivateAttempt && item.studentExamId && (
+                                    <button
+                                      type="button"
+                                      disabled={isReactivating}
+                                      onClick={() => setReactivateCandidate(item)}
+                                      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/20"
+                                    >
+                                      {isReactivating ? 'Đang xử lý...' : 'Cho làm lại'}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1004,6 +1112,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                             sortedExamStudents.map((item) => {
                               const statusMeta = getStudentStatusMeta(item);
                               const isRetrying = item.studentExamId ? retryingStudentExamIds.includes(item.studentExamId) : false;
+                              const isReactivating = item.studentExamId ? reactivatingStudentExamIds.includes(item.studentExamId) : false;
 
                               return (
                                 <tr key={`${item.studentId}-${item.studentExamId || 'empty'}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
@@ -1045,19 +1154,44 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                             {isRetrying ? 'Đang gửi...' : 'Chấm lại'}
                                           </button>
                                         )}
+                                        {item.canReactivateAttempt && item.studentExamId && (
+                                          <button
+                                            type="button"
+                                            disabled={isReactivating}
+                                            onClick={() => setReactivateCandidate(item)}
+                                            className="text-red-600 transition-colors hover:text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:text-red-300"
+                                          >
+                                            {isReactivating ? 'Đang xử lý...' : 'Cho làm lại'}
+                                          </button>
+                                        )}
                                       </div>
-                                    ) : item.canRetryAssessment && item.studentExamId ? (
-                                      <button
-                                        type="button"
-                                        disabled={isRetrying}
-                                        onClick={() => handleRetryStudentAssessment(item)}
-                                        className="inline-flex items-center gap-2 text-blue-600 transition-colors hover:text-blue-700 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-blue-400 dark:hover:text-blue-300"
-                                      >
-                                        <RotateCw size={14} className={isRetrying ? 'animate-spin' : ''} />
-                                        {isRetrying ? 'Đang gửi...' : 'Chấm lại'}
-                                      </button>
                                     ) : (
-                                      <span className="text-gray-400 dark:text-gray-500">—</span>
+                                      <div className="flex flex-wrap items-center gap-3">
+                                        {item.canRetryAssessment && item.studentExamId && (
+                                          <button
+                                            type="button"
+                                            disabled={isRetrying}
+                                            onClick={() => handleRetryStudentAssessment(item)}
+                                            className="inline-flex items-center gap-2 text-blue-600 transition-colors hover:text-blue-700 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-blue-400 dark:hover:text-blue-300"
+                                          >
+                                            <RotateCw size={14} className={isRetrying ? 'animate-spin' : ''} />
+                                            {isRetrying ? 'Đang gửi...' : 'Chấm lại'}
+                                          </button>
+                                        )}
+                                        {item.canReactivateAttempt && item.studentExamId && (
+                                          <button
+                                            type="button"
+                                            disabled={isReactivating}
+                                            onClick={() => setReactivateCandidate(item)}
+                                            className="text-red-600 transition-colors hover:text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:text-red-300"
+                                          >
+                                            {isReactivating ? 'Đang xử lý...' : 'Cho làm lại'}
+                                          </button>
+                                        )}
+                                        {!item.canRetryAssessment && !item.canReactivateAttempt && (
+                                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                                        )}
+                                      </div>
                                     )}
                                   </td>
                                 </tr>
