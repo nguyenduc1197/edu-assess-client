@@ -11,6 +11,9 @@ export interface Choice {
 export interface Question {
   id: string;        
   content: string;
+  startedAt?: string | null;
+  attemptDeadlineUtc?: string | null;
+  durationMinutes?: number;
   competencyType?: string;
   competencyLabel?: string;
   questionFormat?: QuestionFormat;
@@ -122,6 +125,7 @@ export interface Assignment {
   startedAt?: string | null;
   attemptDeadlineUtc?: string | null;
   isAttemptExpired?: boolean;
+  canStartAttempt?: boolean;
   score?: number | null;
   assessmentStatus?: 'NotStarted' | 'Pending' | 'Completed' | 'Failed';
   canRetry?: boolean;

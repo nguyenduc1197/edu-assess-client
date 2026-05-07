@@ -32,16 +32,25 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
-  const calculateDurationMinutes = (startIso?: string, endIso?: string) => {
-    if (!startIso || !endIso) return DEFAULT_DURATION_MINUTES;
-    const diffMinutes = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000);
-    return diffMinutes > 0 ? diffMinutes : DEFAULT_DURATION_MINUTES;
-  };
   const getInitialDurationMinutes = () => {
-    if (!examToEdit) return String(DEFAULT_DURATION_MINUTES);
-    return String(examToEdit.durationMinutes ?? calculateDurationMinutes(examToEdit.start, examToEdit.end));
+    if (!examToEdit || typeof examToEdit.durationMinutes !== 'number' || examToEdit.durationMinutes <= 0) {
+      return String(DEFAULT_DURATION_MINUTES);
+    }
+
+    return String(examToEdit.durationMinutes);
   };
   const isValidDurationMinutes = (value: string) => /^\d+$/.test(value) && Number(value) > 0;
+  const formatPreviewDatetime = (value: string) => {
+    if (!value) return '--';
+
+    return new Date(value).toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
   const [start, setStart] = useState(examToEdit ? toLocalDatetime(examToEdit.start) : '');
   const [end, setEnd] = useState(examToEdit ? toLocalDatetime(examToEdit.end) : '');
   const [durationMinutes, setDurationMinutes] = useState(getInitialDurationMinutes);
@@ -178,7 +187,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     const normalizedDurationMinutes = durationMinutes.trim();
     const parsedDurationMinutes = Number(normalizedDurationMinutes);
     if (!isValidDurationMinutes(normalizedDurationMinutes)) {
-      setError('Thời lượng bài thi phải là số nguyên lớn hơn 0 phút.');
+      setError('Thời lượng làm bài phải là số nguyên lớn hơn 0 phút.');
       setIsLoading(false);
       return;
     }
@@ -330,7 +339,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label htmlFor="start" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Thời Gian Bắt Đầu
+                  Thời gian bắt đầu cho phép vào làm
                 </label>
                 <input
                   type="datetime-local"
@@ -339,11 +348,30 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   onChange={(e) => setStart(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Học sinh chỉ được phép bắt đầu bài thi từ mốc này.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="end" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Thời gian kết thúc cho phép vào làm
+                </label>
+                <input
+                  type="datetime-local"
+                  id="end"
+                  value={end}
+                  onChange={(e) => setEnd(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Sau mốc này, học sinh không thể bắt đầu lượt làm mới.
+                </p>
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="durationMinutes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Thời Lượng
+                  Thời lượng làm bài (phút)
                 </label>
                 <input
                   type="number"
@@ -355,24 +383,26 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Thời gian giới hạn tính từ lúc học sinh bấm bắt đầu làm bài.
+                  Mỗi học sinh có từng này phút kể từ lúc mở đề lần đầu. Giá trị này độc lập với thời gian mở đề.
                 </p>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <label htmlFor="end" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Thời Gian Kết Thúc Giao Bài
-                </label>
-                <input
-                  type="datetime-local"
-                  id="end"
-                  value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Đây là khung thời gian bài được phép bắt đầu làm.
-                </p>
+            <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Tóm tắt lịch thi</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-white/80 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Thời gian mở đề</p>
+                  <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
+                    Từ {formatPreviewDatetime(start)} đến {formatPreviewDatetime(end)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white/80 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Thời lượng làm bài</p>
+                  <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
+                    {durationMinutes || DEFAULT_DURATION_MINUTES} phút kể từ lúc học sinh bắt đầu
+                  </p>
+                </div>
               </div>
             </div>
 

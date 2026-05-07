@@ -6,35 +6,13 @@ import AssignmentTable from '../../Common/AssignmentTable/AssignmentTable';
 import ExamSession from '../Exam/ExamSession';
 import { fetchClient, getCurrentProfileId } from '../../../api/fetchClient';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
+import { formatVietnamDateTime, parseApiDateTime, resolveAttemptDeadlineUtc } from '../../../utils/apiDateTime';
 
 const mockUser: User = {
   id: localStorage.getItem('profileId') || 'student-user',
   name: localStorage.getItem('name') || 'Học sinh',
   email: localStorage.getItem('email') || 'student@school.edu',
   avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj'
-};
-
-const formatViDateTime = (iso?: string | null) => {
-  if (!iso) return '--';
-  return new Date(iso).toLocaleString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    weekday: 'long',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-};
-
-const resolveAttemptDeadline = (item: any) => {
-  if (item.attemptDeadlineUtc) return item.attemptDeadlineUtc as string;
-  if (item.startedAt && Number(item.durationMinutes) > 0) {
-    const fallbackDeadline = new Date(item.startedAt);
-    fallbackDeadline.setMinutes(fallbackDeadline.getMinutes() + Number(item.durationMinutes));
-    return fallbackDeadline.toISOString();
-  }
-
-  return null;
 };
 
 const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
@@ -100,13 +78,21 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       const items = Array.isArray(data) ? data : (data.data || []);
 
       const mappedAssignments: Assignment[] = items.map((item: any) => {
-        const now = new Date();
+        const nowMs = Date.now();
         const isSubmitted = item.isSubmitted === true;
         const assessmentStatus = item.assessmentStatus || (isSubmitted ? 'Pending' : 'NotStarted');
         const canRetryAssessment = item.canRetryAssessment === true;
         const startedAt = item.startedAt || null;
-        const attemptDeadlineUtc = resolveAttemptDeadline(item);
-        const isAttemptExpired = !!attemptDeadlineUtc && now.getTime() > new Date(attemptDeadlineUtc).getTime();
+        const start = item.start || null;
+        const end = item.end || null;
+        const startDate = parseApiDateTime(start);
+        const endDate = parseApiDateTime(end);
+        const attemptDeadlineUtc = resolveAttemptDeadlineUtc(startedAt, Number(item.durationMinutes) || undefined, item.attemptDeadlineUtc || null);
+        const attemptDeadlineDate = parseApiDateTime(attemptDeadlineUtc);
+        const isAttemptExpired = !!attemptDeadlineDate && nowMs > attemptDeadlineDate.getTime();
+        const hasScheduleStarted = !!startDate && nowMs >= startDate.getTime();
+        const isScheduleClosed = !startedAt && !!endDate && nowMs > endDate.getTime();
+        const canStartAttempt = !!startedAt || ((!startDate || hasScheduleStarted) && !isScheduleClosed);
 
         let status = AssignmentStatus.NEW;
         let statusMessage = '';
@@ -130,6 +116,11 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           statusMessage = isAttemptExpired
             ? 'Đã hết thời gian làm bài của lượt làm này.'
             : 'Đang làm bài. Đồng hồ tính theo hạn nộp cá nhân.';
+        } else if (!canStartAttempt) {
+          status = AssignmentStatus.NEW;
+          statusMessage = hasScheduleStarted
+            ? 'Đã qua thời gian được phép bắt đầu bài thi.'
+            : 'Chưa đến thời gian được phép bắt đầu bài thi.';
         } else {
           status = AssignmentStatus.NEW;
           statusMessage = 'Chưa bắt đầu làm bài.';
@@ -141,16 +132,17 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
           subject: SubjectLabel.GD_KTPL,
           deadline: attemptDeadlineUtc || item.end,
           deadlineDisplay: startedAt
-            ? `Hạn nộp: ${formatViDateTime(attemptDeadlineUtc)}`
-            : `Khung giao: ${formatViDateTime(item.start)} - ${formatViDateTime(item.end)}`,
+            ? `Hạn nộp: ${formatVietnamDateTime(attemptDeadlineUtc)}`
+            : `Khung giao: ${formatVietnamDateTime(item.start)} - ${formatVietnamDateTime(item.end)}`,
           status,
           isOverdue: isAttemptExpired,
-          start: item.start,
-          end: item.end,
+          start,
+          end,
           durationMinutes: Number(item.durationMinutes) || undefined,
           startedAt,
           attemptDeadlineUtc,
           isAttemptExpired,
+          canStartAttempt,
           assessmentStatus,
           canRetry: !!item.canRetry,
           canRetryAssessment,
@@ -218,6 +210,11 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   );
 
   const handleStartExam = (assignment: Assignment) => {
+    if (assignment.canStartAttempt === false) {
+      setError(assignment.statusMessage || 'Bài thi hiện chưa thể mở.');
+      return;
+    }
+
     if (assignment.isAttemptExpired || assignment.status === AssignmentStatus.EXPIRED) {
       setError('Bài thi này đã hết thời gian làm bài.');
       return;

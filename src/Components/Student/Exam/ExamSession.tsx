@@ -2,8 +2,9 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { AnswerState, Assignment, AssessmentResult, Question, WrongAnswerReview } from '../../../types';
 import ExamReview from './ExamReview';
 import ExamTaking from './ExamTaking';
-import { fetchClient, getCurrentProfileId } from '../../../api/fetchClient';
+import { fetchClient } from '../../../api/fetchClient';
 import { useAntiCheatMonitoring } from './useAntiCheatMonitoring';
+import { parseApiDateTime, resolveAttemptDeadlineUtc } from '../../../utils/apiDateTime';
 
 
 interface ExamSessionProps {
@@ -74,18 +75,31 @@ const extractApiMessage = async (response: Response) => {
 const looksLikeAttemptExpiredMessage = (message: string) =>
   /(hết giờ|quá hạn|expired|deadline|timeout)/i.test(message);
 
-const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+const extractAttemptTimingFromQuestions = (items: Question[]) => {
+  const firstQuestionWithTiming = items.find(
+    (item) => item.startedAt || item.attemptDeadlineUtc || item.durationMinutes
+  );
 
-const resolveAttemptDeadline = (startedAt?: string | null, durationMinutes?: number, attemptDeadlineUtc?: string | null) => {
-  if (attemptDeadlineUtc) return attemptDeadlineUtc;
-
-  if (startedAt && durationMinutes && durationMinutes > 0) {
-    const fallback = new Date(startedAt);
-    fallback.setMinutes(fallback.getMinutes() + durationMinutes);
-    return fallback.toISOString();
+  if (!firstQuestionWithTiming) {
+    return {
+      startedAt: null,
+      attemptDeadlineUtc: null,
+      durationMinutes: undefined,
+    };
   }
 
-  return null;
+  return {
+    startedAt: firstQuestionWithTiming.startedAt || null,
+    attemptDeadlineUtc: resolveAttemptDeadlineUtc(
+      firstQuestionWithTiming.startedAt,
+      firstQuestionWithTiming.durationMinutes,
+      firstQuestionWithTiming.attemptDeadlineUtc
+    ),
+    durationMinutes:
+      typeof firstQuestionWithTiming.durationMinutes === 'number'
+        ? firstQuestionWithTiming.durationMinutes
+        : undefined,
+  };
 };
 
 const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, onSubmitted }) => {
@@ -123,7 +137,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   }, [assignment.attemptDeadlineUtc, assignment.durationMinutes, assignment.isAttemptExpired, assignment.startedAt]);
 
   const resolvedAttemptDeadlineUtc = useMemo(
-    () => resolveAttemptDeadline(attemptStartedAt, attemptDurationMinutes, attemptDeadlineUtc),
+    () => resolveAttemptDeadlineUtc(attemptStartedAt, attemptDurationMinutes, attemptDeadlineUtc),
     [attemptDeadlineUtc, attemptDurationMinutes, attemptStartedAt]
   );
 
@@ -132,49 +146,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     studentExamId: currentStudentExamId,
   });
 
-  const refreshAttemptWindow = async () => {
-    const studentId = getCurrentProfileId();
-    if (!studentId) return null;
-
-    const response = await fetchClient(`/students/${studentId}/available-exams`);
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    const items = Array.isArray(data) ? data : (data.data || []);
-    const currentExam = items.find(
-      (item: any) =>
-        item.examId === examId ||
-        item.id === examId ||
-        (currentStudentExamId && item.studentExamId === currentStudentExamId)
-    );
-
-    if (!currentExam) return null;
-
-    setCurrentStudentExamId(currentExam.studentExamId || currentStudentExamId || null);
-    setAttemptStartedAt(currentExam.startedAt || null);
-    setAttemptDurationMinutes(Number(currentExam.durationMinutes) || attemptDurationMinutes);
-    setAttemptDeadlineUtc(currentExam.attemptDeadlineUtc || null);
-    return currentExam;
-  };
-
-  const syncAttemptWindowAfterStart = async () => {
-    for (let attemptIndex = 0; attemptIndex < 5; attemptIndex += 1) {
-      const currentExam = await refreshAttemptWindow();
-
-      if (currentExam?.startedAt || currentExam?.attemptDeadlineUtc) {
-        return currentExam;
-      }
-
-      await wait(700);
-    }
-
-    return null;
-  };
-
   const saveDraft = async () => {
     if (isAttemptLocked) return;
 
-    if (resolvedAttemptDeadlineUtc && new Date(resolvedAttemptDeadlineUtc).getTime() <= Date.now()) {
+    const resolvedAttemptDeadlineDate = parseApiDateTime(resolvedAttemptDeadlineUtc);
+    if (resolvedAttemptDeadlineDate && resolvedAttemptDeadlineDate.getTime() <= Date.now()) {
       setIsAttemptLocked(true);
       setAttemptActionMessage('Đã hết thời gian làm bài của lượt này. Em không thể lưu thêm.');
       return;
@@ -221,31 +197,6 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, examId, resolvedAttemptDeadlineUtc, isAttemptLocked]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (step !== 'taking' || isLoading || attemptEntryError || resolvedAttemptDeadlineUtc) {
-      return;
-    }
-
-    let isCancelled = false;
-    let retryCount = 0;
-
-    const intervalId = window.setInterval(async () => {
-      if (isCancelled) return;
-
-      retryCount += 1;
-      const currentExam = await refreshAttemptWindow();
-
-      if (isCancelled || currentExam?.attemptDeadlineUtc || currentExam?.startedAt || retryCount >= 10) {
-        window.clearInterval(intervalId);
-      }
-    }, 1000);
-
-    return () => {
-      isCancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [isLoading, attemptEntryError, resolvedAttemptDeadlineUtc, step]);
 
   const fetchAssessmentResult = async (studentExamId: string) => {
     const response = await fetchClient(`/student-exams/${studentExamId}/assessment`);
@@ -341,8 +292,23 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
         if (response.ok) {
           const data = await response.json();
           const items = Array.isArray(data) ? data : (data.items || data.data || []);
-          setQuestions(items);
-          await syncAttemptWindowAfterStart();
+          const questionItems = items as Question[];
+          const attemptTiming = extractAttemptTimingFromQuestions(questionItems);
+          const nextStartedAt = attemptTiming.startedAt ?? assignment.startedAt ?? null;
+          const nextDurationMinutes = attemptTiming.durationMinutes ?? assignment.durationMinutes;
+          const nextAttemptDeadlineUtc =
+            attemptTiming.attemptDeadlineUtc ??
+            resolveAttemptDeadlineUtc(nextStartedAt, nextDurationMinutes, assignment.attemptDeadlineUtc);
+          const nextAttemptDeadlineDate = parseApiDateTime(nextAttemptDeadlineUtc);
+
+          setQuestions(questionItems);
+          setAttemptStartedAt(nextStartedAt);
+          setAttemptDurationMinutes(nextDurationMinutes);
+          setAttemptDeadlineUtc(nextAttemptDeadlineUtc);
+          setAttemptActionMessage(null);
+          setIsAttemptLocked(
+            !!nextAttemptDeadlineDate && nextAttemptDeadlineDate.getTime() <= Date.now()
+          );
         } else {
           if (response.status === 400) {
             const message = await extractApiMessage(response);

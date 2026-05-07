@@ -18,6 +18,7 @@ import { fetchClient } from '../../../api/fetchClient';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 import { formatCompetencyPercent } from '../../../utils/competencyPercent';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
+import { formatVietnamDateTime } from '../../../utils/apiDateTime';
 
 let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
@@ -25,6 +26,14 @@ let mockUser: User = {
   email: localStorage.getItem('email') || 'an.nguyen@school.edu',
   avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaWbkVJIW-UxVbQAZVdNrwMze37EFXHpuuLhTSw7WJksMYe3RyK6MlICHa5M_rj6rAY8fmpaTsje51sF_GaYmBr15LrSN-IPsN9CSad_0QSDbvg69dUedrdiq4gN0Ev5352TfW0E_YrYXi0ugbxl2tDCdOwo84g_5dR-RxAreLeGB0Bs-5JS0tvLlFklj1uRh9wPZecX3HEGBS1Cgfm6tBuHD_pCTa6Z_JZN2Vzxo69eS-QEJjRqrhjg5yFrZfRnFYPL7VgejfRtgj"
 };
+
+const formatExamWindow = (start?: string, end?: string) =>
+  `Mở đề: ${formatVietnamDateTime(start)} - ${formatVietnamDateTime(end)}`;
+
+const formatExamDuration = (durationMinutes?: number) =>
+  durationMinutes && durationMinutes > 0
+    ? `Thời lượng làm bài: ${durationMinutes} phút`
+    : 'Thời lượng làm bài: Chưa cấu hình';
 
 const getFeedbackItems = (feedback?: string | null) =>
   (feedback || '')
@@ -155,16 +164,12 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             title: item.name,
             subject: SubjectLabel.GD_KTPL,
             deadline: item.end,
-            deadlineDisplay: endDate.toLocaleString('vi-VN', {
-              hour: '2-digit',
-              minute: '2-digit',
-              weekday: 'long',
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric'
-            }),
+            deadlineDisplay: formatExamWindow(item.start, item.end),
             status: status,
             isOverdue: now > endDate,
+            start: item.start,
+            end: item.end,
+            durationMinutes: typeof item.durationMinutes === 'number' ? item.durationMinutes : undefined,
             antiCheatEnabled: item.antiCheatEnabled === true,
           };
         });
@@ -435,8 +440,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       setEditingExam({
         id: assignment.id,
         name: examData.name || assignment.title,
-        start: examData.start || assignment.deadline,
-        end: examData.end || assignment.deadline,
+        start: examData.start || assignment.start || '',
+        end: examData.end || assignment.end || '',
         durationMinutes: typeof examData.durationMinutes === 'number' ? examData.durationMinutes : undefined,
         questionIds: questionItems.map((q: any) => q.id),
         schoolClassId: examData.schoolClassId || '',
@@ -447,9 +452,9 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       setEditingExam({
         id: assignment.id,
         name: assignment.title,
-        start: '',
-        end: assignment.deadline,
-        durationMinutes: undefined,
+        start: assignment.start || '',
+        end: assignment.end || '',
+        durationMinutes: assignment.durationMinutes,
         questionIds: [],
         schoolClassId: '',
         antiCheatEnabled: assignment.antiCheatEnabled ?? false,
@@ -625,7 +630,10 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                         {a.status}
                       </span>
                     </div>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{a.deadlineDisplay}</p>
+                    <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p>{a.deadlineDisplay}</p>
+                      <p>{formatExamDuration(a.durationMinutes)}</p>
+                    </div>
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <button
                         type="button"
@@ -692,7 +700,10 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                           {a.title}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                          {a.deadlineDisplay}
+                          <div className="flex flex-col gap-1">
+                            <span>{a.deadlineDisplay}</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">{formatExamDuration(a.durationMinutes)}</span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
@@ -856,6 +867,21 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             </div>
 
             <div className="space-y-6 overflow-y-auto p-4 sm:p-6">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Khung giao bài</p>
+                  <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">
+                    {formatExamWindow(selectedExam.start, selectedExam.end)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-violet-100 bg-violet-50/70 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">Thời lượng</p>
+                  <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">
+                    {formatExamDuration(selectedExam.durationMinutes)} kể từ lúc học sinh bắt đầu.
+                  </p>
+                </div>
+              </div>
+
               {examDetailTab === 'students' && (
                 <>
               {studentListError && (

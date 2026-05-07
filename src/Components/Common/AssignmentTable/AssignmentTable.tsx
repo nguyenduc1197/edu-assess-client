@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import StatusBadge from '../StatusBadge/StatusBadge';
 import { Assignment, AssignmentStatus } from '../../../types';
 import { Clock3, Sparkles, Trash2 } from 'lucide-react';
+import { formatVietnamDateTime, parseApiDateTime } from '../../../utils/apiDateTime';
 
 interface AssignmentTableProps {
   assignments: Assignment[];
@@ -31,16 +32,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
     return () => window.clearInterval(intervalId);
   }, []);
 
-  const formatShortDateTime = (iso?: string | null) => {
-    if (!iso) return '--';
-    return new Date(iso).toLocaleString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
+  const formatShortDateTime = (iso?: string | null) => formatVietnamDateTime(iso);
 
   const formatCountdown = (seconds: number) => {
     const safeSeconds = Math.max(0, seconds);
@@ -53,7 +45,9 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
 
   const getAttemptRemainingSeconds = (assignment: Assignment) => {
     if (!assignment.attemptDeadlineUtc) return null;
-    return Math.floor((new Date(assignment.attemptDeadlineUtc).getTime() - nowMs) / 1000);
+    const deadline = parseApiDateTime(assignment.attemptDeadlineUtc);
+    if (!deadline) return null;
+    return Math.floor((deadline.getTime() - nowMs) / 1000);
   };
 
   const getTimingDisplay = (assignment: Assignment) => {
@@ -100,6 +94,10 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
   );
 
   const getActionText = (assignment: Assignment) => {
+    if (assignment.canStartAttempt === false && !assignment.startedAt && !assignment.isSubmitted) {
+      return assignment.isOverdue ? 'Đã đóng' : 'Chưa mở';
+    }
+
     if (assignment.isSubmitted) {
       if (assignment.assessmentStatus === 'Pending') return 'Đang chấm';
       if (assignment.assessmentStatus === 'Failed' && assignment.canRetryAssessment) return 'Chấm lại';
@@ -120,6 +118,10 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
   };
 
   const isActionDisabled = (assignment: Assignment) => {
+    if (assignment.canStartAttempt === false && !assignment.startedAt && !assignment.isSubmitted) {
+      return true;
+    }
+
     if (assignment.status === AssignmentStatus.EXPIRED || assignment.isAttemptExpired) {
       return true;
     }
@@ -128,6 +130,10 @@ const AssignmentTable: React.FC<AssignmentTableProps> = ({
   };
 
   const handleAction = (assignment: Assignment) => {
+    if (assignment.canStartAttempt === false && !assignment.startedAt && !assignment.isSubmitted) {
+      return;
+    }
+
     if (assignment.isSubmitted && assignment.assessmentStatus === 'Failed' && assignment.canRetryAssessment && onRetryAssessment) {
       onRetryAssessment(assignment);
       return;
