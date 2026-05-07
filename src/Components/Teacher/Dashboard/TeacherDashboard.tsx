@@ -339,14 +339,47 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         throw new Error(retryData?.message || `API returned ${response.status}`);
       }
 
-      await loadExamStudents(selectedExam);
+      setExamStudents((current) =>
+        current.map((student) =>
+          student.studentExamId === item.studentExamId
+            ? {
+                ...student,
+                assessmentStatus: 'Pending',
+                assessmentError: null,
+                score: null,
+                assessedAt: null,
+                canRetryAssessment: false,
+                canViewResult: true,
+              }
+            : student
+        )
+      );
+
+      setSelectedAssessment((current) => {
+        if (!current || current.studentExamId !== item.studentExamId) {
+          return current;
+        }
+
+        return {
+          ...current,
+          assessmentStatus: 'Pending',
+          assessmentError: null,
+          overallFeedback: null,
+          behaviorAdjustmentFeedback: null,
+          selfDevelopmentFeedback: null,
+          economicSocialParticipationFeedback: null,
+          wrongAnswers: [],
+          assessedAt: null,
+          canRetryAssessment: false,
+        };
+      });
     } catch (retryError) {
       console.error('Failed to retry student assessment', retryError);
       setStudentListError('Không thể yêu cầu chấm lại. Vui lòng thử lại sau.');
     } finally {
       setRetryingStudentExamIds((current) => current.filter((id) => id !== item.studentExamId));
     }
-  }, [loadExamStudents, selectedExam]);
+  }, [selectedExam]);
 
   const handleConfirmReactivateAttempt = useCallback(async () => {
     if (!reactivateCandidate?.studentExamId || !selectedExam) return;
@@ -399,6 +432,21 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
       const data: AssessmentResult = await response.json();
       setSelectedAssessment(data);
+      setExamStudents((current) =>
+        current.map((student) =>
+          student.studentExamId === studentExamId
+            ? {
+                ...student,
+                assessmentStatus: data.assessmentStatus,
+                assessmentError: data.assessmentError,
+                score: data.assessmentStatus === 'Completed' ? data.score : student.score,
+                assessedAt: data.assessedAt,
+                canRetryAssessment: data.canRetryAssessment === true,
+                canViewResult: data.assessmentStatus !== 'Pending',
+              }
+            : student
+        )
+      );
       return data;
     } catch (error) {
       console.error('Failed to fetch assessment detail', error);
@@ -425,6 +473,74 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
     return () => window.clearInterval(intervalId);
   }, [fetchAssessmentDetail, selectedAssessment]);
+
+  useEffect(() => {
+    const pendingStudentExamIds = examStudents
+      .filter((item) => item.studentExamId && item.assessmentStatus === 'Pending')
+      .map((item) => item.studentExamId as string);
+
+    if (pendingStudentExamIds.length === 0) {
+      return;
+    }
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const settledResults = await Promise.allSettled(
+          pendingStudentExamIds.map(async (studentExamId) => {
+            const response = await fetchClient(`/student-exams/${studentExamId}/assessment`);
+            if (!response.ok) {
+              throw new Error(`API returned ${response.status}`);
+            }
+
+            return response.json() as Promise<AssessmentResult>;
+          })
+        );
+
+        const completedAssessments = settledResults
+          .filter((result): result is PromiseFulfilledResult<AssessmentResult> => result.status === 'fulfilled')
+          .map((result) => result.value);
+
+        if (completedAssessments.length === 0) {
+          return;
+        }
+
+        const assessmentByStudentExamId = new Map(
+          completedAssessments.map((assessment) => [assessment.studentExamId, assessment])
+        );
+
+        setExamStudents((current) =>
+          current.map((student) => {
+            const assessment = student.studentExamId ? assessmentByStudentExamId.get(student.studentExamId) : undefined;
+            if (!assessment) {
+              return student;
+            }
+
+            return {
+              ...student,
+              assessmentStatus: assessment.assessmentStatus,
+              assessmentError: assessment.assessmentError,
+              score: assessment.assessmentStatus === 'Completed' ? assessment.score : student.score,
+              assessedAt: assessment.assessedAt,
+              canRetryAssessment: assessment.canRetryAssessment === true,
+              canViewResult: assessment.assessmentStatus !== 'Pending',
+            };
+          })
+        );
+
+        setSelectedAssessment((current) => {
+          if (!current?.studentExamId) {
+            return current;
+          }
+
+          return assessmentByStudentExamId.get(current.studentExamId) || current;
+        });
+      } catch {
+        // Keep polling; transient errors should not break the retry flow.
+      }
+    }, 2500);
+
+    return () => window.clearInterval(intervalId);
+  }, [examStudents]);
 
   const filteredAssignments = useMemo(() => {
     const filtered = assignments.filter(a => 
@@ -1218,9 +1334,46 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                         <>
                           <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-200 dark:border-blue-800">
                             <p className="text-sm text-gray-500 dark:text-gray-400">Điểm tổng</p>
-                            <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{selectedAssessment.score?.toFixed(1) ?? '—'}</p>
+                            <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">
+                              {selectedAssessment.assessmentStatus === 'Pending'
+                                ? 'Đang chấm'
+                                : selectedAssessment.score?.toFixed(1) ?? '—'}
+                            </p>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái: {getAssessmentStatusLabel(selectedAssessment.assessmentStatus)}</p>
                           </div>
+
+                          {selectedAssessment.assessmentStatus === 'Pending' && (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                              Bài đang được AI đánh giá. Thông tin sẽ tự cập nhật sau mỗi vài giây.
+                            </div>
+                          )}
+
+                          {selectedAssessment.assessmentStatus === 'Failed' && (
+                            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                              <p className="font-semibold">Đánh giá thất bại</p>
+                              {selectedAssessment.assessmentError && (
+                                <p className="mt-1">{selectedAssessment.assessmentError}</p>
+                              )}
+                              {selectedAssessment.canRetryAssessment && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRetryStudentAssessment({
+                                      studentId: selectedAssessment.studentId,
+                                      studentName: selectedStudentName || selectedAssessment.studentName,
+                                      studentExamId: selectedAssessment.studentExamId,
+                                      assessmentStatus: selectedAssessment.assessmentStatus,
+                                      canRetryAssessment: true,
+                                      isSubmitted: true,
+                                    })
+                                  }
+                                  className="mt-3 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+                                >
+                                  Chấm lại
+                                </button>
+                              )}
+                            </div>
+                          )}
 
                           {selectedAssessment.overallFeedback && (
                             <div>
@@ -1342,7 +1495,11 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
                           <div>
                             <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Danh sách câu cần học lại</p>
-                            {(selectedAssessment.wrongAnswers || []).length === 0 ? (
+                            {selectedAssessment.assessmentStatus === 'Pending' ? (
+                              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 text-sm text-amber-800 dark:text-amber-200">
+                                Đang chờ kết quả đánh giá cập nhật.
+                              </div>
+                            ) : (selectedAssessment.wrongAnswers || []).length === 0 ? (
                               <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 text-sm text-green-700 dark:text-green-300">
                                 Không có câu sai nào cần xem lại.
                               </div>

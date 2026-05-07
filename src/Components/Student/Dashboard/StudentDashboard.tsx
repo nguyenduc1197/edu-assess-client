@@ -266,23 +266,32 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         method: 'POST',
       });
 
-      const retryData = await response.json().catch(() => ({}));
+      const retryData = await response.json().catch(() => null);
 
-      if (!response.ok || !retryData?.studentExamId) {
-        throw new Error(retryData?.message || `API returned ${response.status}`);
+      if (!response.ok) {
+        throw new Error(
+          (retryData && typeof retryData === 'object' && 'message' in retryData && typeof retryData.message === 'string'
+            ? retryData.message
+            : null) || `API returned ${response.status}`
+        );
       }
 
-      await fetchAssignments();
-
-      setSelectedExam({
+      const pendingAssignment: Assignment = {
         ...assignment,
-        studentExamId: retryData.studentExamId,
-        assessmentStatus: retryData.assessmentStatus || 'Pending',
+        assessmentStatus: 'Pending',
+        assessmentError: null,
         isSubmitted: true,
         canRetryAssessment: false,
         status: AssignmentStatus.SUBMITTED,
-        statusMessage: retryData.message || 'Bài đang được đánh giá lại.',
-      });
+        statusMessage: 'Bài đang được đánh giá lại.',
+      };
+
+      setAssignments((current) =>
+        current.map((item) =>
+          item.studentExamId === assignment.studentExamId ? pendingAssignment : item
+        )
+      );
+      setSelectedExam(pendingAssignment);
       setCurrentView('exam-session');
       window.scrollTo(0, 0);
     } catch (retryError) {

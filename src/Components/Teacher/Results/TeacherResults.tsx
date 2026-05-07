@@ -224,6 +224,19 @@ const isAntiCheatEnabled = (detail?: AntiCheatDetailsResponse | null) => {
   );
 };
 
+const toPendingAssessmentResult = (current: AssessmentResult): AssessmentResult => ({
+  ...current,
+  assessmentStatus: 'Pending',
+  assessmentError: null,
+  overallFeedback: null,
+  behaviorAdjustmentFeedback: null,
+  selfDevelopmentFeedback: null,
+  economicSocialParticipationFeedback: null,
+  wrongAnswers: [],
+  assessedAt: null,
+  canRetryAssessment: false,
+});
+
 const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [results, setResults] = useState<StudentResultSummary[]>([]);
@@ -336,6 +349,32 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
       const data: AssessmentResult = await response.json();
       setSelectedResult(data);
+      setSelectedResultSummary((current) =>
+        current?.studentExamId === studentExamId
+          ? {
+              ...current,
+              assessmentStatus: data.assessmentStatus,
+              score: data.assessmentStatus === 'Completed' ? data.score : current.score,
+              assessedAt: data.assessedAt,
+              assessmentError: data.assessmentError,
+              canRetryAssessment: data.canRetryAssessment,
+            }
+          : current
+      );
+      setResults((current) =>
+        current.map((result) =>
+          result.studentExamId === studentExamId
+            ? {
+                ...result,
+                assessmentStatus: data.assessmentStatus,
+                score: data.assessmentStatus === 'Completed' ? data.score : result.score,
+                assessedAt: data.assessedAt,
+                assessmentError: data.assessmentError,
+                canRetryAssessment: data.canRetryAssessment,
+              }
+            : result
+        )
+      );
       return data;
     } catch (detailError) {
       console.error('Failed to load result detail', detailError);
@@ -390,6 +429,59 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
     ]);
   };
 
+  const handleRetryAssessment = useCallback(async () => {
+    if (!selectedResult?.studentExamId) {
+      return;
+    }
+
+    try {
+      setError('');
+
+      const response = await fetchClient(`/student-exams/${selectedResult.studentExamId}/retry-assessment`, {
+        method: 'POST',
+      });
+      const retryData = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          (retryData && typeof retryData === 'object' && 'message' in retryData && typeof retryData.message === 'string'
+            ? retryData.message
+            : null) || `API returned ${response.status}`
+        );
+      }
+
+      const pendingResult = toPendingAssessmentResult(selectedResult);
+      setSelectedResult(pendingResult);
+      setSelectedResultSummary((current) =>
+        current?.studentExamId === pendingResult.studentExamId
+          ? {
+              ...current,
+              assessmentStatus: 'Pending',
+              assessedAt: null,
+              assessmentError: null,
+              canRetryAssessment: false,
+            }
+          : current
+      );
+      setResults((current) =>
+        current.map((result) =>
+          result.studentExamId === pendingResult.studentExamId
+            ? {
+                ...result,
+                assessmentStatus: 'Pending',
+                assessedAt: null,
+                assessmentError: null,
+                canRetryAssessment: false,
+              }
+            : result
+        )
+      );
+    } catch (retryError) {
+      console.error('Failed to retry assessment', retryError);
+      setError('Không thể yêu cầu chấm lại. Vui lòng thử lại sau.');
+    }
+  }, [selectedResult]);
+
   useEffect(() => {
     if (!selectedResult?.studentExamId || selectedResult.assessmentStatus !== 'Pending') {
       return;
@@ -397,7 +489,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
     const intervalId = window.setInterval(() => {
       fetchAssessmentDetail(selectedResult.studentExamId, true);
-    }, 3000);
+    }, 2500);
 
     return () => window.clearInterval(intervalId);
   }, [fetchAssessmentDetail, selectedResult?.assessmentStatus, selectedResult?.studentExamId]);
@@ -649,9 +741,29 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                 <>
                   <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-200 dark:border-blue-800">
                     <p className="text-sm text-gray-500 dark:text-gray-400">Điểm tổng</p>
-                    <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{selectedResult.score?.toFixed(1) ?? '—'}</p>
+                    <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">
+                      {selectedResult.assessmentStatus === 'Pending'
+                        ? 'Đang chấm'
+                        : selectedResult.score?.toFixed(1) ?? '—'}
+                    </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái: {getAssessmentStatusLabel(selectedResult.assessmentStatus)}</p>
                   </div>
+
+                  {selectedResult.assessmentStatus === 'Failed' && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                      <p className="font-semibold">Đánh giá thất bại</p>
+                      {selectedResult.assessmentError && <p className="mt-1">{selectedResult.assessmentError}</p>}
+                      {selectedResult.canRetryAssessment && (
+                        <button
+                          type="button"
+                          onClick={handleRetryAssessment}
+                          className="mt-3 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+                        >
+                          Chấm lại
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {selectedResult.overallFeedback && (
                     <div>
@@ -724,7 +836,11 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                       </div>
                     )}
 
-                    {(selectedResult.wrongAnswers || []).length === 0 ? (
+                    {selectedResult.assessmentStatus === 'Pending' ? (
+                      <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 text-sm text-amber-800 dark:text-amber-200">
+                        Đang chờ kết quả đánh giá cập nhật.
+                      </div>
+                    ) : (selectedResult.wrongAnswers || []).length === 0 ? (
                       <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 text-sm text-green-700 dark:text-green-300">
                         Không có câu sai nào cần xem lại.
                       </div>

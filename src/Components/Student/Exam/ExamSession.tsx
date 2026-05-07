@@ -102,6 +102,36 @@ const extractAttemptTimingFromQuestions = (items: Question[]) => {
   };
 };
 
+const toPendingAssessmentResult = (
+  studentExamId: string,
+  assignment: Assignment,
+  previousResult: AssessmentResult | null
+): AssessmentResult => ({
+  studentExamId,
+  examId: previousResult?.examId || assignment.id,
+  examName: previousResult?.examName || assignment.title,
+  studentId: previousResult?.studentId || '',
+  studentName: previousResult?.studentName || '',
+  score: previousResult?.score ?? 0,
+  assessmentStatus: 'Pending',
+  behaviorAdjustmentScore: previousResult?.behaviorAdjustmentScore ?? null,
+  selfDevelopmentScore: previousResult?.selfDevelopmentScore ?? null,
+  economicSocialParticipationScore: previousResult?.economicSocialParticipationScore ?? null,
+  overallFeedback: null,
+  behaviorAdjustmentFeedback: null,
+  selfDevelopmentFeedback: null,
+  economicSocialParticipationFeedback: null,
+  completedExamCount: previousResult?.completedExamCount ?? 0,
+  behaviorAdjustmentAccumulation: previousResult?.behaviorAdjustmentAccumulation ?? null,
+  selfDevelopmentAccumulation: previousResult?.selfDevelopmentAccumulation ?? null,
+  economicSocialParticipationAccumulation: previousResult?.economicSocialParticipationAccumulation ?? null,
+  wrongAnswers: [],
+  assessmentError: null,
+  finishedAt: previousResult?.finishedAt || new Date().toISOString(),
+  assessedAt: null,
+  canRetryAssessment: false,
+});
+
 const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, onSubmitted }) => {
   const [step, setStep] = useState<SessionStep>('taking');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -206,13 +236,14 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     }
 
     const data: AssessmentResult = await response.json();
+    setAssessmentResult(data);
 
     if (data.assessmentStatus === 'Completed' || data.assessmentStatus === 'Failed') {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
 
-      setAssessmentResult(data);
       setStep('result');
+      onSubmitted?.();
     } else {
       setStep('assessing');
     }
@@ -239,36 +270,41 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       setPollingSecondsElapsed((prev) => prev + 1);
     }, 1000);
 
-    // Poll every 5 s — background assessment is not instant, 3 s is unnecessarily aggressive
+    // Poll every 2.5 s so retry/submit state changes surface quickly in the UI.
     pollIntervalRef.current = setInterval(async () => {
       try {
         await fetchAssessmentResult(studentExamId);
       } catch {
         // keep polling; transient errors shouldn't stop us
       }
-    }, 5000);
+    }, 2500);
   };
 
   const handleRetryAssessment = async (studentExamId: string) => {
-    try {
-      setStep('assessing');
-      setAssessmentResult(null);
+    const previousResult = assessmentResult;
 
+    try {
       const response = await fetchClient(`/student-exams/${studentExamId}/retry-assessment`, {
         method: 'POST',
       });
-      const retryData = await response.json().catch(() => ({}));
+      const retryData = await response.json().catch(() => null);
 
-      if (!response.ok || !retryData?.studentExamId) {
-        throw new Error(retryData?.message || `API returned ${response.status}`);
+      if (!response.ok) {
+        throw new Error(
+          (retryData && typeof retryData === 'object' && 'message' in retryData && typeof retryData.message === 'string'
+            ? retryData.message
+            : null) || `API returned ${response.status}`
+        );
       }
 
-      onSubmitted?.();
-      setCurrentStudentExamId(retryData.studentExamId);
-      await startPolling(retryData.studentExamId);
+      setCurrentStudentExamId(studentExamId);
+      setAssessmentResult(toPendingAssessmentResult(studentExamId, assignment, previousResult));
+      setStep('assessing');
+      await startPolling(studentExamId);
     } catch (error) {
       console.error('Error retrying assessment:', error);
       alert('Không thể yêu cầu chấm lại. Vui lòng thử lại sau.');
+      setAssessmentResult(previousResult);
       setStep('result');
     }
   };
