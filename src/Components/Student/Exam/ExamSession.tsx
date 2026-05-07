@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { AnswerState, Assignment, AssessmentResult, Question, WrongAnswerReview } from '../../../types';
 import ExamReview from './ExamReview';
 import ExamTaking from './ExamTaking';
 import { fetchClient } from '../../../api/fetchClient';
+import { useAntiCheatMonitoring } from './useAntiCheatMonitoring';
+import { parseApiDateTime, resolveAttemptDeadlineUtc } from '../../../utils/apiDateTime';
 
 
 interface ExamSessionProps {
@@ -59,13 +61,63 @@ const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
 
 const getExplanationText = (item: WrongAnswerReview) => item.errorExplanation || item.highlightText;
 
+const extractApiMessage = async (response: Response) => {
+  const errorData = await response.json().catch(() => null);
+  if (!errorData) return 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+
+  if (typeof errorData === 'string') return errorData;
+  if (typeof errorData.message === 'string' && errorData.message.trim()) return errorData.message;
+  if (typeof errorData.title === 'string' && errorData.title.trim()) return errorData.title;
+
+  return 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+};
+
+const looksLikeAttemptExpiredMessage = (message: string) =>
+  /(hết giờ|quá hạn|expired|deadline|timeout)/i.test(message);
+
+const extractAttemptTimingFromQuestions = (items: Question[]) => {
+  const firstQuestionWithTiming = items.find(
+    (item) => item.startedAt || item.attemptDeadlineUtc || item.durationMinutes
+  );
+
+  if (!firstQuestionWithTiming) {
+    return {
+      startedAt: null,
+      attemptDeadlineUtc: null,
+      durationMinutes: undefined,
+    };
+  }
+
+  return {
+    startedAt: firstQuestionWithTiming.startedAt || null,
+    attemptDeadlineUtc: resolveAttemptDeadlineUtc(
+      firstQuestionWithTiming.startedAt,
+      firstQuestionWithTiming.durationMinutes,
+      firstQuestionWithTiming.attemptDeadlineUtc
+    ),
+    durationMinutes:
+      typeof firstQuestionWithTiming.durationMinutes === 'number'
+        ? firstQuestionWithTiming.durationMinutes
+        : undefined,
+  };
+};
+
 const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, onSubmitted }) => {
   const [step, setStep] = useState<SessionStep>('taking');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
+  const [currentStudentExamId, setCurrentStudentExamId] = useState<string | null>(assignment.studentExamId || null);
+  const [attemptStartedAt, setAttemptStartedAt] = useState<string | null>(assignment.startedAt || null);
+  const [attemptDurationMinutes, setAttemptDurationMinutes] = useState<number | undefined>(assignment.durationMinutes);
+  const [attemptDeadlineUtc, setAttemptDeadlineUtc] = useState<string | null>(assignment.attemptDeadlineUtc || null);
+  const [attemptActionMessage, setAttemptActionMessage] = useState<string | null>(null);
+  const [attemptEntryError, setAttemptEntryError] = useState<string | null>(null);
+  const [isAttemptLocked, setIsAttemptLocked] = useState<boolean>(assignment.isAttemptExpired === true);
+  const [pollingSecondsElapsed, setPollingSecondsElapsed] = useState(0);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveDraftIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answersRef = useRef(answers);
 
@@ -73,7 +125,37 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     answersRef.current = answers;
   }, [answers]);
 
+  useEffect(() => {
+    setCurrentStudentExamId(assignment.studentExamId || null);
+  }, [assignment.studentExamId]);
+
+  useEffect(() => {
+    setAttemptStartedAt(assignment.startedAt || null);
+    setAttemptDurationMinutes(assignment.durationMinutes);
+    setAttemptDeadlineUtc(assignment.attemptDeadlineUtc || null);
+    setIsAttemptLocked(assignment.isAttemptExpired === true);
+  }, [assignment.attemptDeadlineUtc, assignment.durationMinutes, assignment.isAttemptExpired, assignment.startedAt]);
+
+  const resolvedAttemptDeadlineUtc = useMemo(
+    () => resolveAttemptDeadlineUtc(attemptStartedAt, attemptDurationMinutes, attemptDeadlineUtc),
+    [attemptDeadlineUtc, attemptDurationMinutes, attemptStartedAt]
+  );
+
+  const antiCheatMonitoring = useAntiCheatMonitoring({
+    enabled: assignment.antiCheatEnabled === true && (step === 'taking' || step === 'review'),
+    studentExamId: currentStudentExamId,
+  });
+
   const saveDraft = async () => {
+    if (isAttemptLocked) return;
+
+    const resolvedAttemptDeadlineDate = parseApiDateTime(resolvedAttemptDeadlineUtc);
+    if (resolvedAttemptDeadlineDate && resolvedAttemptDeadlineDate.getTime() <= Date.now()) {
+      setIsAttemptLocked(true);
+      setAttemptActionMessage('Đã hết thời gian làm bài của lượt này. Em không thể lưu thêm.');
+      return;
+    }
+
     try {
       const payload = {
         answers: Object.entries(answersRef.current).map(([questionId, value]) => ({
@@ -82,13 +164,22 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
           essayAnswer: null,
         })),
       };
-      await fetchClient(`/exams/${examId}/save-draft`, {
+
+      const response = await fetchClient(`/exams/${examId}/save-draft`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      if (!response.ok && response.status === 400) {
+        const message = await extractApiMessage(response);
+        setAttemptActionMessage(message);
+        if (looksLikeAttemptExpiredMessage(message)) {
+          setIsAttemptLocked(true);
+        }
+      }
     } catch {
-      // silently ignore draft save errors
+      // keep autosave silent for transient network errors
     }
   };
 
@@ -105,7 +196,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       if (saveDraftIntervalRef.current) clearInterval(saveDraftIntervalRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, examId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, examId, resolvedAttemptDeadlineUtc, isAttemptLocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAssessmentResult = async (studentExamId: string) => {
     const response = await fetchClient(`/student-exams/${studentExamId}/assessment`);
@@ -117,9 +208,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     const data: AssessmentResult = await response.json();
 
     if (data.assessmentStatus === 'Completed' || data.assessmentStatus === 'Failed') {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
 
       setAssessmentResult(data);
       setStep('result');
@@ -132,10 +222,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
   const startPolling = async (studentExamId: string) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    setPollingSecondsElapsed(0);
 
     try {
       const initialResult = await fetchAssessmentResult(studentExamId);
-
       if (initialResult?.assessmentStatus === 'Completed' || initialResult?.assessmentStatus === 'Failed') {
         return;
       }
@@ -143,13 +234,19 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       // keep polling; transient errors shouldn't stop us
     }
 
+    // Start elapsed-time counter so the assessing screen can show meaningful wait hints
+    elapsedTimerRef.current = setInterval(() => {
+      setPollingSecondsElapsed((prev) => prev + 1);
+    }, 1000);
+
+    // Poll every 5 s — background assessment is not instant, 3 s is unnecessarily aggressive
     pollIntervalRef.current = setInterval(async () => {
       try {
         await fetchAssessmentResult(studentExamId);
       } catch {
         // keep polling; transient errors shouldn't stop us
       }
-    }, 3000);
+    }, 5000);
   };
 
   const handleRetryAssessment = async (studentExamId: string) => {
@@ -167,6 +264,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       }
 
       onSubmitted?.();
+      setCurrentStudentExamId(retryData.studentExamId);
       await startPolling(retryData.studentExamId);
     } catch (error) {
       console.error('Error retrying assessment:', error);
@@ -175,8 +273,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     }
   };
 
-  // Fetch questions specifically for this exam context
-  // Note: Using the general questions endpoint for demo purposes as per instructions
+  // Student questions endpoint is the source of truth and triggers first attempt start at backend.
   useEffect(() => {
     if (assignment.isSubmitted && assignment.studentExamId) {
       setIsLoading(false);
@@ -187,27 +284,43 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
     const fetchQuestions = async () => {
       try {
+        setAttemptEntryError(null);
+        setAttemptActionMessage(null);
         setIsLoading(true);
         const response = await fetchClient(`/questions?pageNumber=1&examId=${examId}&pageSize=20`);
-        
+
         if (response.ok) {
           const data = await response.json();
           const items = Array.isArray(data) ? data : (data.items || data.data || []);
-          setQuestions(items);
+          const questionItems = items as Question[];
+          const attemptTiming = extractAttemptTimingFromQuestions(questionItems);
+          const nextStartedAt = attemptTiming.startedAt ?? assignment.startedAt ?? null;
+          const nextDurationMinutes = attemptTiming.durationMinutes ?? assignment.durationMinutes;
+          const nextAttemptDeadlineUtc =
+            attemptTiming.attemptDeadlineUtc ??
+            resolveAttemptDeadlineUtc(nextStartedAt, nextDurationMinutes, assignment.attemptDeadlineUtc);
+          const nextAttemptDeadlineDate = parseApiDateTime(nextAttemptDeadlineUtc);
+
+          setQuestions(questionItems);
+          setAttemptStartedAt(nextStartedAt);
+          setAttemptDurationMinutes(nextDurationMinutes);
+          setAttemptDeadlineUtc(nextAttemptDeadlineUtc);
+          setAttemptActionMessage(null);
+          setIsAttemptLocked(
+            !!nextAttemptDeadlineDate && nextAttemptDeadlineDate.getTime() <= Date.now()
+          );
         } else {
-            throw new Error('API Error');
+          if (response.status === 400) {
+            const message = await extractApiMessage(response);
+            setAttemptEntryError(message);
+            setIsAttemptLocked(looksLikeAttemptExpiredMessage(message));
+          } else {
+            setAttemptEntryError('Không thể mở đề thi. Vui lòng thử lại sau.');
+          }
         }
       } catch (error) {
-        console.warn("Failed to load exam questions, using mock data.", error);
-        // Fallback mock data
-        const mockQuestions: Question[] = [
-            { id: 'q1', content: 'Quyền bình đẳng của công dân trong lao động được thể hiện ở việc mọi công dân đều có quyền?' },
-            { id: 'q2', content: 'Nội dung nào dưới đây không phải là bình đẳng trong hôn nhân và gia đình?'},
-            { id: 'q3', content: 'Hành vi nào dưới đây vi phạm quyền bình đẳng của công dân trước pháp luật?'},
-            { id: 'q4', content: 'Quyền bình đẳng giữa các dân tộc được hiểu là các dân tộc trong cộng đồng dân cư Việt Nam có quyền dùng tiếng nói, chữ viết của dân tộc mình là thể hiện quyền bình đẳng về?'},
-            { id: 'q5', content: 'Công dân bình đẳng về trách nhiệm pháp lí là?'}
-        ];
-        setQuestions(mockQuestions);
+        console.error('Failed to load exam questions', error);
+        setAttemptEntryError('Không thể mở đề thi. Vui lòng kiểm tra kết nối rồi thử lại.');
       } finally {
         setIsLoading(false);
       }
@@ -216,16 +329,23 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   }, [assignment.isSubmitted, assignment.studentExamId, examId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAnswer = (questionId: string, choiceId: string, content: string) => {
-   setAnswers(prev => ({
-  ...prev,
-  [questionId]: {
-    content,
-    choiceId,
-  },
-}));
-  }
+    if (isAttemptLocked) return;
+
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        content,
+        choiceId,
+      },
+    }));
+  };
 
   const handleSubmit = async () => {
+    if (isAttemptLocked) {
+      setAttemptActionMessage('Đã hết thời gian làm bài của lượt này. Em không thể nộp thêm.');
+      return;
+    }
+
     try {
       const payload = {
         answers: Object.entries(answers).map(([questionId, value]) => ({
@@ -244,29 +364,57 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       if (response.ok) {
         const submitData = await response.json();
         const studentExamId: string = submitData.studentExamId;
+        await antiCheatMonitoring.flushPendingEvents(studentExamId);
+        await antiCheatMonitoring.waitForPendingSends();
         onSubmitted?.();
+        setCurrentStudentExamId(studentExamId);
         setStep('assessing');
         startPolling(studentExamId);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        alert(`Nộp bài thất bại: ${errorData.message || 'Lỗi không xác định'}`);
+        const message = await extractApiMessage(response);
+        setAttemptActionMessage(message);
+        alert(message);
+
+        if (response.status === 400 && looksLikeAttemptExpiredMessage(message)) {
+          setIsAttemptLocked(true);
+          setStep('taking');
+        }
       }
     } catch (error) {
       console.error('Error submitting exam:', error);
-      alert('Đã xảy ra lỗi khi nộp bài. Vui lòng thử lại.');
+      setAttemptActionMessage('Đã xảy ra lỗi khi nộp bài. Vui lòng thử lại.');
     }
   };
 
-  // Clean up intervals on unmount
+  // Clean up all intervals on unmount
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
       if (saveDraftIntervalRef.current) clearInterval(saveDraftIntervalRef.current);
     };
   }, []);
 
   if (step === 'taking' && isLoading) {
     return <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 text-gray-600 dark:text-gray-300">Đang tải câu hỏi...</div>;
+  }
+
+  if (step === 'taking' && attemptEntryError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6 dark:bg-gray-950">
+        <div className="w-full max-w-xl rounded-2xl border border-red-200 bg-white p-6 text-center shadow-sm dark:border-red-800 dark:bg-slate-900">
+          <h2 className="text-lg font-semibold text-red-700 dark:text-red-300">Không thể mở bài thi</h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{attemptEntryError}</p>
+          <button
+            type="button"
+            onClick={onExit}
+            className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Quay lại danh sách bài thi
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (step === 'review') {
@@ -276,19 +424,54 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
         answers={answers}
         onBackToExam={() => setStep('taking')}
         onSubmit={handleSubmit}
+        antiCheatEvents={antiCheatMonitoring.recentEvents}
+        antiCheatEventCount={antiCheatMonitoring.totalEventCount}
+        antiCheatSyncErrorCount={antiCheatMonitoring.syncErrorCount}
+        isAntiCheatMonitoring={antiCheatMonitoring.isMonitoring}
+        antiCheatEnabled={assignment.antiCheatEnabled === true}
       />
     );
   }
 
   if (step === 'assessing') {
+    const isLongWait = pollingSecondsElapsed > 60;
+
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white p-6 dark:from-gray-950 dark:to-gray-950 sm:bg-gray-50 dark:sm:bg-gray-950">
         <div className="flex max-w-md flex-col items-center gap-5 rounded-2xl border border-slate-200 bg-white/80 p-6 text-center shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/70 sm:gap-6 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
           <div className="h-16 w-16 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Đang đánh giá bài làm</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Đang chấm bài trong nền</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 sm:text-base">
-            Vui lòng chờ trong giây lát, bài làm đang được đánh giá...
+            Hệ thống đang đánh giá bài làm của em. Trang sẽ tự cập nhật khi có kết quả — em không cần làm gì thêm.
           </p>
+
+          {pollingSecondsElapsed > 5 && (
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Đã chờ {pollingSecondsElapsed} giây...
+            </p>
+          )}
+
+          {isLongWait && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+              Đang mất nhiều thời gian hơn bình thường. Em có thể chờ tiếp hoặc quay lại kiểm tra sau.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={() => currentStudentExamId && fetchAssessmentResult(currentStudentExamId)}
+            className="rounded-xl border border-blue-300 px-5 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+          >
+            Kiểm tra kết quả ngay
+          </button>
+
+          <button
+            type="button"
+            onClick={onExit}
+            className="text-sm text-gray-400 underline underline-offset-2 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          >
+            Về trang chủ
+          </button>
         </div>
       </div>
     );
@@ -641,12 +824,19 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   return (
     <ExamTaking
       examTitle={assignment.title}
-      examEnd={assignment.deadline}
+      attemptDeadlineUtc={resolvedAttemptDeadlineUtc}
       questions={questions}
       answers={answers}
       onAnswer={handleAnswer}
       onReview={() => setStep('review')}
       onExit={onExit}
+      antiCheatEvents={antiCheatMonitoring.recentEvents}
+      antiCheatEventCount={antiCheatMonitoring.totalEventCount}
+      antiCheatSyncErrorCount={antiCheatMonitoring.syncErrorCount}
+      isAntiCheatMonitoring={antiCheatMonitoring.isMonitoring}
+      antiCheatEnabled={assignment.antiCheatEnabled === true}
+      disableExamActions={isAttemptLocked}
+      lockMessage={attemptActionMessage}
     />
   );
 };

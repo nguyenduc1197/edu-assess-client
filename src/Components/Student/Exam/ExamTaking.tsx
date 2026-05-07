@@ -1,34 +1,62 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnswerState, Question } from '../../../types';
+import { AntiCheatUiEvent } from './antiCheat';
+import { parseApiDateTime } from '../../../utils/apiDateTime';
 
 interface ExamTakingProps {
   examTitle: string;
-  examEnd?: string;
+  attemptDeadlineUtc?: string | null;
   questions: Question[];
   answers: Record<string, AnswerState>;
   onAnswer: (questionId: string, id: string, content: string) => void;
   onReview: () => void;
   onExit: () => void;
+  antiCheatEvents?: AntiCheatUiEvent[];
+  antiCheatEventCount?: number;
+  antiCheatSyncErrorCount?: number;
+  isAntiCheatMonitoring?: boolean;
+  antiCheatEnabled?: boolean;
+  disableExamActions?: boolean;
+  lockMessage?: string | null;
 }
 
 const ExamTaking: React.FC<ExamTakingProps> = ({ 
   examTitle, 
-  examEnd,
+  attemptDeadlineUtc,
   questions, 
   answers, 
   onAnswer, 
   onReview,
-  onExit
+  onExit,
+  antiCheatEvents = [],
+  antiCheatEventCount = 0,
+  antiCheatSyncErrorCount = 0,
+  isAntiCheatMonitoring = false,
+  antiCheatEnabled = false,
+  disableExamActions = false,
+  lockMessage = null,
 }) => {
-  const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
-  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(() => {
-    if (!examEnd) return null;
-    const diff = Math.floor((new Date(examEnd).getTime() - Date.now()) / 1000);
-    return diff > 0 ? diff : 0;
-  });
+  const getRemainingSeconds = (deadlineValue?: string | null) => {
+    const deadline = parseApiDateTime(deadlineValue);
+    if (!deadline) return null;
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const diff = Math.floor((deadline.getTime() - Date.now()) / 1000);
+    return diff > 0 ? diff : 0;
+  };
+
+  const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(() => getRemainingSeconds(attemptDeadlineUtc));
+
+  useEffect(() => {
+    if (!attemptDeadlineUtc) {
+      setRemainingSeconds(null);
+      return;
+    }
+
+    setRemainingSeconds(getRemainingSeconds(attemptDeadlineUtc));
+  }, [attemptDeadlineUtc]);
+
   useEffect(() => {
     if (remainingSeconds === null) return;
     if (remainingSeconds <= 0) return;
@@ -42,7 +70,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
       });
     }, 1000);
     return () => window.clearInterval(tid);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [remainingSeconds]);
 
   const formatCountdown = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -97,6 +125,10 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   const currentBlock = questionBlocks[currentBlockIndex];
   const currentQuestion = currentBlock?.questions[0];
   const progress = questions.length === 0 ? 0 : Math.round((Object.keys(answers).length / questions.length) * 100);
+  const isTimeUp = remainingSeconds !== null && remainingSeconds <= 0;
+  const isLocked = disableExamActions || isTimeUp;
+  const effectiveLockMessage =
+    lockMessage || (isTimeUp ? 'Đã hết thời gian làm bài cho lượt này. Em không thể chỉnh sửa thêm.' : null);
 
   const handleNext = () => {
     if (currentBlockIndex < questionBlocks.length - 1) {
@@ -130,7 +162,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
               <span className={`font-mono font-bold ${
                 remainingSeconds !== null && remainingSeconds <= 300 ? 'text-red-500' : 'text-primary'
               }`}>
-                {remainingSeconds !== null ? formatCountdown(remainingSeconds) : '--:--'}
+                {remainingSeconds !== null ? formatCountdown(remainingSeconds) : 'Dang khoi tao...'}
               </span>
             </div>
             <div
@@ -139,10 +171,11 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
               aria-atomic="true"
             >
               <span className="sr-only">Thời gian còn lại </span>
-              {remainingSeconds !== null ? formatCountdown(remainingSeconds) : '--:--'}
+              {remainingSeconds !== null ? formatCountdown(remainingSeconds) : 'Dang khoi tao...'}
             </div>
             <button
               onClick={onReview}
+              disabled={isLocked}
               className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
             >
               Review & Nộp bài
@@ -155,6 +188,12 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
         {/* Question Area */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
           <div className="mx-auto max-w-3xl">
+            {effectiveLockMessage && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                {effectiveLockMessage}
+              </div>
+            )}
+
             {/* Progress Bar (Mobile) */}
             <div className="mb-6 lg:hidden">
               <div className="flex justify-between text-xs mb-1">
@@ -168,6 +207,46 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                 />
               </div>
             </div>
+
+            {antiCheatEnabled && (
+              <div className={`mb-6 rounded-2xl border p-4 shadow-sm ${
+                antiCheatEventCount > 0
+                  ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200'
+                  : 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/40 dark:text-sky-200'
+              }`}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">
+                      {isAntiCheatMonitoring ? 'Giám sát chống gian lận đang bật' : 'Giám sát chống gian lận đang chờ đồng bộ'}
+                    </p>
+                    <p className="text-xs opacity-80">
+                      Hệ thống sẽ ghi nhận thao tác rời tab, chuyển cửa sổ, thoát toàn màn hình và sao chép / dán trong lúc làm bài.
+                    </p>
+                  </div>
+                  <div className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold dark:bg-slate-900/40">
+                    Số lần ghi nhận: {antiCheatEventCount}
+                  </div>
+                </div>
+
+                {antiCheatEvents.length > 0 && (
+                  <ul className="mt-3 space-y-2 text-xs">
+                    {antiCheatEvents.map((event) => (
+                      <li key={event.id} className="rounded-xl bg-white/70 px-3 py-2 dark:bg-slate-900/40">
+                        <span className="font-semibold">{event.label}</span>
+                        <span className="mx-2 opacity-60">•</span>
+                        <span>{event.details}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {antiCheatSyncErrorCount > 0 && (
+                  <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                    Một số sự kiện chưa gửi được lên hệ thống và sẽ được thử lại trong phiên hiện tại.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="mb-8">
               <span className="text-sm font-semibold text-primary uppercase tracking-wider">
@@ -227,6 +306,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                               name={`question-${question.id}`}
                               value={option.id ?? ''}
                               checked={isSelected}
+                              disabled={isLocked}
                               onChange={() => onAnswer(question.id, option.id ?? '', option.content)}
                               className="h-5 w-5 border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
                             />
@@ -260,6 +340,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                         name={`question-${currentQuestion.id}`}
                         value={option.id ?? ''}
                         checked={isSelected}
+                        disabled={isLocked}
                         onChange={() => onAnswer(currentQuestion.id, option.id ?? '', option.content)}
                         className="h-5 w-5 border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
                       />

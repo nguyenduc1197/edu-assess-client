@@ -10,6 +10,7 @@ import TeacherManagement from './Components/Teacher/Teachers/TeacherManagement';
 import StudentManagement from './Components/Teacher/Students/StudentManagement';
 import ClassManagement from './Components/Teacher/Classes/ClassManagement';
 import TeacherResults from './Components/Teacher/Results/TeacherResults';
+import FailedAssessments from './Components/Teacher/FailedAssessments/FailedAssessments';
 import SettingsPage from './Components/Common/Settings/SettingsPage';
 import StudentAnalyticsPage from './Components/Student/Analytics/StudentAnalyticsPage';
 
@@ -78,6 +79,7 @@ useEffect(() => {
             <Route path="/teacherdashboard" element={<TeacherDashboard onLogout={handleLogout} />} />
             <Route path="/teacher/questions" element={<QuestionManagement onLogout={handleLogout} />} />
             <Route path="/teacher/results" element={<TeacherResults onLogout={handleLogout} />} />
+            <Route path="/teacher/failed-assessments" element={<FailedAssessments onLogout={handleLogout} />} />
             <Route path="/teacher/teachers" element={<TeacherManagement onLogout={handleLogout} />} />
             <Route path="/teacher/students" element={<StudentManagement onLogout={handleLogout} />} />
             <Route path="/teacher/classes" element={<ClassManagement onLogout={handleLogout} />} />

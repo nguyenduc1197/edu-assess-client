@@ -9,8 +9,10 @@ interface ExamToEdit {
   name: string;
   start: string;
   end: string;
+  durationMinutes?: number;
   questionIds: string[];
   schoolClassId: string;
+  antiCheatEnabled?: boolean;
 }
 
 interface CreateExamModalProps {
@@ -18,6 +20,8 @@ interface CreateExamModalProps {
   onSuccess?: () => void;
   examToEdit?: ExamToEdit | null;
 }
+
+const DEFAULT_DURATION_MINUTES = 45;
 
 const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, examToEdit }) => {
   const isEditing = !!examToEdit;
@@ -28,8 +32,28 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
+  const getInitialDurationMinutes = () => {
+    if (!examToEdit || typeof examToEdit.durationMinutes !== 'number' || examToEdit.durationMinutes <= 0) {
+      return String(DEFAULT_DURATION_MINUTES);
+    }
+
+    return String(examToEdit.durationMinutes);
+  };
+  const isValidDurationMinutes = (value: string) => /^\d+$/.test(value) && Number(value) > 0;
+  const formatPreviewDatetime = (value: string) => {
+    if (!value) return '--';
+
+    return new Date(value).toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
   const [start, setStart] = useState(examToEdit ? toLocalDatetime(examToEdit.start) : '');
   const [end, setEnd] = useState(examToEdit ? toLocalDatetime(examToEdit.end) : '');
+  const [durationMinutes, setDurationMinutes] = useState(getInitialDurationMinutes);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>(examToEdit?.questionIds || []);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -42,6 +66,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   // State for fetching classes
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>(examToEdit?.schoolClassId || '');
+  const [antiCheatEnabled, setAntiCheatEnabled] = useState<boolean>(examToEdit?.antiCheatEnabled === true);
   const [isFetchingClasses, setIsFetchingClasses] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -148,7 +173,21 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
     setIsLoading(true);
 
     if (!name || !start || !end || !selectedClassId) {
-      setError('Vui lòng nhập đầy đủ tên bài thi, thời gian và lớp học.');
+      setError('Vui lòng nhập đầy đủ tên bài thi, thời gian giao bài và lớp học.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (new Date(end).getTime() <= new Date(start).getTime()) {
+      setError('Thời gian kết thúc giao bài phải sau thời gian bắt đầu.');
+      setIsLoading(false);
+      return;
+    }
+
+    const normalizedDurationMinutes = durationMinutes.trim();
+    const parsedDurationMinutes = Number(normalizedDurationMinutes);
+    if (!isValidDurationMinutes(normalizedDurationMinutes)) {
+      setError('Thời lượng làm bài phải là số nguyên lớn hơn 0 phút.');
       setIsLoading(false);
       return;
     }
@@ -163,8 +202,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
       name,
       start: new Date(start).toISOString(),
       end: new Date(end).toISOString(),
+      durationMinutes: parsedDurationMinutes,
       questionIds: selectedQuestionIds,
-      schoolClassId: selectedClassId
+      schoolClassId: selectedClassId,
+      antiCheatEnabled,
     };
 
     try {
@@ -295,10 +336,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label htmlFor="start" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Thời Gian Bắt Dầu
+                  Thời gian bắt đầu cho phép vào làm
                 </label>
                 <input
                   type="datetime-local"
@@ -307,11 +348,14 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   onChange={(e) => setStart(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Học sinh chỉ được phép bắt đầu bài thi từ mốc này.
+                </p>
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="end" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Thời Gian Kết Thúc
+                  Thời gian kết thúc cho phép vào làm
                 </label>
                 <input
                   type="datetime-local"
@@ -320,6 +364,65 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   onChange={(e) => setEnd(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Sau mốc này, học sinh không thể bắt đầu lượt làm mới.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="durationMinutes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Thời lượng làm bài (phút)
+                </label>
+                <input
+                  type="number"
+                  id="durationMinutes"
+                  min={1}
+                  step={1}
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:[color-scheme:dark]"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Mỗi học sinh có từng này phút kể từ lúc mở đề lần đầu. Giá trị này độc lập với thời gian mở đề.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Tóm tắt lịch thi</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-white/80 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Thời gian mở đề</p>
+                  <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
+                    Từ {formatPreviewDatetime(start)} đến {formatPreviewDatetime(end)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white/80 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Thời lượng làm bài</p>
+                  <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
+                    {durationMinutes || DEFAULT_DURATION_MINUTES} phút kể từ lúc học sinh bắt đầu
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Bật giám sát vi phạm</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Ghi nhận các hành vi rời tab, chuyển cửa sổ, sao chép hoặc dán khi học sinh làm bài.
+                  </p>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={antiCheatEnabled}
+                    onChange={(e) => setAntiCheatEnabled(e.target.checked)}
+                  />
+                  <span className="h-6 w-11 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-5 dark:bg-gray-600" />
+                </label>
               </div>
             </div>
 

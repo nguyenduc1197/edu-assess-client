@@ -1,15 +1,31 @@
 import React from 'react';
 import {  Send, Edit3 } from 'lucide-react';
 import { AnswerState, Question } from '../../../types';
+import { AntiCheatUiEvent } from './antiCheat';
 
 interface ExamReviewProps {
   questions: Question[];
   answers: Record<string, AnswerState>;
   onBackToExam: () => void;
   onSubmit: () => void;
+  antiCheatEvents?: AntiCheatUiEvent[];
+  antiCheatEventCount?: number;
+  antiCheatSyncErrorCount?: number;
+  isAntiCheatMonitoring?: boolean;
+  antiCheatEnabled?: boolean;
 }
 
-const ExamReview: React.FC<ExamReviewProps> = ({ questions, answers, onBackToExam, onSubmit }) => {
+const ExamReview: React.FC<ExamReviewProps> = ({
+  questions,
+  answers,
+  onBackToExam,
+  onSubmit,
+  antiCheatEvents = [],
+  antiCheatEventCount = 0,
+  antiCheatSyncErrorCount = 0,
+  isAntiCheatMonitoring = false,
+  antiCheatEnabled = false,
+}) => {
   const answeredCount = Object.keys(answers).length;
   const totalCount = questions.length;
 
@@ -41,6 +57,46 @@ const ExamReview: React.FC<ExamReviewProps> = ({ questions, answers, onBackToExa
             </button>
           </div>
         </div>
+
+        {antiCheatEnabled && (
+          <div className={`mb-8 rounded-xl border p-4 shadow-sm ${
+            antiCheatEventCount > 0
+              ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200'
+              : 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/40 dark:text-sky-200'
+          }`}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold">
+                  {isAntiCheatMonitoring ? 'Giám sát chống gian lận vẫn đang hoạt động' : 'Giám sát chống gian lận đang chờ đồng bộ'}
+                </p>
+                <p className="text-xs opacity-80">
+                  Hãy gửi bài ngay khi đã kiểm tra xong để hoàn tất phiên thi.
+                </p>
+              </div>
+              <div className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold dark:bg-slate-900/40">
+                Số lần ghi nhận: {antiCheatEventCount}
+              </div>
+            </div>
+
+            {antiCheatEvents.length > 0 && (
+              <ul className="mt-3 space-y-2 text-xs">
+                {antiCheatEvents.map((event) => (
+                  <li key={event.id} className="rounded-lg bg-white/70 px-3 py-2 dark:bg-slate-900/40">
+                    <span className="font-semibold">{event.label}</span>
+                    <span className="mx-2 opacity-60">•</span>
+                    <span>{event.details}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {antiCheatSyncErrorCount > 0 && (
+              <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                Một số sự kiện chưa gửi được lên hệ thống và sẽ được thử lại khi có thể.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Summary Card */}
         <div className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-background-dark">

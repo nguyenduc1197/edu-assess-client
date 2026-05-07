@@ -15,6 +15,9 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     case AssignmentStatus.IN_PROGRESS:
       styles = 'border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
       break;
+    case AssignmentStatus.EXPIRED:
+      styles = 'border border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300';
+      break;
     case AssignmentStatus.SUBMITTED:
       styles = 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300';
       break;
