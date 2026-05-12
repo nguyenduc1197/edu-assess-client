@@ -4,11 +4,14 @@ import {
   AIExamScanGenerateResponse,
   AIExamVariant,
   AIQuestionGenerateResponse,
-  Choice,
   CompetencyOption,
   Question,
 } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
+import {
+  getAiDraftValidationError,
+  normalizeAiQuestions,
+} from '../../../utils/aiQuestionNormalization';
 
 type SourceMode = 'text' | 'pdf' | 'url' | 'youtube';
 type GeneratorTab = 'content' | 'scan';
@@ -16,7 +19,6 @@ type FileMode = 'content' | 'exam';
 
 type GeneratedQuestion = Question & {
   sourceEvidence?: string;
-  choices: Choice[];
 };
 
 interface AIQuestionGeneratorModalProps {
@@ -123,36 +125,10 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
     return '';
   };
 
-  const normalizeQuestions = (items: Question[] = []): GeneratedQuestion[] => {
-    const seed = Date.now();
-
-    return items.map((question, questionIndex) => {
-      const questionFormat = question.questionFormat || 'SingleChoice';
-      const rawChoices = question.choices || [];
-      const choices = (questionFormat === 'TrueFalse'
-        ? [rawChoices[0], rawChoices[1]].map((choice, choiceIndex) => ({
-            id: choice?.id || `ai-choice-${seed}-${questionIndex}-${choiceIndex}`,
-            optionLabel: OPTION_LABELS[choiceIndex],
-            content: choice?.content || (choiceIndex === 0 ? 'Đúng' : 'Sai'),
-            isCorrect: !!choice?.isCorrect,
-          }))
-        : rawChoices.map((choice, choiceIndex) => ({
-            id: choice.id || `ai-choice-${seed}-${questionIndex}-${choiceIndex}`,
-            optionLabel: choice.optionLabel || OPTION_LABELS[choiceIndex] || String(choiceIndex + 1),
-            content: choice.content || '',
-            isCorrect: !!choice.isCorrect,
-          }))) as Choice[];
-
-      return {
-        ...question,
-        id: question.id || `ai-${seed}-${questionIndex}`,
-        competencyType: question.competencyType || selectedCompetencies[0] || '',
-        questionFormat,
-        difficultyLevel: question.difficultyLevel || 'Medium',
-        choices,
-      };
-    });
-  };
+  const normalizeQuestions = (items: Question[] = []): GeneratedQuestion[] =>
+    normalizeAiQuestions(items, {
+      defaultCompetencyType: selectedCompetencies[0] || '',
+    }) as GeneratedQuestion[];
 
   const resetGeneratedState = () => {
     setGeneratedQuestions([]);
@@ -370,7 +346,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
 
         return {
           ...question,
-          choices: question.choices.map((choice, idx) =>
+          choices: (question.choices || []).map((choice, idx) =>
             idx === choiceIndex ? { ...choice, content: value } : choice
           ),
         };
@@ -385,7 +361,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
 
         return {
           ...question,
-          choices: question.choices.map((choice, idx) => ({
+          choices: (question.choices || []).map((choice, idx) => ({
             ...choice,
             isCorrect: idx === choiceIndex,
           })),
@@ -400,15 +376,14 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
       return;
     }
 
-    const hasInvalidDraft = generatedQuestions.some((question) => {
-      const filledChoices = question.choices?.filter((choice) => choice.content.trim()) || [];
-      const correctChoices = filledChoices.filter((choice) => choice.isCorrect);
-
-      return !question.content.trim() || !question.competencyType || filledChoices.length < 2 || correctChoices.length !== 1;
-    });
+    const normalizedDrafts = normalizeQuestions(generatedQuestions);
+    const hasInvalidDraft = normalizedDrafts.some((question) => getAiDraftValidationError(question));
 
     if (hasInvalidDraft) {
-      setError('Mỗi câu hỏi cần có nội dung, năng lực, ít nhất 2 đáp án và đúng 1 đáp án đúng.');
+      const firstError = normalizedDrafts
+        .map((question) => getAiDraftValidationError(question))
+        .find(Boolean);
+      setError(firstError || 'Bản nháp AI chưa hợp lệ.');
       return;
     }
 
@@ -417,7 +392,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
       setError('');
       setSuccessMessage('');
 
-      const payload = generatedQuestions.map((question) => ({
+      const payload = normalizedDrafts.map((question) => ({
         content: question.content.trim(),
         competencyType: question.competencyType,
         questionFormat: question.questionFormat,
@@ -426,7 +401,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
         passageGroupKey: question.passageGroupKey?.trim() || undefined,
         statementOrder: question.statementOrder ?? undefined,
         sourceEvidence: question.sourceEvidence?.trim() || undefined,
-        choices: question.choices.map((choice, index) => ({
+        choices: (question.choices || []).map((choice, index) => ({
           optionLabel: choice.optionLabel || OPTION_LABELS[index] || String(index + 1),
           content: choice.content.trim(),
           isCorrect: !!choice.isCorrect,
@@ -1135,7 +1110,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
                               />
                               <div className="space-y-2">
-                                {item.choices.slice(0, 2).map((choice, choiceIndex) => (
+                                {item.choices?.slice(0, 2).map((choice, choiceIndex) => (
                                   <div key={choice.id || `${item.id}-${choiceIndex}`} className="flex items-center gap-3">
                                     <input
                                       type="radio"
@@ -1150,7 +1125,8 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                                     <input
                                       type="text"
                                       value={choice.content}
-                                      onChange={(e) => updateChoiceContent(index, choiceIndex, e.target.value)}
+                                      readOnly
+                                      aria-label={`Lựa chọn ${choice.content} cố định cho câu hỏi Đúng/Sai, không thể chỉnh sửa`}
                                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                                     />
                                   </div>
@@ -1228,7 +1204,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                       )}
 
                       <div className="space-y-2">
-                        {question.choices.slice(0, question.questionFormat === 'TrueFalse' ? 2 : question.choices.length).map((choice, choiceIndex) => (
+                        {question.choices?.slice(0, question.questionFormat === 'TrueFalse' ? 2 : question.choices.length).map((choice, choiceIndex) => (
                           <div key={choice.id || `${question.id}-${choiceIndex}`} className="flex items-center gap-3">
                             <input
                               type="radio"
@@ -1244,6 +1220,12 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                               type="text"
                               value={choice.content}
                               onChange={(e) => updateChoiceContent(originalIndex, choiceIndex, e.target.value)}
+                              readOnly={question.questionFormat === 'TrueFalse'}
+                              aria-label={
+                                question.questionFormat === 'TrueFalse'
+                                  ? `Lựa chọn ${choice.content} cố định cho câu hỏi Đúng/Sai, không thể chỉnh sửa`
+                                  : undefined
+                              }
                               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                             />
                           </div>
