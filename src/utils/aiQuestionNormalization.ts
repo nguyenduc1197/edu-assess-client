@@ -3,6 +3,8 @@ import { Choice, Question } from '../types';
 const SINGLE_CHOICE_LABELS = ['A', 'B', 'C', 'D'];
 const TRUE_FALSE_LABELS = ['A', 'B'];
 const TRUE_FALSE_CONTENTS = ['Đúng', 'Sai'];
+const getExpectedChoiceCount = (questionFormat?: Question['questionFormat']) =>
+  questionFormat === 'TrueFalse' ? 2 : 4;
 
 type NormalizeQuestionOptions = {
   defaultCompetencyType?: string;
@@ -81,7 +83,7 @@ export const getAiDraftValidationError = (question: Question) => {
     return 'Mỗi câu hỏi cần có năng lực.';
   }
 
-  if (!question.choices || question.choices.length !== (question.questionFormat === 'TrueFalse' ? 2 : 4)) {
+  if (!question.choices || question.choices.length !== getExpectedChoiceCount(question.questionFormat)) {
     return question.questionFormat === 'TrueFalse'
       ? 'Câu hỏi Đúng / Sai phải có đúng 2 lựa chọn.'
       : 'Câu hỏi một đáp án phải có đúng 4 lựa chọn A, B, C, D.';
