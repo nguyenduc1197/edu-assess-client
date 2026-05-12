@@ -30,6 +30,30 @@ describe('aiQuestionNormalization', () => {
     ]);
   });
 
+  it('keeps the first marked correct choice when one already exists', () => {
+    const [question] = normalizeAiQuestions(
+      [
+        {
+          id: '',
+          content: 'Câu hỏi có đáp án đúng',
+          choices: [
+            { optionLabel: 'A', content: 'Phương án 1', isCorrect: false },
+            { optionLabel: 'B', content: 'Phương án 2', isCorrect: true },
+            { optionLabel: 'C', content: 'Phương án 3', isCorrect: true },
+          ],
+        },
+      ],
+      { seed: 'correct-seed' }
+    );
+
+    expect(question.choices).toEqual([
+      expect.objectContaining({ optionLabel: 'A', isCorrect: false }),
+      expect.objectContaining({ optionLabel: 'B', isCorrect: true }),
+      expect.objectContaining({ optionLabel: 'C', isCorrect: false }),
+      expect.objectContaining({ optionLabel: 'D', isCorrect: false }),
+    ]);
+  });
+
   it('normalizes true-false questions to fixed Đúng/Sai options', () => {
     const [question] = normalizeAiQuestions(
       [
