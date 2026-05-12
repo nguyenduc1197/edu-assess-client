@@ -401,7 +401,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
         passageGroupKey: question.passageGroupKey?.trim() || undefined,
         statementOrder: question.statementOrder ?? undefined,
         sourceEvidence: question.sourceEvidence?.trim() || undefined,
-        choices: question.choices!.map((choice, index) => ({
+        choices: (question.choices || []).map((choice, index) => ({
           optionLabel: choice.optionLabel || OPTION_LABELS[index] || String(index + 1),
           content: choice.content.trim(),
           isCorrect: !!choice.isCorrect,

@@ -1,6 +1,7 @@
 import { Choice, Question } from '../types';
 
 const SINGLE_CHOICE_LABELS = ['A', 'B', 'C', 'D'];
+const TRUE_FALSE_LABELS = ['A', 'B'];
 const TRUE_FALSE_CONTENTS = ['Đúng', 'Sai'];
 
 type NormalizeQuestionOptions = {
@@ -39,7 +40,7 @@ const normalizeTrueFalseChoices = (rawChoices: Choice[], seed: number | string, 
 
       return {
         id: choice?.id || `ai-choice-${seed}-${questionIndex}-${choiceIndex}`,
-        optionLabel: SINGLE_CHOICE_LABELS[choiceIndex],
+        optionLabel: TRUE_FALSE_LABELS[choiceIndex],
         content,
         isCorrect: !!choice?.isCorrect,
       };
