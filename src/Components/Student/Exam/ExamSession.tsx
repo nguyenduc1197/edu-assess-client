@@ -5,6 +5,7 @@ import ExamTaking from './ExamTaking';
 import { fetchClient } from '../../../api/fetchClient';
 import { useAntiCheatMonitoring } from './useAntiCheatMonitoring';
 import { parseApiDateTime, resolveAttemptDeadlineUtc } from '../../../utils/apiDateTime';
+import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 
 
 interface ExamSessionProps {
@@ -21,43 +22,6 @@ const getFeedbackItems = (feedback?: string | null) =>
     .split(/\r?\n|•/)
     .map((item) => item.replace(/^[-•]\s*/, '').trim())
     .filter(Boolean);
-
-const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
-  const groups: Array<
-    | { type: 'single'; item: WrongAnswerReview }
-    | { type: 'group'; key: string; passageText?: string | null; items: WrongAnswerReview[] }
-  > = [];
-  const processedGroupKeys = new Set<string>();
-
-  items.forEach((item) => {
-    const groupKey = item.passageGroupKey?.trim();
-
-    if (item.questionFormat === 'TrueFalse' && groupKey) {
-      if (processedGroupKeys.has(groupKey)) return;
-
-      const groupItems = items
-        .filter((candidate) => candidate.questionFormat === 'TrueFalse' && candidate.passageGroupKey === groupKey)
-        .sort(
-          (a, b) =>
-            (a.statementOrder ?? Number.MAX_SAFE_INTEGER) -
-            (b.statementOrder ?? Number.MAX_SAFE_INTEGER)
-        );
-
-      groups.push({
-        type: 'group',
-        key: groupKey,
-        passageText: groupItems.find((candidate) => candidate.passageText)?.passageText || item.passageText,
-        items: groupItems,
-      });
-      processedGroupKeys.add(groupKey);
-      return;
-    }
-
-    groups.push({ type: 'single', item });
-  });
-
-  return groups;
-};
 
 const getExplanationText = (item: WrongAnswerReview) => item.errorExplanation || item.highlightText;
 
@@ -531,7 +495,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
     const failed = assessmentStatus === 'Failed';
     const wrongAnswers = assessmentResult.wrongAnswers || [];
-    const wrongAnswerSections = groupWrongAnswerItems(wrongAnswers);
+    const wrongAnswerSections = buildWrongAnswerSections(wrongAnswers);
     const feedbackItems = getFeedbackItems(overallFeedback);
 
     const competencies = [
@@ -753,7 +717,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                 ) : (
                   <div className="space-y-4">
                     {wrongAnswerSections.map((section) =>
-                      section.type === 'group' ? (
+                      section.type === 'group' && section.groupKind === 'trueFalse' ? (
                         <div key={`group-${section.key}`} className="rounded-xl border border-gray-200 p-3 space-y-3 dark:border-gray-700 sm:rounded-lg sm:p-4">
                           {section.passageText && (
                             <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-sm text-slate-700 dark:text-slate-200">
@@ -771,6 +735,47 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                             {section.items.map((item, index) => (
                               <div key={item.questionId} className="rounded-lg border border-gray-200 bg-gray-50/70 p-3 space-y-3 dark:border-gray-700 dark:bg-gray-800/40 sm:p-4">
                                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Mệnh đề {item.statementOrder ?? index + 1}</p>
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.questionContent}</p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                  <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+                                    <p className="font-semibold text-red-700 dark:text-red-300">Em chọn gì</p>
+                                    <p className="mt-1 text-red-600 dark:text-red-200">{item.selectedAnswer || 'Không có câu trả lời'}</p>
+                                  </div>
+                                  <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3">
+                                    <p className="font-semibold text-green-700 dark:text-green-300">Đáp án đúng là gì</p>
+                                    <p className="mt-1 text-green-700 dark:text-green-200">{item.correctAnswer || 'Không có dữ liệu'}</p>
+                                  </div>
+                                </div>
+
+                                {getExplanationText(item) && (
+                                  <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 dark:text-yellow-200">
+                                    <p className="font-semibold mb-1">Vì sao đáp án em chọn chưa đúng</p>
+                                    <p>{getExplanationText(item)}</p>
+                                  </div>
+                                )}
+
+                                {item.guidanceNote && (
+                                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                                    <span className="font-semibold">Gợi ý:</span> {item.guidanceNote}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : section.type === 'group' ? (
+                        <div key={`group-${section.key}`} className="rounded-xl border border-gray-200 p-3 space-y-3 dark:border-gray-700 sm:rounded-lg sm:p-4">
+                          {section.passageText && (
+                            <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-sm text-slate-700 dark:text-slate-200">
+                              <p className="font-semibold mb-1">Đoạn văn chung</p>
+                              <p>{section.passageText}</p>
+                            </div>
+                          )}
+
+                          <div className="space-y-3">
+                            {section.items.map((item) => (
+                              <div key={item.questionId} className="rounded-lg border border-gray-200 bg-gray-50/70 p-3 space-y-3 dark:border-gray-700 dark:bg-gray-800/40 sm:p-4">
                                 <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.questionContent}</p>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">

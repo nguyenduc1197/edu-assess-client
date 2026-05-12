@@ -10,7 +10,6 @@ import {
   ScoreDistributionItem,
   SubjectLabel,
   User,
-  WrongAnswerReview,
 } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import CreateExamModal from '../Exam/CreateExamModal';
@@ -19,6 +18,7 @@ import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 import { formatCompetencyPercent } from '../../../utils/competencyPercent';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 import { formatVietnamDateTime } from '../../../utils/apiDateTime';
+import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 
 let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
@@ -58,43 +58,6 @@ const getAccumulationGainTone = (value?: number | null) => {
   if (value > 0) return 'text-green-600 dark:text-green-400';
   if (value < 0) return 'text-red-600 dark:text-red-400';
   return 'text-gray-600 dark:text-gray-400';
-};
-
-const groupWrongAnswerItems = (items: WrongAnswerReview[]) => {
-  const groups: Array<
-    | { type: 'single'; item: WrongAnswerReview }
-    | { type: 'group'; key: string; passageText?: string | null; items: WrongAnswerReview[] }
-  > = [];
-  const processedGroupKeys = new Set<string>();
-
-  items.forEach((item) => {
-    const groupKey = item.passageGroupKey?.trim();
-
-    if (item.questionFormat === 'TrueFalse' && groupKey) {
-      if (processedGroupKeys.has(groupKey)) return;
-
-      const groupItems = items
-        .filter((candidate) => candidate.questionFormat === 'TrueFalse' && candidate.passageGroupKey === groupKey)
-        .sort(
-          (a, b) =>
-            (a.statementOrder ?? Number.MAX_SAFE_INTEGER) -
-            (b.statementOrder ?? Number.MAX_SAFE_INTEGER)
-        );
-
-      groups.push({
-        type: 'group',
-        key: groupKey,
-        passageText: groupItems.find((candidate) => candidate.passageText)?.passageText || item.passageText,
-        items: groupItems,
-      });
-      processedGroupKeys.add(groupKey);
-      return;
-    }
-
-    groups.push({ type: 'single', item });
-  });
-
-  return groups;
 };
 
 const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
@@ -1505,8 +1468,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                               </div>
                             ) : (
                               <div className="space-y-4">
-                                {groupWrongAnswerItems(selectedAssessment.wrongAnswers || []).map((section) =>
-                                  section.type === 'group' ? (
+                                {buildWrongAnswerSections(selectedAssessment.wrongAnswers || []).map((section) =>
+                                  section.type === 'group' && section.groupKind === 'trueFalse' ? (
                                     <div key={`group-${section.key}`} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3 bg-white dark:bg-gray-900">
                                       {section.passageText && (
                                         <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-sm text-slate-700 dark:text-slate-200">
@@ -1524,8 +1487,32 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                         </div>
                                       ))}
                                     </div>
+                                  ) : section.type === 'group' ? (
+                                    <div key={`group-${section.key}`} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3 bg-white dark:bg-gray-900">
+                                      {section.passageText && (
+                                        <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-sm text-slate-700 dark:text-slate-200">
+                                          <p className="font-semibold mb-1">Đoạn văn chung</p>
+                                          <p>{section.passageText}</p>
+                                        </div>
+                                      )}
+
+                                      {section.items.map((item) => (
+                                        <div key={item.questionId} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.questionContent}</p>
+                                          <p className="text-sm text-red-600 dark:text-red-300"><span className="font-semibold">Đã chọn:</span> {item.selectedAnswer || 'Không có câu trả lời'}</p>
+                                          <p className="text-sm text-green-700 dark:text-green-300"><span className="font-semibold">Đáp án đúng:</span> {item.correctAnswer || 'Không có dữ liệu'}</p>
+                                          {(item.errorExplanation || item.highlightText) && <p className="text-sm text-yellow-800 dark:text-yellow-200"><span className="font-semibold">Giải thích:</span> {item.errorExplanation || item.highlightText}</p>}
+                                        </div>
+                                      ))}
+                                    </div>
                                   ) : (
                                     <div key={section.item.questionId} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2 bg-white dark:bg-gray-900">
+                                      {section.item.passageText && (
+                                        <div className="rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-sm text-slate-700 dark:text-slate-200">
+                                          <p className="font-semibold mb-1">Đoạn văn chung</p>
+                                          <p>{section.item.passageText}</p>
+                                        </div>
+                                      )}
                                       <p className="text-sm font-semibold text-gray-900 dark:text-white">{section.item.questionContent}</p>
                                       <p className="text-sm text-red-600 dark:text-red-300"><span className="font-semibold">Đã chọn:</span> {section.item.selectedAnswer || 'Không có câu trả lời'}</p>
                                       <p className="text-sm text-green-700 dark:text-green-300"><span className="font-semibold">Đáp án đúng:</span> {section.item.correctAnswer || 'Không có dữ liệu'}</p>
