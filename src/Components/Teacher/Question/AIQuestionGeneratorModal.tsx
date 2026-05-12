@@ -1126,7 +1126,6 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                                       type="text"
                                       value={choice.content}
                                       readOnly
-                                      aria-readonly={true}
                                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                                     />
                                   </div>
@@ -1221,7 +1220,6 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                               value={choice.content}
                               onChange={(e) => updateChoiceContent(originalIndex, choiceIndex, e.target.value)}
                               readOnly={question.questionFormat === 'TrueFalse'}
-                              aria-readonly={question.questionFormat === 'TrueFalse'}
                               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                             />
                           </div>
