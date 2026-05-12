@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { AlertTriangle, RotateCw } from 'lucide-react';
 import { StudentResultSummary, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
-import { fetchClient, getCurrentUserId } from '../../../api/fetchClient';
+import { fetchClient } from '../../../api/fetchClient';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 

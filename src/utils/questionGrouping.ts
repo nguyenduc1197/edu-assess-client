@@ -1,11 +1,26 @@
 import { Question } from '../types';
+import { buildQuestionRenderGroups } from './groupQuestionsBySharedPassage';
 
 export type QuestionBlock = {
   key: string;
   type: 'single' | 'group';
+  groupKind?: 'trueFalse' | 'passage';
   questions: Question[];
   passageText?: string | null;
+  questionNumbers: number[];
 };
+
+export type QuestionPreviewBlock =
+  | { key: string; type: 'single'; question: Question }
+  | {
+      key: string;
+      type: 'passage-group' | 'true-false-group';
+      leadQuestion: Question;
+      questions: Question[];
+      passageText?: string | null;
+    };
+
+const normalizePassageText = (value?: string | null) => value?.trim() || null;
 
 const getGroupedTrueFalseKey = (question: Question) => {
   const groupKey = question.passageGroupKey?.trim();
@@ -13,49 +28,91 @@ const getGroupedTrueFalseKey = (question: Question) => {
 };
 
 export const buildQuestionBlocks = (questions: Question[]): QuestionBlock[] => {
-  const groupQuestions = new Map<string, Question[]>();
-  const questionGroupKeys = new Map<string, string>();
+  let nextQuestionNumber = 1;
 
-  questions.forEach((question) => {
-    const groupKey = getGroupedTrueFalseKey(question);
-    if (!groupKey) {
-      return;
-    }
+  return buildQuestionRenderGroups(questions).map((group) => {
+    const questionNumbers = group.questions.map(() => nextQuestionNumber++);
 
-    questionGroupKeys.set(question.id, groupKey);
-    const items = groupQuestions.get(groupKey);
-    if (items) {
-      items.push(question);
-      return;
-    }
-
-    groupQuestions.set(groupKey, [question]);
+    return {
+      key: group.key,
+      type: group.type,
+      groupKind: group.groupKind,
+      questions: group.questions,
+      passageText: group.passageText,
+      questionNumbers,
+    };
   });
+};
 
-  const processedGroups = new Set<string>();
+export const buildQuestionPreviewBlocks = (questions: Question[]): QuestionPreviewBlock[] => {
+  const blocks: QuestionPreviewBlock[] = [];
+  const processedTrueFalseKeys = new Set<string>();
 
-  return questions.reduce<QuestionBlock[]>((blocks, question) => {
-    const groupKey = questionGroupKeys.get(question.id);
+  for (let index = 0; index < questions.length; index += 1) {
+    const question = questions[index];
+    const trueFalseGroupKey = getGroupedTrueFalseKey(question);
 
-    if (groupKey) {
-      if (!processedGroups.has(groupKey)) {
-        const groupedQuestions = groupQuestions.get(groupKey) || [question];
-
-        blocks.push({
-          key: groupKey,
-          type: 'group',
-          questions: groupedQuestions,
-          passageText:
-            groupedQuestions.find((item) => item.passageText)?.passageText || question.passageText,
-        });
-
-        processedGroups.add(groupKey);
+    if (trueFalseGroupKey) {
+      if (processedTrueFalseKeys.has(trueFalseGroupKey)) {
+        continue;
       }
 
-      return blocks;
+      const groupedQuestions = questions
+        .filter((candidate) => getGroupedTrueFalseKey(candidate) === trueFalseGroupKey)
+        .sort(
+          (left, right) =>
+            (left.statementOrder ?? Number.MAX_SAFE_INTEGER) -
+            (right.statementOrder ?? Number.MAX_SAFE_INTEGER)
+        );
+
+      blocks.push({
+        key: trueFalseGroupKey,
+        type: 'true-false-group',
+        leadQuestion: question,
+        questions: groupedQuestions,
+        passageText:
+          groupedQuestions.find((candidate) => normalizePassageText(candidate.passageText))?.passageText ||
+          question.passageText,
+      });
+      processedTrueFalseKeys.add(trueFalseGroupKey);
+      continue;
     }
 
-    blocks.push({ key: question.id, type: 'single', questions: [question] });
-    return blocks;
-  }, []);
+    const passageText =
+      question.questionFormat === 'SingleChoice' ? normalizePassageText(question.passageText) : null;
+
+    if (passageText) {
+      const groupedQuestions = [question];
+      let nextIndex = index + 1;
+
+      while (nextIndex < questions.length) {
+        const nextQuestion = questions[nextIndex];
+        if (
+          nextQuestion.questionFormat !== 'SingleChoice' ||
+          normalizePassageText(nextQuestion.passageText) !== passageText
+        ) {
+          break;
+        }
+
+        groupedQuestions.push(nextQuestion);
+        nextIndex += 1;
+      }
+
+      if (groupedQuestions.length > 1) {
+        blocks.push({
+          key: `passage-${question.id}-${index}`,
+          type: 'passage-group',
+          leadQuestion: question,
+          questions: groupedQuestions,
+          passageText,
+        });
+        index = nextIndex - 1;
+        continue;
+      }
+    }
+
+    blocks.push({ key: question.id, type: 'single', question });
+  }
+
+  return blocks;
 };

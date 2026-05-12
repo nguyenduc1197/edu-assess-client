@@ -94,6 +94,10 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
 
   const currentBlock = questionBlocks[currentBlockIndex];
   const currentQuestion = currentBlock?.questions[0];
+  const isTrueFalseGroup = currentBlock?.type === 'group' && currentBlock.groupKind === 'trueFalse';
+  const isPassageGroup = currentBlock?.type === 'group' && currentBlock.groupKind === 'passage';
+  const currentBlockFirstNumber = currentBlock?.questionNumbers[0];
+  const currentBlockLastNumber = currentBlock?.questionNumbers[currentBlock.questionNumbers.length - 1];
   const progress = questions.length === 0 ? 0 : Math.round((Object.keys(answers).length / questions.length) * 100);
   const isTimeUp = remainingSeconds !== null && remainingSeconds <= 0;
   const isLocked = disableExamActions || isTimeUp;
@@ -221,11 +225,11 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
             <div className="mb-8">
               <span className="text-sm font-semibold text-primary uppercase tracking-wider">
                 {currentBlock.type === 'group'
-                  ? `Nhóm câu ${currentBlockIndex + 1} / ${questionBlocks.length}`
-                  : `Câu hỏi ${currentBlockIndex + 1} / ${questionBlocks.length}`}
+                  ? `Nhóm câu ${currentBlockFirstNumber}-${currentBlockLastNumber} / ${questions.length}`
+                  : `Câu hỏi ${currentBlockFirstNumber} / ${questions.length}`}
               </span>
 
-              {currentBlock.type === 'group' ? (
+              {isTrueFalseGroup ? (
                 <div className="mt-4 space-y-5">
                   <div>
                     <h2 className="text-2xl font-medium leading-relaxed">Đọc đoạn văn và chọn Đúng hoặc Sai cho từng mệnh đề</h2>
@@ -243,20 +247,89 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                     </div>
                   )}
                 </div>
+              ) : isPassageGroup ? (
+                <div className="mt-4 space-y-5">
+                  <div>
+                    <h2 className="text-2xl font-medium leading-relaxed">Đọc đoạn văn và trả lời các câu hỏi liên quan</h2>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                      Các câu hỏi dùng chung đoạn văn đã được gộp trên cùng một màn để em dễ đối chiếu.
+                    </p>
+                  </div>
+
+                  {currentBlock.passageText && (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Đoạn văn chung
+                      </p>
+                      <p>{currentBlock.passageText}</p>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <h2 className="mt-4 text-2xl font-medium leading-relaxed">
-                  {currentQuestion.content}
-                </h2>
+                <div className="mt-4 space-y-5">
+                  {currentBlock.passageText && (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Đoạn văn chung
+                      </p>
+                      <p>{currentBlock.passageText}</p>
+                    </div>
+                  )}
+
+                  <h2 className="whitespace-pre-line text-2xl font-medium leading-relaxed">
+                    {currentQuestion.content}
+                  </h2>
+                </div>
               )}
             </div>
 
             {/* Options */}
-            {currentBlock.type === 'group' ? (
+            {isTrueFalseGroup ? (
               <div className="space-y-4">
                 {currentBlock.questions.map((question, questionIdx) => (
                   <div key={question.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-background-dark">
-                    <p className="mb-4 text-base font-semibold text-gray-900 dark:text-white">
-                      Mệnh đề {question.statementOrder ?? questionIdx + 1}: {question.content}
+                    <p className="mb-4 whitespace-pre-line text-base font-semibold text-gray-900 dark:text-white">
+                      Câu {currentBlock.questionNumbers[questionIdx]} - Mệnh đề {question.statementOrder ?? questionIdx + 1}: {question.content}
+                    </p>
+                    <div className="space-y-3">
+                      {question.choices?.map((option) => {
+                        const isSelected = answers[question.id]?.choiceId === option.id;
+
+                        return (
+                          <label
+                            key={option.id || `${question.id}-${option.optionLabel}`}
+                            className={`flex cursor-pointer items-center rounded-xl border p-4 transition-all ${
+                              isSelected
+                                ? 'border-primary bg-primary/5 ring-1 ring-primary dark:bg-primary/10'
+                                : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-background-dark dark:hover:bg-gray-800'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name={`question-${question.id}`}
+                              value={option.id ?? ''}
+                              checked={isSelected}
+                              disabled={isLocked}
+                              onChange={() => onAnswer(question.id, option.id ?? '', option.content)}
+                              className="h-5 w-5 border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-700"
+                            />
+                            <span className="ml-4 font-medium text-gray-700 dark:text-gray-200">
+                              {option.optionLabel && <span className="mr-2 font-bold text-primary">{option.optionLabel}.</span>}
+                              {option.content}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : isPassageGroup ? (
+              <div className="space-y-4">
+                {currentBlock.questions.map((question, questionIdx) => (
+                  <div key={question.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-background-dark">
+                    <p className="mb-4 whitespace-pre-line text-base font-semibold text-gray-900 dark:text-white">
+                      Câu {currentBlock.questionNumbers[questionIdx]}: {question.content}
                     </p>
                     <div className="space-y-3">
                       {question.choices?.map((option) => {
@@ -366,9 +439,15 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                         ? 'bg-blue-50 text-primary dark:bg-blue-900/30 dark:text-blue-300'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
                     }`}
-                    title={block.type === 'group' ? 'Nhóm câu Đúng / Sai' : `Câu ${idx + 1}`}
+                    title={
+                      block.type === 'group'
+                        ? `Nhóm câu ${block.questionNumbers[0]}-${block.questionNumbers[block.questionNumbers.length - 1]}`
+                        : `Câu ${block.questionNumbers[0]}`
+                    }
                   >
-                    {block.type === 'group' ? `Đ/S ${idx + 1}` : idx + 1}
+                    {block.type === 'group'
+                      ? `${block.questionNumbers[0]}-${block.questionNumbers[block.questionNumbers.length - 1]}`
+                      : block.questionNumbers[0]}
                   </button>
                 );
               })}
