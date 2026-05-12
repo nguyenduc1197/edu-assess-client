@@ -35,4 +35,23 @@ describe('questionGrouping', () => {
     });
     expect(blocks[2].questions.map((question) => question.id)).toEqual(['q-3', 'q-4']);
   });
+
+  it('keeps true-false questions without a group key as standalone items', () => {
+    const questions: Question[] = [
+      { id: 'q-1', content: 'Mệnh đề lẻ', questionFormat: 'TrueFalse', statementOrder: 1 },
+      {
+        id: 'q-2',
+        content: 'Mệnh đề nhóm',
+        questionFormat: 'TrueFalse',
+        passageGroupKey: 'group-1',
+      },
+    ];
+
+    const blocks = buildQuestionBlocks(questions);
+
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0]).toMatchObject({ key: 'q-1', type: 'single' });
+    expect(blocks[1]).toMatchObject({ key: 'group-1', type: 'group' });
+    expect(blocks[1].questions.map((question) => question.id)).toEqual(['q-2']);
+  });
 });

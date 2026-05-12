@@ -8,6 +8,24 @@ export type QuestionBlock = {
 };
 
 export const buildQuestionBlocks = (questions: Question[]): QuestionBlock[] => {
+  const groupQuestions = new Map<string, Question[]>();
+
+  questions.forEach((question) => {
+    const groupKey = question.passageGroupKey?.trim();
+
+    if (question.questionFormat !== 'TrueFalse' || !groupKey) {
+      return;
+    }
+
+    const items = groupQuestions.get(groupKey);
+    if (items) {
+      items.push(question);
+      return;
+    }
+
+    groupQuestions.set(groupKey, [question]);
+  });
+
   const processedGroups = new Set<string>();
 
   return questions.reduce<QuestionBlock[]>((blocks, question) => {
@@ -18,11 +36,7 @@ export const buildQuestionBlocks = (questions: Question[]): QuestionBlock[] => {
         return blocks;
       }
 
-      const groupedQuestions = questions.filter(
-        (item) =>
-          item.questionFormat === 'TrueFalse' &&
-          item.passageGroupKey?.trim() === groupKey
-      );
+      const groupedQuestions = groupQuestions.get(groupKey) || [question];
 
       blocks.push({
         key: groupKey,
