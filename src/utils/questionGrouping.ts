@@ -7,16 +7,22 @@ export type QuestionBlock = {
   passageText?: string | null;
 };
 
+const getGroupedTrueFalseKey = (question: Question) => {
+  const groupKey = question.passageGroupKey?.trim();
+  return question.questionFormat === 'TrueFalse' && groupKey ? groupKey : null;
+};
+
 export const buildQuestionBlocks = (questions: Question[]): QuestionBlock[] => {
   const groupQuestions = new Map<string, Question[]>();
+  const questionGroupKeys = new Map<string, string>();
 
   questions.forEach((question) => {
-    const groupKey = question.passageGroupKey?.trim();
-
-    if (question.questionFormat !== 'TrueFalse' || !groupKey) {
+    const groupKey = getGroupedTrueFalseKey(question);
+    if (!groupKey) {
       return;
     }
 
+    questionGroupKeys.set(question.id, groupKey);
     const items = groupQuestions.get(groupKey);
     if (items) {
       items.push(question);
@@ -29,24 +35,23 @@ export const buildQuestionBlocks = (questions: Question[]): QuestionBlock[] => {
   const processedGroups = new Set<string>();
 
   return questions.reduce<QuestionBlock[]>((blocks, question) => {
-    const groupKey = question.passageGroupKey?.trim();
+    const groupKey = questionGroupKeys.get(question.id);
 
-    if (question.questionFormat === 'TrueFalse' && groupKey) {
-      if (processedGroups.has(groupKey)) {
-        return blocks;
+    if (groupKey) {
+      if (!processedGroups.has(groupKey)) {
+        const groupedQuestions = groupQuestions.get(groupKey) || [question];
+
+        blocks.push({
+          key: groupKey,
+          type: 'group',
+          questions: groupedQuestions,
+          passageText:
+            groupedQuestions.find((item) => item.passageText)?.passageText || question.passageText,
+        });
+
+        processedGroups.add(groupKey);
       }
 
-      const groupedQuestions = groupQuestions.get(groupKey) || [question];
-
-      blocks.push({
-        key: groupKey,
-        type: 'group',
-        questions: groupedQuestions,
-        passageText:
-          groupedQuestions.find((item) => item.passageText)?.passageText || question.passageText,
-      });
-
-      processedGroups.add(groupKey);
       return blocks;
     }
 
