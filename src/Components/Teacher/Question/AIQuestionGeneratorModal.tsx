@@ -1126,7 +1126,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                                       type="text"
                                       value={choice.content}
                                       readOnly
-                                      aria-label={`Lựa chọn ${choice.content} cố định cho câu hỏi Đúng/Sai`}
+                                      aria-label={`Lựa chọn ${choice.content} cố định cho câu hỏi Đúng/Sai, không thể chỉnh sửa`}
                                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                                     />
                                   </div>
@@ -1223,7 +1223,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                               readOnly={question.questionFormat === 'TrueFalse'}
                               aria-label={
                                 question.questionFormat === 'TrueFalse'
-                                  ? `Lựa chọn ${choice.content} cố định cho câu hỏi Đúng/Sai`
+                                  ? `Lựa chọn ${choice.content} cố định cho câu hỏi Đúng/Sai, không thể chỉnh sửa`
                                   : undefined
                               }
                               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
