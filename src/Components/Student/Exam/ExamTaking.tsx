@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnswerState, Question } from '../../../types';
 import { AntiCheatUiEvent } from './antiCheat';
 import { parseApiDateTime } from '../../../utils/apiDateTime';
+import { buildQuestionBlocks } from '../../../utils/questionGrouping';
 
 interface ExamTakingProps {
   examTitle: string;
@@ -82,38 +83,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   };
 
   const questionBlocks = useMemo(() => {
-    const processedGroups = new Set<string>();
-
-    return questions.reduce<Array<{ key: string; type: 'single' | 'group'; questions: Question[]; passageText?: string | null }>>((blocks, question) => {
-      const groupKey = question.passageGroupKey?.trim();
-
-      if (question.questionFormat === 'TrueFalse' && groupKey) {
-        if (processedGroups.has(groupKey)) {
-          return blocks;
-        }
-
-        const groupedQuestions = questions
-          .filter((item) => item.questionFormat === 'TrueFalse' && item.passageGroupKey === groupKey)
-          .sort(
-            (a, b) =>
-              (a.statementOrder ?? Number.MAX_SAFE_INTEGER) -
-              (b.statementOrder ?? Number.MAX_SAFE_INTEGER)
-          );
-
-        blocks.push({
-          key: groupKey,
-          type: 'group',
-          questions: groupedQuestions,
-          passageText: groupedQuestions.find((item) => item.passageText)?.passageText || question.passageText,
-        });
-
-        processedGroups.add(groupKey);
-        return blocks;
-      }
-
-      blocks.push({ key: question.id, type: 'single', questions: [question] });
-      return blocks;
-    }, []);
+    return buildQuestionBlocks(questions);
   }, [questions]);
 
   useEffect(() => {
