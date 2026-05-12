@@ -33,6 +33,7 @@ describe('questionGrouping', () => {
       type: 'group',
       passageText: 'Đoạn văn',
     });
+    expect(blocks[2].questions).toHaveLength(2);
     expect(blocks[2].questions.map((question) => question.id)).toEqual(['q-3', 'q-4']);
   });
 
