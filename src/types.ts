@@ -80,6 +80,34 @@ export interface Class {
   isDeleted?: boolean;
 }
 
+export interface MissingExamsClassInfo {
+  id?: string;
+  name?: string;
+}
+
+export interface MissingExamAssignment {
+  studentExamId: string;
+  examId: string;
+  examName: string;
+  start: string | null;
+  end: string | null;
+}
+
+export interface MissingExamStudent {
+  studentId: string;
+  studentName: string;
+  missingExamCount: number;
+  missingExams: MissingExamAssignment[];
+}
+
+export interface ClassMissingExamsSummary {
+  schoolClass: MissingExamsClassInfo | null;
+  totalActiveStudents: number;
+  studentsWithMissingExamsCount: number;
+  totalMissingExamAssignments: number;
+  students: MissingExamStudent[];
+}
+
 export interface SchoolYear {
   id: string;
   start: string;
