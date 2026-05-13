@@ -81,11 +81,11 @@ useEffect(() => {
             <Route path="/teacher/questions" element={<QuestionManagement onLogout={handleLogout} />} />
             <Route path="/teacher/results" element={<TeacherResults onLogout={handleLogout} />} />
             <Route path="/teacher/failed-assessments" element={<FailedAssessments onLogout={handleLogout} />} />
-             <Route path="/teacher/teachers" element={<TeacherManagement onLogout={handleLogout} />} />
-             <Route path="/teacher/students" element={<StudentManagement onLogout={handleLogout} />} />
-             <Route path="/teacher/classes" element={<ClassManagement onLogout={handleLogout} />} />
-             <Route path="/teacher/classes/:classId" element={<ClassMissingExamsPage onLogout={handleLogout} />} />
-             <Route path="/settings" element={<SettingsPage onLogout={handleLogout} />} />
+            <Route path="/teacher/teachers" element={<TeacherManagement onLogout={handleLogout} />} />
+            <Route path="/teacher/students" element={<StudentManagement onLogout={handleLogout} />} />
+            <Route path="/teacher/classes/:classId" element={<ClassMissingExamsPage onLogout={handleLogout} />} />
+            <Route path="/teacher/classes" element={<ClassManagement onLogout={handleLogout} />} />
+            <Route path="/settings" element={<SettingsPage onLogout={handleLogout} />} />
           </>
         }
         {
