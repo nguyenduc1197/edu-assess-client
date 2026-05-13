@@ -203,7 +203,9 @@ const ClassMissingExamsPage: React.FC<ClassMissingExamsPageProps> = ({ onLogout 
               <p className="mt-2 text-sm text-red-800 dark:text-red-200">{error}</p>
               <button
                 type="button"
-                onClick={() => { void refetch(); }}
+                onClick={() => {
+                  refetch();
+                }}
                 className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
               >
                 <RefreshCw size={16} />
