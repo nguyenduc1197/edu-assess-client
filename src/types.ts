@@ -385,6 +385,36 @@ export interface ExamAnalytics {
   scoreDistribution: ScoreDistributionItem[];
 }
 
+export interface ClassReportProgressItem {
+  studentExamId: string;
+  examName: string;
+  finishedAt: string;
+  score: number;
+  behaviorAdjustmentScore: number | null;
+  selfDevelopmentScore: number | null;
+  economicSocialParticipationScore: number | null;
+}
+
+export interface ClassReportStudent {
+  studentId: string;
+  studentName: string;
+  totalExams: number;
+  completedExams: number;
+  completionRate: number;
+  averageScore: number | null;
+  averageBehaviorAdjustmentScore: number | null;
+  averageSelfDevelopmentScore: number | null;
+  averageEconomicSocialParticipationScore: number | null;
+  progressOverTime: ClassReportProgressItem[];
+}
+
+export interface ClassReport {
+  classId: string;
+  className: string;
+  totalExams: number;
+  students: ClassReportStudent[];
+}
+
 export interface AssessmentResult {
   studentExamId: string;
   examId: string;

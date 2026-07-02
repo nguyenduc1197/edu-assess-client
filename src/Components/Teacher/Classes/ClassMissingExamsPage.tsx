@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, ArrowLeft, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { AlertCircle, ArrowLeft, BarChart2, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { MissingExamStudent, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
@@ -167,13 +167,22 @@ const ClassMissingExamsPage: React.FC<ClassMissingExamsPageProps> = ({ onLogout 
                   Theo dõi nhanh số học sinh đang thiếu bài và các bài thi chưa nộp.
                 </p>
               </div>
-              <Link
-                to="/teacher/classes"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-              >
-                <ArrowLeft size={18} />
-                Quay lại danh sách lớp
-              </Link>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Link
+                  to={`/teacher/classes/${classId}/report`}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-gray-900 dark:text-blue-300 dark:hover:bg-blue-900/20"
+                >
+                  <BarChart2 size={18} />
+                  Báo cáo lớp
+                </Link>
+                <Link
+                  to="/teacher/classes"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+                >
+                  <ArrowLeft size={18} />
+                  Quay lại danh sách lớp
+                </Link>
+              </div>
             </div>
           </div>
 

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Download } from 'lucide-react';
 import { StudentAnalytics, AnalyticsProgressItem, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import { fetchClient, getCurrentProfileId } from '../../../api/fetchClient';
 import { formatCompetencyPercent } from '../../../utils/competencyPercent';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
+import { downloadFile } from '../../../utils/downloadFile';
 
 interface StudentAnalyticsPageProps {
   onLogout?: () => void;
@@ -163,6 +165,8 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
   const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
 
   const sidebarUser: User = {
     id: localStorage.getItem('profileId') || '',
@@ -199,6 +203,24 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
     fetchAnalytics();
   }, [fetchAnalytics]);
 
+  const handleExport = async () => {
+    const studentId = getCurrentProfileId();
+    if (!studentId) return;
+    setIsExporting(true);
+    setExportError('');
+    try {
+      await downloadFile(
+        `/students/${studentId}/analytics/export`,
+        `bao-cao-hoc-sinh-${studentId}.xlsx`
+      );
+    } catch (err) {
+      console.error('Export failed', err);
+      setExportError('Xuất báo cáo thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const fmtCompetency = (v: number | null | undefined) =>
     formatCompetencyPercent(v, { fractionDigits: 0 });
 
@@ -221,19 +243,32 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
       <main className="mobile-safe-bottom min-h-[calc(100dvh-var(--mobile-app-header-height))] flex-1 overflow-x-hidden overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:h-screen lg:p-8 lg:pb-8">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
           <div className="rounded-3xl border border-slate-200/80 bg-gradient-to-r from-white via-violet-50 to-fuchsia-50 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-              Phân Tích Năng Lực
-            </h1>
-            {analytics && (
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                {analytics.studentName} · {analytics.completedExamCount} bài đã hoàn thành
-              </p>
-            )}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
+                  Phân Tích Năng Lực
+                </h1>
+                {analytics && (
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    {analytics.studentName} · {analytics.completedExamCount} bài đã hoàn thành
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={isExporting || isLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition-colors hover:from-violet-700 hover:to-fuchsia-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Download size={16} />
+                {isExporting ? 'Đang xuất...' : 'Xuất báo cáo'}
+              </button>
+            </div>
           </div>
 
-          {error && (
+          {(error || exportError) && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
-              {error}
+              {error || exportError}
             </div>
           )}
 
