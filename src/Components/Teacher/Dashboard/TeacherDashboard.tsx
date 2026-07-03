@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, PlusCircle, Copy, Edit2, BarChart2, RotateCw } from 'lucide-react';
+import { Download, Search, PlusCircle, Copy, Edit2, BarChart2, RotateCw } from 'lucide-react';
 import {
   AssessmentResult,
   Assignment,
@@ -14,6 +14,7 @@ import {
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import CreateExamModal from '../Exam/CreateExamModal';
 import { fetchClient } from '../../../api/fetchClient';
+import { downloadFile } from '../../../utils/downloadFile';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 import { formatCompetencyPercent } from '../../../utils/competencyPercent';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
@@ -91,6 +92,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const PAGE_SIZE = 20;
+  const [isExamExporting, setIsExamExporting] = useState(false);
+  const [examExportError, setExamExportError] = useState('');
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -504,6 +507,23 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
     return () => window.clearInterval(intervalId);
   }, [examStudents]);
+
+  const handleExamExport = useCallback(async () => {
+    if (!selectedExam) return;
+    setIsExamExporting(true);
+    setExamExportError('');
+    try {
+      await downloadFile(
+        `/exams/${selectedExam.id}/students/export`,
+        `diem-${selectedExam.id}.xlsx`
+      );
+    } catch (err) {
+      console.error('Exam export failed', err);
+      setExamExportError('Xuất điểm thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsExamExporting(false);
+    }
+  }, [selectedExam]);
 
   const filteredAssignments = useMemo(() => {
     const filtered = assignments.filter(a => 
@@ -991,19 +1011,31 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">{selectedExam.title}</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedExam(null);
-                  setSelectedAssessment(null);
-                  setSelectedStudentName('');
-                  setExamAnalytics(null);
-                  setExamDetailTab('students');
-                }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                Đóng
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExamExport}
+                  disabled={isExamExporting}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/20"
+                >
+                  <Download size={14} />
+                  {isExamExporting ? 'Đang xuất...' : 'Xuất điểm'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedExam(null);
+                    setSelectedAssessment(null);
+                    setSelectedStudentName('');
+                    setExamAnalytics(null);
+                    setExamDetailTab('students');
+                    setExamExportError('');
+                  }}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  Đóng
+                </button>
+              </div>
             </div>
 
             {/* Tabs */}
@@ -1062,6 +1094,12 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               {studentListError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
                   {studentListError}
+                </div>
+              )}
+
+              {examExportError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                  {examExportError}
                 </div>
               )}
 

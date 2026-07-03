@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, Edit2, PlusCircle, Search, Trash2 } from 'lucide-react';
+import { BarChart3, Edit2, FileText, PlusCircle, Search, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Class as SchoolClass, SchoolYear, Teacher, User } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
@@ -223,6 +223,13 @@ const ClassManagement: React.FC<ClassManagementProps> = ({ onLogout }) => {
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{schoolClass.isActive === false ? 'Không hoạt động' : 'Đang hoạt động'}</td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
+                          <Link
+                            to={`/teacher/classes/${schoolClass.id}/report`}
+                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors dark:text-blue-400"
+                            title="Báo cáo lớp học"
+                          >
+                            <FileText size={18} />
+                          </Link>
                           <Link
                             to={`/teacher/classes/${schoolClass.id}`}
                             className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors dark:text-emerald-400"
