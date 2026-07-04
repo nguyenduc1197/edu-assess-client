@@ -99,10 +99,14 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [examQuestions, setExamQuestions] = useState<Question[]>([]);
   const [isExamQuestionsLoading, setIsExamQuestionsLoading] = useState(false);
   const [examQuestionsError, setExamQuestionsError] = useState('');
+  const [deletedExamQuestions, setDeletedExamQuestions] = useState<Question[]>([]);
+  const [isDeletedExamQuestionsLoading, setIsDeletedExamQuestionsLoading] = useState(false);
+  const [deletedExamQuestionsError, setDeletedExamQuestionsError] = useState('');
   const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
   const [updatingQuestionId, setUpdatingQuestionId] = useState<string | null>(null);
   const [removeQuestionCandidate, setRemoveQuestionCandidate] = useState<Question | null>(null);
   const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
+  const [restoringQuestionId, setRestoringQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -697,6 +701,47 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     }
   }, [competencyOptions.length]);
 
+  const fetchDeletedExamQuestions = useCallback(async (examId: string) => {
+    setIsDeletedExamQuestionsLoading(true);
+    setDeletedExamQuestionsError('');
+    try {
+      const response = await fetchClient(`/exams/${examId}/deleted-questions`);
+      if (!response.ok) {
+        setDeletedExamQuestions([]);
+        setDeletedExamQuestionsError('Không thể tải danh sách câu hỏi đã xóa.');
+        return;
+      }
+
+      const data = await response.json();
+      const items: Question[] = Array.isArray(data) ? data : (data.items || data.data || []);
+      setDeletedExamQuestions(Array.isArray(items) ? items : []);
+    } catch (err) {
+      console.error('Failed to fetch deleted exam questions', err);
+      setDeletedExamQuestions([]);
+      setDeletedExamQuestionsError('Không thể tải danh sách câu hỏi đã xóa.');
+    } finally {
+      setIsDeletedExamQuestionsLoading(false);
+    }
+  }, []);
+
+  const refreshExamQuestionLists = useCallback(async (examId: string) => {
+    await Promise.all([
+      fetchExamQuestions(examId),
+      fetchDeletedExamQuestions(examId),
+    ]);
+  }, [fetchDeletedExamQuestions, fetchExamQuestions]);
+
+  useEffect(() => {
+    if (!selectedExam?.id) {
+      setDeletedExamQuestions([]);
+      setDeletedExamQuestionsError('');
+      setIsDeletedExamQuestionsLoading(false);
+      return;
+    }
+
+    fetchDeletedExamQuestions(selectedExam.id);
+  }, [fetchDeletedExamQuestions, selectedExam?.id]);
+
   const handleUpdateQuestionCompetency = async (questionId: string, competencyType: string) => {
     if (!selectedExam) return;
     setUpdatingQuestionId(questionId);
@@ -743,6 +788,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       });
       if (response.status === 204 || response.ok) {
         setExamQuestions((prev) => prev.filter((q) => q.id !== questionId));
+        await fetchDeletedExamQuestions(selectedExam.id);
         setToast({ type: 'success', message: 'Đã xóa câu hỏi khỏi bài thi.' });
       } else if (response.status === 404) {
         setToast({ type: 'error', message: 'Không tìm thấy câu hỏi trong bài thi.' });
@@ -754,6 +800,34 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       setToast({ type: 'error', message: 'Xóa câu hỏi thất bại. Vui lòng thử lại.' });
     } finally {
       setRemovingQuestionId(null);
+    }
+  };
+
+  const handleRestoreExamQuestion = async (questionId: string) => {
+    if (!selectedExam) return;
+
+    setRestoringQuestionId(questionId);
+    try {
+      const response = await fetchClient(`/exams/${selectedExam.id}/questions/${questionId}/restore`, {
+        method: 'POST',
+      });
+
+      if (response.status === 204 || response.ok) {
+        await refreshExamQuestionLists(selectedExam.id);
+        setToast({ type: 'success', message: 'Đã khôi phục câu hỏi vào bài thi.' });
+        return;
+      }
+
+      const body = await response.json().catch(() => ({}));
+      setToast({
+        type: 'error',
+        message: (body as any)?.message || 'Khôi phục câu hỏi thất bại. Vui lòng thử lại.',
+      });
+    } catch (err) {
+      console.error('Failed to restore question to exam', err);
+      setToast({ type: 'error', message: 'Khôi phục câu hỏi thất bại. Vui lòng thử lại.' });
+    } finally {
+      setRestoringQuestionId(null);
     }
   };
 
@@ -1128,7 +1202,11 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     setExamExportError('');
                     setExamQuestions([]);
                     setExamQuestionsError('');
+                    setDeletedExamQuestions([]);
+                    setDeletedExamQuestionsError('');
                     setRemoveQuestionCandidate(null);
+                    setRemovingQuestionId(null);
+                    setRestoringQuestionId(null);
                   }}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
@@ -1846,6 +1924,65 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                       </table>
                     </div>
                   )}
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 dark:border-gray-700 dark:bg-gray-800/30">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Đã xóa</h4>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          Các câu hỏi đã xóa khỏi bài thi có thể được khôi phục lại.
+                        </p>
+                      </div>
+                      {isDeletedExamQuestionsLoading && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Đang tải...</span>
+                      )}
+                    </div>
+
+                    {deletedExamQuestionsError && (
+                      <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                        {deletedExamQuestionsError}
+                      </div>
+                    )}
+
+                    {!deletedExamQuestionsError && !isDeletedExamQuestionsLoading && deletedExamQuestions.length === 0 && (
+                      <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Chưa có câu hỏi nào trong danh sách đã xóa.</p>
+                    )}
+
+                    {deletedExamQuestions.length > 0 && (
+                      <div className="mt-3 space-y-3">
+                        {deletedExamQuestions.map((q) => (
+                          <div
+                            key={q.id}
+                            className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900 sm:flex-row sm:items-start sm:justify-between"
+                          >
+                            <div className="min-w-0 space-y-1">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{q.content}</p>
+                              <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                <span>{q.competencyLabel ?? q.competencyType ?? '—'}</span>
+                                <span>•</span>
+                                <span>{q.questionFormatLabel ?? '—'}</span>
+                                <span>•</span>
+                                <span>{q.difficultyLabel ?? '—'}</span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={restoringQuestionId === q.id || removingQuestionId !== null}
+                              onClick={() => handleRestoreExamQuestion(q.id)}
+                              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                            >
+                              {restoringQuestionId === q.id ? (
+                                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-emerald-300 border-t-emerald-600" />
+                              ) : (
+                                <RotateCw size={16} />
+                              )}
+                              {restoringQuestionId === q.id ? 'Đang khôi phục...' : 'Khôi phục'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1867,17 +2004,19 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
+                disabled={removingQuestionId === removeQuestionCandidate.id}
                 onClick={() => setRemoveQuestionCandidate(null)}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
               >
                 Hủy
               </button>
               <button
                 type="button"
+                disabled={removingQuestionId === removeQuestionCandidate.id}
                 onClick={() => handleRemoveExamQuestion(removeQuestionCandidate.id)}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-red-700 dark:hover:bg-red-800"
               >
-                Xóa khỏi bài thi
+                {removingQuestionId === removeQuestionCandidate.id ? 'Đang xóa...' : 'Xóa khỏi bài thi'}
               </button>
             </div>
           </div>
