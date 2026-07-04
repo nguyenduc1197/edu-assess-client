@@ -6,6 +6,7 @@ import { fetchClient, getCurrentProfileId } from '../../../api/fetchClient';
 import { formatCompetencyPercent } from '../../../utils/competencyPercent';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 import { downloadFile } from '../../../utils/downloadFile';
+import { EXAM_DATA_CHANGED_EVENT } from '../../../utils/examDataEvents';
 
 interface StudentAnalyticsPageProps {
   onLogout?: () => void;
@@ -201,6 +202,15 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
 
   useEffect(() => {
     fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  useEffect(() => {
+    const handleExamDataChanged = () => {
+      fetchAnalytics();
+    };
+
+    window.addEventListener(EXAM_DATA_CHANGED_EVENT, handleExamDataChanged);
+    return () => window.removeEventListener(EXAM_DATA_CHANGED_EVENT, handleExamDataChanged);
   }, [fetchAnalytics]);
 
   const handleExport = async () => {
