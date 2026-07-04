@@ -7,6 +7,7 @@ import { fetchClient } from '../../../api/fetchClient';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 import { downloadFile } from '../../../utils/downloadFile';
 import { formatCompetencyPercent } from '../../../utils/competencyPercent';
+import { EXAM_DATA_CHANGED_EVENT } from '../../../utils/examDataEvents';
 
 interface ClassReportPageProps {
   onLogout?: () => void;
@@ -102,6 +103,15 @@ const ClassReportPage: React.FC<ClassReportPageProps> = ({ onLogout }) => {
 
   useEffect(() => {
     fetchReport();
+  }, [fetchReport]);
+
+  useEffect(() => {
+    const handleExamDataChanged = () => {
+      fetchReport();
+    };
+
+    window.addEventListener(EXAM_DATA_CHANGED_EVENT, handleExamDataChanged);
+    return () => window.removeEventListener(EXAM_DATA_CHANGED_EVENT, handleExamDataChanged);
   }, [fetchReport]);
 
   const handleExport = async () => {

@@ -18,6 +18,7 @@ import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/M
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 import { competencyScoreToPercent, formatCompetencyPercent } from '../../../utils/competencyPercent';
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
+import { EXAM_DATA_CHANGED_EVENT } from '../../../utils/examDataEvents';
 
 interface TeacherResultsProps {
   onLogout?: () => void;
@@ -347,6 +348,19 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
       if (!silent) setIsDetailLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const handleExamDataChanged = () => {
+      fetchMetadata();
+      fetchResults();
+      if (selectedResult?.studentExamId) {
+        fetchAssessmentDetail(selectedResult.studentExamId, true);
+      }
+    };
+
+    window.addEventListener(EXAM_DATA_CHANGED_EVENT, handleExamDataChanged);
+    return () => window.removeEventListener(EXAM_DATA_CHANGED_EVENT, handleExamDataChanged);
+  }, [fetchAssessmentDetail, fetchMetadata, fetchResults, selectedResult?.studentExamId]);
 
   const fetchAntiCheatDetail = useCallback(async (studentExamId: string) => {
     try {

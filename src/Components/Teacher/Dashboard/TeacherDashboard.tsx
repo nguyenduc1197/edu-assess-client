@@ -22,6 +22,7 @@ import { formatCompetencyPercent } from '../../../utils/competencyPercent';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 import { formatVietnamDateTime } from '../../../utils/apiDateTime';
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
+import { emitExamDataChangedEvent } from '../../../utils/examDataEvents';
 
 let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
@@ -65,12 +66,14 @@ const getAccumulationGainTone = (value?: number | null) => {
 
 const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy] = useState<'title' | 'subject' | 'deadline' | 'status'>('deadline');
-  const [sortDirection] = useState<'asc' | 'desc'>('desc');
+  const [examListMode, setExamListMode] = useState<'active' | 'deleted'>('active');
   const [studentSortBy, setStudentSortBy] = useState<'studentName' | 'schoolClassName' | 'assessmentStatus' | 'score'>('studentName');
   const [studentSortDirection, setStudentSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [deletedAssignments, setDeletedAssignments] = useState<Assignment[]>([]);
+  const [isDeletedAssignmentsLoading, setIsDeletedAssignmentsLoading] = useState(false);
+  const [deletedAssignmentsError, setDeletedAssignmentsError] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; durationMinutes?: number; questionIds: string[]; schoolClassId: string; antiCheatEnabled?: boolean } | null>(null);
   const [selectedExam, setSelectedExam] = useState<Assignment | null>(null);
@@ -107,6 +110,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [removeQuestionCandidate, setRemoveQuestionCandidate] = useState<Question | null>(null);
   const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
   const [restoringQuestionId, setRestoringQuestionId] = useState<string | null>(null);
+  const [deletingExamId, setDeletingExamId] = useState<string | null>(null);
+  const [restoringExamId, setRestoringExamId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -120,6 +125,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
   const fetchAssignments = useCallback(async (page = 1, classId = '', keyword = '') => {
     try {
+      setDeletedAssignmentsError('');
       const query = new URLSearchParams({
         pageNumber: String(page),
         pageSize: String(PAGE_SIZE),
@@ -173,10 +179,77 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     }
   }, []);
 
+  const fetchDeletedAssignments = useCallback(async (page = 1, classId = '', keyword = '') => {
+    setIsDeletedAssignmentsLoading(true);
+    setDeletedAssignmentsError('');
+    try {
+      const query = new URLSearchParams({
+        pageNumber: String(page),
+        pageSize: String(PAGE_SIZE),
+        sortBy: 'start',
+        sortDirection: 'desc',
+      });
+      if (classId) query.append('schoolClassId', classId);
+      if (keyword) query.append('keyword', keyword);
+
+      const response = await fetchClient(`/exams/deleted?${query.toString()}`);
+      if (!response.ok) {
+        setDeletedAssignments([]);
+        setTotalExams(0);
+        setTotalPages(1);
+        setDeletedAssignmentsError('Không thể tải danh sách đề đã xóa.');
+        return;
+      }
+
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : (data.items || data.data || []);
+      const total = data.totalCount ?? items.length;
+      const pages = data.totalPages ?? (Math.ceil(total / PAGE_SIZE) || 1);
+      setTotalExams(total);
+      setTotalPages(pages);
+
+      const mappedAssignments: Assignment[] = items.map((item: any) => ({
+        id: item.id,
+        title: item.name,
+        subject: SubjectLabel.GD_KTPL,
+        deadline: item.end,
+        deadlineDisplay: formatExamWindow(item.start, item.end),
+        status: AssignmentStatus.GRADED,
+        isOverdue: true,
+        start: item.start,
+        end: item.end,
+        durationMinutes: typeof item.durationMinutes === 'number' ? item.durationMinutes : undefined,
+        antiCheatEnabled: item.antiCheatEnabled === true,
+      }));
+
+      setDeletedAssignments(mappedAssignments);
+    } catch (error) {
+      console.error('Failed to fetch deleted assignments', error);
+      setDeletedAssignments([]);
+      setTotalExams(0);
+      setTotalPages(1);
+      setDeletedAssignmentsError('Không thể tải danh sách đề đã xóa.');
+    } finally {
+      setIsDeletedAssignmentsLoading(false);
+    }
+  }, []);
+
+  const refreshExamLists = useCallback(async () => {
+    await Promise.all([
+      fetchAssignments(currentPage, filterClassId, searchQuery),
+      fetchDeletedAssignments(currentPage, filterClassId, searchQuery),
+    ]);
+  }, [currentPage, fetchAssignments, fetchDeletedAssignments, filterClassId, searchQuery]);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchAssignments(currentPage, filterClassId, searchQuery);
-  }, [fetchAssignments, currentPage, filterClassId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (examListMode === 'active') {
+      fetchAssignments(currentPage, filterClassId, searchQuery);
+      return;
+    }
+
+    fetchDeletedAssignments(currentPage, filterClassId, searchQuery);
+  }, [examListMode, fetchAssignments, fetchDeletedAssignments, currentPage, filterClassId, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load classes for filter dropdown
   useEffect(() => {
@@ -538,27 +611,10 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     }
   }, [selectedExam]);
 
-  const filteredAssignments = useMemo(() => {
-    const filtered = assignments.filter(a => 
-      a.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const modifier = sortDirection === 'asc' ? 1 : -1;
-
-    return [...filtered].sort((left, right) => {
-      switch (sortBy) {
-        case 'title':
-          return left.title.localeCompare(right.title) * modifier;
-        case 'subject':
-          return String(left.subject).localeCompare(String(right.subject)) * modifier;
-        case 'status':
-          return String(left.status).localeCompare(String(right.status)) * modifier;
-        case 'deadline':
-        default:
-          return (new Date(left.deadline).getTime() - new Date(right.deadline).getTime()) * modifier;
-      }
-    });
-  }, [assignments, searchQuery, sortBy, sortDirection]);
+  const displayedAssignments = useMemo(
+    () => (examListMode === 'active' ? assignments : deletedAssignments),
+    [assignments, deletedAssignments, examListMode]
+  );
 
   const sortedExamStudents = useMemo(() => {
     const modifier = studentSortDirection === 'asc' ? 1 : -1;
@@ -583,16 +639,61 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       return;
     }
 
+    setDeletingExamId(examId);
     try {
       const response = await fetchClient(`/exams/${examId}`, { method: "DELETE" });
-      if (response.ok) {
-        fetchAssignments(currentPage, filterClassId, searchQuery);
-      } else {
-        alert("Xóa thất bại. Vui lòng thử lại.");
+      if (response.status === 204 || response.ok) {
+        if (selectedExam?.id === examId) {
+          setSelectedExam(null);
+        }
+        await refreshExamLists();
+        emitExamDataChangedEvent();
+        setToast({ type: 'success', message: 'Đã xóa đề thành công.' });
+        return;
       }
+
+      if (response.status === 404) {
+        setToast({ type: 'error', message: 'Đề không tồn tại hoặc đã bị thay đổi trạng thái.' });
+        await refreshExamLists();
+        return;
+      }
+
+      setToast({ type: 'error', message: 'Xóa thất bại. Vui lòng thử lại.' });
     } catch (error) {
       console.error("Error deleting exam:", error);
-      alert("Đã xảy ra lỗi khi xóa bài tập.");
+      setToast({ type: 'error', message: 'Đã xảy ra lỗi khi xóa đề.' });
+    } finally {
+      setDeletingExamId(null);
+    }
+  };
+
+  const handleRestoreExam = async (examId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn khôi phục đề này không?')) {
+      return;
+    }
+
+    setRestoringExamId(examId);
+    try {
+      const response = await fetchClient(`/exams/${examId}/restore`, { method: 'POST' });
+      if (response.status === 204 || response.ok) {
+        await refreshExamLists();
+        emitExamDataChangedEvent();
+        setToast({ type: 'success', message: 'Khôi phục đề thành công.' });
+        return;
+      }
+
+      if (response.status === 404) {
+        setToast({ type: 'error', message: 'Đề không còn trong thùng rác hoặc đã được khôi phục.' });
+        await refreshExamLists();
+        return;
+      }
+
+      setToast({ type: 'error', message: 'Khôi phục đề thất bại. Vui lòng thử lại.' });
+    } catch (error) {
+      console.error('Error restoring exam:', error);
+      setToast({ type: 'error', message: 'Đã xảy ra lỗi khi khôi phục đề.' });
+    } finally {
+      setRestoringExamId(null);
     }
   };
 
@@ -860,7 +961,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         <CreateExamModal 
           onClose={() => { setIsCreateModalOpen(false); setEditingExam(null); }} 
           onSuccess={() => {
-            fetchAssignments(currentPage, filterClassId, searchQuery);
+            refreshExamLists();
           }}
           examToEdit={editingExam}
         />
@@ -911,18 +1012,55 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                   Quản lý bài thi
                 </span>
                 <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                  Bài Tập Đã Giao
+                  {examListMode === 'active' ? 'Bài Tập Đã Giao' : 'Thùng Rác Đề'}
                 </h1>
                 <p className="text-base text-gray-600 dark:text-gray-400">
-                  Theo dõi danh sách bài thi, trạng thái học sinh và kết quả ngay trên một màn hình.
+                  {examListMode === 'active'
+                    ? 'Theo dõi danh sách bài thi, trạng thái học sinh và kết quả ngay trên một màn hình.'
+                    : 'Xem danh sách đề đã xóa và khôi phục khi cần.'}
                 </p>
               </div>
 
-              <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-violet-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all">
-                <PlusCircle size={20} />
-                <span>Tạo Mới</span>
-              </button>
+              {examListMode === 'active' && (
+                <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-violet-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all">
+                  <PlusCircle size={20} />
+                  <span>Tạo Mới</span>
+                </button>
+              )}
             </div>
+          </div>
+
+          <div className="inline-flex w-fit rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-900">
+            <button
+              type="button"
+              onClick={() => {
+                setExamListMode('active');
+                setCurrentPage(1);
+                setSelectedExam(null);
+              }}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                examListMode === 'active'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+              }`}
+            >
+              Đề đang hoạt động
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setExamListMode('deleted');
+                setCurrentPage(1);
+                setSelectedExam(null);
+              }}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                examListMode === 'deleted'
+                  ? 'bg-primary text-white'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+              }`}
+            >
+              Đề đã xóa
+            </button>
           </div>
 
           {/* Toolbar & Filters */}
@@ -942,7 +1080,13 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     setCurrentPage(1);
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') fetchAssignments(1, filterClassId, searchQuery);
+                    if (e.key === 'Enter') {
+                      if (examListMode === 'active') {
+                        fetchAssignments(1, filterClassId, searchQuery);
+                        return;
+                      }
+                      fetchDeletedAssignments(1, filterClassId, searchQuery);
+                    }
                   }}
                   className="block h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-background-dark dark:text-white dark:placeholder-gray-500 transition-colors"
                 />
@@ -961,7 +1105,13 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               </select>
 
               <button
-                onClick={() => fetchAssignments(1, filterClassId, searchQuery)}
+                onClick={() => {
+                  if (examListMode === 'active') {
+                    fetchAssignments(1, filterClassId, searchQuery);
+                    return;
+                  }
+                  fetchDeletedAssignments(1, filterClassId, searchQuery);
+                }}
                 className="h-10 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
               >
                 Tìm kiếm
@@ -975,13 +1125,22 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
           {/* Table Data */}
           <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+            {examListMode === 'deleted' && deletedAssignmentsError && (
+              <div className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
+                {deletedAssignmentsError}
+              </div>
+            )}
             <div className="space-y-3 p-3 sm:hidden">
-              {filteredAssignments.length === 0 ? (
+              {examListMode === 'deleted' && isDeletedAssignmentsLoading ? (
                 <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                  Chưa có bài thi nào.
+                  Đang tải thùng rác đề...
+                </div>
+              ) : displayedAssignments.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                  {examListMode === 'active' ? 'Chưa có bài thi nào.' : 'Chưa có đề nào trong thùng rác.'}
                 </div>
               ) : (
-                filteredAssignments.map((a) => (
+                displayedAssignments.map((a) => (
                   <div key={a.id} className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/40">
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">{a.title}</p>
@@ -999,43 +1158,57 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                       <p>{a.deadlineDisplay}</p>
                       <p>{formatExamDuration(a.durationMinutes)}</p>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenExamStudents(a)}
-                        className="min-h-10 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
-                      >
-                        Học sinh
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { handleOpenExamStudents(a); setExamDetailTab('analytics'); fetchExamAnalytics(a.id); }}
-                        className="min-h-10 rounded-xl border border-violet-200 px-3 py-2 text-sm font-medium text-violet-700 dark:border-violet-800 dark:text-violet-300"
-                      >
-                        Phân tích
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEditExam(a)}
-                        className="min-h-10 rounded-xl border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 dark:border-blue-800 dark:text-blue-300"
-                      >
-                        Chỉnh sửa
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDuplicateExam(a.id)}
-                        className="min-h-10 rounded-xl border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:text-emerald-300"
-                      >
-                        Nhân đôi
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteExam(a.id)}
-                        className="col-span-2 min-h-10 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-800 dark:text-red-300"
-                      >
-                        Xóa bài thi
-                      </button>
-                    </div>
+                    {examListMode === 'active' ? (
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenExamStudents(a)}
+                          className="min-h-10 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                        >
+                          Học sinh
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { handleOpenExamStudents(a); setExamDetailTab('analytics'); fetchExamAnalytics(a.id); }}
+                          className="min-h-10 rounded-xl border border-violet-200 px-3 py-2 text-sm font-medium text-violet-700 dark:border-violet-800 dark:text-violet-300"
+                        >
+                          Phân tích
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEditExam(a)}
+                          className="min-h-10 rounded-xl border border-blue-200 px-3 py-2 text-sm font-medium text-blue-700 dark:border-blue-800 dark:text-blue-300"
+                        >
+                          Chỉnh sửa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateExam(a.id)}
+                          className="min-h-10 rounded-xl border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:text-emerald-300"
+                        >
+                          Nhân đôi
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingExamId === a.id}
+                          onClick={() => handleDeleteExam(a.id)}
+                          className="col-span-2 min-h-10 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800 dark:text-red-300"
+                        >
+                          {deletingExamId === a.id ? 'Đang xóa...' : 'Xóa bài thi'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-4">
+                        <button
+                          type="button"
+                          disabled={restoringExamId === a.id}
+                          onClick={() => handleRestoreExam(a.id)}
+                          className="min-h-10 w-full rounded-xl border border-emerald-200 px-3 py-2 text-sm font-medium text-emerald-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-800 dark:text-emerald-300"
+                        >
+                          {restoringExamId === a.id ? 'Đang khôi phục...' : 'Khôi phục'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -1052,14 +1225,20 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAssignments.length === 0 ? (
+                  {examListMode === 'deleted' && isDeletedAssignmentsLoading ? (
                     <tr>
                       <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                        Chưa có bài thi nào.
+                        Đang tải thùng rác đề...
+                      </td>
+                    </tr>
+                  ) : displayedAssignments.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                        {examListMode === 'active' ? 'Chưa có bài thi nào.' : 'Chưa có đề nào trong thùng rác.'}
                       </td>
                     </tr>
                   ) : (
-                    filteredAssignments.map((a) => (
+                    displayedAssignments.map((a) => (
                       <tr key={a.id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                         <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white max-w-[220px] truncate">
                           {a.title}
@@ -1083,46 +1262,61 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              title="Xem học sinh"
-                              onClick={() => handleOpenExamStudents(a)}
-                              className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors text-xs font-medium"
-                            >
-                              Học sinh
-                            </button>
-                            <button
-                              type="button"
-                              title="Phân tích"
-                              onClick={() => { handleOpenExamStudents(a); setExamDetailTab('analytics'); fetchExamAnalytics(a.id); }}
-                              className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20 transition-colors"
-                            >
-                              <BarChart2 size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              title="Chỉnh sửa"
-                              onClick={() => handleEditExam(a)}
-                              className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              title="Nhân đôi"
-                              onClick={() => handleDuplicateExam(a.id)}
-                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20 transition-colors"
-                            >
-                              <Copy size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              title="Xóa"
-                              onClick={() => handleDeleteExam(a.id)}
-                              className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
-                            >
-                              <span className="material-symbols-outlined text-[18px]">delete</span>
-                            </button>
+                            {examListMode === 'active' ? (
+                              <>
+                                <button
+                                  type="button"
+                                  title="Xem học sinh"
+                                  onClick={() => handleOpenExamStudents(a)}
+                                  className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors text-xs font-medium"
+                                >
+                                  Học sinh
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Phân tích"
+                                  onClick={() => { handleOpenExamStudents(a); setExamDetailTab('analytics'); fetchExamAnalytics(a.id); }}
+                                  className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20 transition-colors"
+                                >
+                                  <BarChart2 size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Chỉnh sửa"
+                                  onClick={() => handleEditExam(a)}
+                                  className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Nhân đôi"
+                                  onClick={() => handleDuplicateExam(a.id)}
+                                  className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20 transition-colors"
+                                >
+                                  <Copy size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Xóa"
+                                  disabled={deletingExamId === a.id}
+                                  onClick={() => handleDeleteExam(a.id)}
+                                  className="p-1.5 rounded-lg text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-900/20"
+                                >
+                                  {deletingExamId === a.id ? <RotateCw size={16} className="animate-spin" /> : <span className="material-symbols-outlined text-[18px]">delete</span>}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                title="Khôi phục"
+                                disabled={restoringExamId === a.id}
+                                onClick={() => handleRestoreExam(a.id)}
+                                className="rounded-lg border border-emerald-200 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/20"
+                              >
+                                {restoringExamId === a.id ? 'Đang khôi phục...' : 'Khôi phục'}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
