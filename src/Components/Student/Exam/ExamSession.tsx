@@ -554,7 +554,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
                       <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực điều chỉnh hành vi</p>
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                        <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((behaviorAdjustmentScore / 10) * 100, 100))}%` }} />
+                        <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min(behaviorAdjustmentScore, 100))}%` }} />
                       </div>
                       {behaviorAdjustmentFeedback && (
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{behaviorAdjustmentFeedback}</p>
@@ -565,7 +565,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
                       <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực phát triển bản thân</p>
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                        <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((selfDevelopmentScore / 10) * 100, 100))}%` }} />
+                        <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min(selfDevelopmentScore, 100))}%` }} />
                       </div>
                       {selfDevelopmentFeedback && (
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{selfDevelopmentFeedback}</p>
@@ -576,7 +576,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
                       <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Năng lực tìm hiểu và tham gia hoạt động kinh tế - xã hội</p>
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                        <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min((economicSocialParticipationScore / 10) * 100, 100))}%` }} />
+                        <div className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${Math.max(0, Math.min(economicSocialParticipationScore, 100))}%` }} />
                       </div>
                       {economicSocialParticipationFeedback && (
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{economicSocialParticipationFeedback}</p>
@@ -598,13 +598,13 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
                           <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {(assessmentResult.behaviorAdjustmentAccumulation.latestScore * 10).toFixed(0)}%
+                            {assessmentResult.behaviorAdjustmentAccumulation.latestScore.toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trung bình</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {(assessmentResult.behaviorAdjustmentAccumulation.averageScore * 10).toFixed(0)}%
+                            {assessmentResult.behaviorAdjustmentAccumulation.averageScore.toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
@@ -621,8 +621,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                             {assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt === null
                               ? '--'
                               : assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt > 0
-                              ? `+${(assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`
-                              : `${(assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`}
+                              ? `+${assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt.toFixed(0)}%`
+                              : `${assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt.toFixed(0)}%`}
                           </p>
                         </div>
                       </div>
@@ -636,13 +636,13 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
                           <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {(assessmentResult.selfDevelopmentAccumulation.latestScore * 10).toFixed(0)}%
+                            {assessmentResult.selfDevelopmentAccumulation.latestScore.toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trung bình</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {(assessmentResult.selfDevelopmentAccumulation.averageScore * 10).toFixed(0)}%
+                            {assessmentResult.selfDevelopmentAccumulation.averageScore.toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
@@ -659,8 +659,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                             {assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt === null
                               ? '--'
                               : assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt > 0
-                              ? `+${(assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`
-                              : `${(assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`}
+                              ? `+${assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt.toFixed(0)}%`
+                              : `${assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt.toFixed(0)}%`}
                           </p>
                         </div>
                       </div>
@@ -674,13 +674,13 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
                           <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {(assessmentResult.economicSocialParticipationAccumulation.latestScore * 10).toFixed(0)}%
+                            {assessmentResult.economicSocialParticipationAccumulation.latestScore.toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trung bình</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {(assessmentResult.economicSocialParticipationAccumulation.averageScore * 10).toFixed(0)}%
+                            {assessmentResult.economicSocialParticipationAccumulation.averageScore.toFixed(0)}%
                           </p>
                         </div>
                         <div className="text-center">
@@ -697,8 +697,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                             {assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt === null
                               ? '--'
                               : assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt > 0
-                              ? `+${(assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`
-                              : `${(assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt * 10).toFixed(0)}%`}
+                              ? `+${assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt.toFixed(0)}%`
+                              : `${assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt.toFixed(0)}%`}
                           </p>
                         </div>
                       </div>

@@ -46,13 +46,13 @@ const getFeedbackItems = (feedback?: string | null) =>
 
 const formatAccumulationPercent = (value?: number | null) => {
   if (value === null || value === undefined) return '--';
-  return `${(value * 10).toFixed(0)}%`;
+  return `${value.toFixed(0)}%`;
 };
 
 const formatAccumulationGain = (value?: number | null) => {
   if (value === null || value === undefined) return '--';
 
-  const percentValue = `${(value * 10).toFixed(0)}%`;
+  const percentValue = `${value.toFixed(0)}%`;
   return value > 0 ? `+${percentValue}` : percentValue;
 };
 
@@ -1785,25 +1785,24 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                   ) : examQuestions.length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400">Bài thi chưa có câu hỏi nào.</p>
                   ) : (
-                    <div className="space-y-2">
-                      {examQuestions.map((q, index) => (
-                        <div
-                          key={q.id}
-                          className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
-                        >
-                          <div className="flex items-start gap-3">
-                            <span className="flex-shrink-0 mt-0.5 text-xs font-bold text-blue-600 dark:text-blue-400 w-6 text-right">
-                              {index + 1}.
-                            </span>
-                            <div className="flex-1 min-w-0 space-y-2">
-                              <p className="text-sm text-gray-900 dark:text-gray-100">{q.content}</p>
-                              <div className="flex flex-wrap items-center gap-2">
-                                {q.questionFormatLabel && (
-                                  <span className="text-xs text-violet-600 dark:text-violet-400">{q.questionFormatLabel}</span>
-                                )}
-                                {q.difficultyLabel && (
-                                  <span className="text-xs text-amber-600 dark:text-amber-400">{q.difficultyLabel}</span>
-                                )}
+                    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-800">
+                          <tr>
+                            <th className="w-10 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">STT</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nội dung câu hỏi</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Loại năng lực</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Loại câu</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Độ khó</th>
+                            <th className="w-10 px-3 py-2" />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-900">
+                          {examQuestions.map((q, index) => (
+                            <tr key={q.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                              <td className="px-3 py-2 text-center text-xs font-bold text-blue-600 dark:text-blue-400">{index + 1}</td>
+                              <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-100">{q.content}</td>
+                              <td className="px-3 py-2">
                                 <select
                                   value={q.competencyType ?? ''}
                                   disabled={updatingQuestionId === q.id}
@@ -1821,26 +1820,30 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                   ))}
                                 </select>
                                 {updatingQuestionId === q.id && (
-                                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+                                  <span className="ml-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
                                 )}
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              disabled={removingQuestionId === q.id}
-                              onClick={() => setRemoveQuestionCandidate(q)}
-                              className="flex-shrink-0 rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-red-900/20"
-                              title="Xóa câu hỏi khỏi bài thi"
-                            >
-                              {removingQuestionId === q.id ? (
-                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600 inline-block" />
-                              ) : (
-                                <Trash2 size={16} />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                              </td>
+                              <td className="px-3 py-2 text-xs text-violet-600 dark:text-violet-400">{q.questionFormatLabel ?? '—'}</td>
+                              <td className="px-3 py-2 text-xs text-amber-600 dark:text-amber-400">{q.difficultyLabel ?? '—'}</td>
+                              <td className="px-3 py-2 text-right">
+                                <button
+                                  type="button"
+                                  disabled={removingQuestionId === q.id}
+                                  onClick={() => setRemoveQuestionCandidate(q)}
+                                  className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-red-900/20"
+                                  title="Xóa câu hỏi khỏi bài thi"
+                                >
+                                  {removingQuestionId === q.id ? (
+                                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600" />
+                                  ) : (
+                                    <Trash2 size={16} />
+                                  )}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>

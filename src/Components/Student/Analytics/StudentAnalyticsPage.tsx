@@ -31,7 +31,7 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
 
   const yScale = (value: number | null) => {
     if (value === null) return null;
-    return CHART_PADDING.top + innerHeight - (value / 10) * innerHeight;
+    return CHART_PADDING.top + innerHeight - (value / 100) * innerHeight;
   };
 
   const buildPath = (getValue: (item: AnalyticsProgressItem) => number | null) => {
@@ -46,7 +46,7 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
     return `M ${points.join(' L ')}`;
   };
 
-  const overallPath = buildPath((item) => item.score);
+  const overallPath = buildPath((item) => item.score * 10);
   const behaviorPath = buildPath((item) => item.behaviorAdjustmentScore);
   const selfDevPath = buildPath((item) => item.selfDevelopmentScore);
   const econPath = buildPath((item) => item.economicSocialParticipationScore);
@@ -55,8 +55,8 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
     <div className="overflow-x-auto">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[400px]">
         {/* Y-axis labels */}
-        {[0, 2, 4, 6, 8, 10].map((tick) => {
-          const y = CHART_PADDING.top + innerHeight - (tick / 10) * innerHeight;
+        {[0, 20, 40, 60, 80, 100].map((tick) => {
+          const y = CHART_PADDING.top + innerHeight - (tick / 100) * innerHeight;
           return (
             <g key={tick}>
               <line
@@ -74,7 +74,7 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
                 fontSize="10"
                 fill="#9ca3af"
               >
-                {tick}
+                {tick}%
               </text>
             </g>
           );
@@ -120,8 +120,8 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
           const x = xScale(idx);
           return (
             <g key={`dots-${item.studentExamId}`}>
-              {yScale(item.score) !== null && (
-                <circle cx={x} cy={yScale(item.score)!} r="3" fill="#3b82f6" />
+              {yScale(item.score * 10) !== null && (
+                <circle cx={x} cy={yScale(item.score * 10)!} r="3" fill="#3b82f6" />
               )}
               {item.behaviorAdjustmentScore !== null && yScale(item.behaviorAdjustmentScore) !== null && (
                 <circle cx={x} cy={yScale(item.behaviorAdjustmentScore)!} r="3" fill="#8b5cf6" />
