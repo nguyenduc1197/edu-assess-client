@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Download, Search, PlusCircle, Copy, Edit2, BarChart2, RotateCw } from 'lucide-react';
+import { Download, Search, PlusCircle, Copy, Edit2, BarChart2, RotateCw, Trash2, AlertTriangle } from 'lucide-react';
 import {
   AssessmentResult,
   Assignment,
   AssignmentStatus,
+  CompetencyOption,
   ExamAnalytics,
   ExamStudentStatusItem,
   LoginProps,
+  Question,
   ScoreDistributionItem,
   SubjectLabel,
   User,
@@ -85,7 +87,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [examAnalytics, setExamAnalytics] = useState<ExamAnalytics | null>(null);
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState('');
-  const [examDetailTab, setExamDetailTab] = useState<'students' | 'analytics'>('students');
+  const [examDetailTab, setExamDetailTab] = useState<'students' | 'analytics' | 'questions'>('students');
   const [filterClassId, setFilterClassId] = useState('');
   const [filterClasses, setFilterClasses] = useState<{ id: string; name: string }[]>([]);
   const [totalExams, setTotalExams] = useState(0);
@@ -94,6 +96,13 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const PAGE_SIZE = 20;
   const [isExamExporting, setIsExamExporting] = useState(false);
   const [examExportError, setExamExportError] = useState('');
+  const [examQuestions, setExamQuestions] = useState<Question[]>([]);
+  const [isExamQuestionsLoading, setIsExamQuestionsLoading] = useState(false);
+  const [examQuestionsError, setExamQuestionsError] = useState('');
+  const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
+  const [updatingQuestionId, setUpdatingQuestionId] = useState<string | null>(null);
+  const [removeQuestionCandidate, setRemoveQuestionCandidate] = useState<Question | null>(null);
+  const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -661,6 +670,93 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     }
   };
 
+  const fetchExamQuestions = useCallback(async (examId: string) => {
+    setIsExamQuestionsLoading(true);
+    setExamQuestionsError('');
+    try {
+      const [questionsRes, competencyRes] = await Promise.all([
+        fetchClient(`/questions?examId=${examId}&pageNumber=1&pageSize=200`),
+        competencyOptions.length === 0 ? fetchClient('/questions/competency-types') : Promise.resolve(null),
+      ]);
+      if (questionsRes.ok) {
+        const data = await questionsRes.json();
+        const items: Question[] = Array.isArray(data) ? data : (data.items || data.data || []);
+        setExamQuestions(items);
+      } else {
+        setExamQuestionsError('Không thể tải danh sách câu hỏi.');
+      }
+      if (competencyRes && competencyRes.ok) {
+        const opts: CompetencyOption[] = await competencyRes.json();
+        setCompetencyOptions(Array.isArray(opts) ? opts : []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch exam questions', err);
+      setExamQuestionsError('Không thể tải danh sách câu hỏi.');
+    } finally {
+      setIsExamQuestionsLoading(false);
+    }
+  }, [competencyOptions.length]);
+
+  const handleUpdateQuestionCompetency = async (questionId: string, competencyType: string) => {
+    if (!selectedExam) return;
+    setUpdatingQuestionId(questionId);
+    try {
+      const response = await fetchClient(`/exams/${selectedExam.id}/questions/${questionId}/competency`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ competencyType }),
+      });
+      if (response.status === 204 || response.ok) {
+        setExamQuestions((prev) =>
+          prev.map((q) =>
+            q.id === questionId
+              ? {
+                  ...q,
+                  competencyType,
+                  competencyLabel: competencyOptions.find((o) => o.value === competencyType)?.label ?? q.competencyLabel,
+                }
+              : q
+          )
+        );
+        setToast({ type: 'success', message: 'Đã cập nhật loại năng lực.' });
+      } else if (response.status === 400) {
+        const body = await response.json().catch(() => ({}));
+        setToast({ type: 'error', message: (body as any)?.message || 'Giá trị năng lực không hợp lệ.' });
+      } else {
+        setToast({ type: 'error', message: 'Cập nhật thất bại. Vui lòng thử lại.' });
+      }
+    } catch (err) {
+      console.error('Failed to update question competency', err);
+      setToast({ type: 'error', message: 'Cập nhật thất bại. Vui lòng thử lại.' });
+    } finally {
+      setUpdatingQuestionId(null);
+    }
+  };
+
+  const handleRemoveExamQuestion = async (questionId: string) => {
+    if (!selectedExam) return;
+    setRemovingQuestionId(questionId);
+    setRemoveQuestionCandidate(null);
+    try {
+      const response = await fetchClient(`/exams/${selectedExam.id}/questions/${questionId}`, {
+        method: 'DELETE',
+      });
+      if (response.status === 204 || response.ok) {
+        setExamQuestions((prev) => prev.filter((q) => q.id !== questionId));
+        setToast({ type: 'success', message: 'Đã xóa câu hỏi khỏi bài thi.' });
+      } else if (response.status === 404) {
+        setToast({ type: 'error', message: 'Không tìm thấy câu hỏi trong bài thi.' });
+      } else {
+        setToast({ type: 'error', message: 'Xóa câu hỏi thất bại. Vui lòng thử lại.' });
+      }
+    } catch (err) {
+      console.error('Failed to remove question from exam', err);
+      setToast({ type: 'error', message: 'Xóa câu hỏi thất bại. Vui lòng thử lại.' });
+    } finally {
+      setRemovingQuestionId(null);
+    }
+  };
+
   return (
     <div className="relative flex min-h-screen w-full flex-col lg:flex-row group/design-root">
       {toast && (
@@ -1030,6 +1126,9 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     setExamAnalytics(null);
                     setExamDetailTab('students');
                     setExamExportError('');
+                    setExamQuestions([]);
+                    setExamQuestionsError('');
+                    setRemoveQuestionCandidate(null);
                   }}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
@@ -1070,6 +1169,23 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                 }`}
               >
                 Phân tích
+              </button>
+              <button
+                onClick={() => {
+                  setExamDetailTab('questions');
+                  if (selectedExam && examQuestions.length === 0 && !isExamQuestionsLoading) {
+                    fetchExamQuestions(selectedExam.id);
+                  }
+                }}
+                role="tab"
+                aria-selected={examDetailTab === 'questions'}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  examDetailTab === 'questions'
+                    ? 'border-primary text-primary dark:border-blue-400 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
+              >
+                Câu hỏi
               </button>
             </div>
 
@@ -1650,6 +1766,116 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                   )}
                 </div>
               )}
+
+              {examDetailTab === 'questions' && (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+                    <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+                    <span>Thay đổi hoặc xóa câu hỏi sẽ tự động tính lại điểm cho các học sinh đã nộp bài.</span>
+                  </div>
+
+                  {examQuestionsError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                      {examQuestionsError}
+                    </div>
+                  )}
+
+                  {isExamQuestionsLoading ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải câu hỏi...</p>
+                  ) : examQuestions.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Bài thi chưa có câu hỏi nào.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {examQuestions.map((q, index) => (
+                        <div
+                          key={q.id}
+                          className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className="flex-shrink-0 mt-0.5 text-xs font-bold text-blue-600 dark:text-blue-400 w-6 text-right">
+                              {index + 1}.
+                            </span>
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <p className="text-sm text-gray-900 dark:text-gray-100">{q.content}</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {q.questionFormatLabel && (
+                                  <span className="text-xs text-violet-600 dark:text-violet-400">{q.questionFormatLabel}</span>
+                                )}
+                                {q.difficultyLabel && (
+                                  <span className="text-xs text-amber-600 dark:text-amber-400">{q.difficultyLabel}</span>
+                                )}
+                                <select
+                                  value={q.competencyType ?? ''}
+                                  disabled={updatingQuestionId === q.id}
+                                  onChange={(e) => handleUpdateQuestionCompetency(q.id, e.target.value)}
+                                  className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                                  aria-label="Loại năng lực"
+                                >
+                                  {competencyOptions.length === 0 && q.competencyType && (
+                                    <option value={q.competencyType}>{q.competencyLabel ?? q.competencyType}</option>
+                                  )}
+                                  {competencyOptions.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                {updatingQuestionId === q.id && (
+                                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={removingQuestionId === q.id}
+                              onClick={() => setRemoveQuestionCandidate(q)}
+                              className="flex-shrink-0 rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-red-900/20"
+                              title="Xóa câu hỏi khỏi bài thi"
+                            >
+                              {removingQuestionId === q.id ? (
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600 inline-block" />
+                              ) : (
+                                <Trash2 size={16} />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {removeQuestionCandidate && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="w-full rounded-t-3xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-lg sm:rounded-2xl">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Xóa câu hỏi khỏi bài thi?</h3>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+              {removeQuestionCandidate.content}
+            </p>
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+              <p>Câu hỏi sẽ bị xóa khỏi bài thi (không xóa khỏi ngân hàng câu hỏi).</p>
+              <p className="mt-1">Điểm sẽ được tính lại cho tất cả học sinh đã nộp bài.</p>
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setRemoveQuestionCandidate(null)}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRemoveExamQuestion(removeQuestionCandidate.id)}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+              >
+                Xóa khỏi bài thi
+              </button>
             </div>
           </div>
         </div>
