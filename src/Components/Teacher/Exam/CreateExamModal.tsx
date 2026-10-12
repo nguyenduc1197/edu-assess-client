@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles } from 'lucide-react';
+import { PlusCircle, Sparkles } from 'lucide-react';
 import { Class, CompetencyOption, Question, SubjectLabel } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
 import AIQuestionGeneratorModal from '../Question/AIQuestionGeneratorModal';
+import AddQuestionMenu from './AddQuestionMenu';
+import { buildCreateQuestionPayload } from '../../../utils/questionPayload';
+import { formatPoints } from '../../../utils/essay';
 
 interface ExamToEdit {
   id: string;
@@ -56,6 +59,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   const [durationMinutes, setDurationMinutes] = useState(getInitialDurationMinutes);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>(examToEdit?.questionIds || []);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
   
@@ -161,6 +165,36 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   }, []);
 
 
+  // Manually created questions (including essay questions) are saved to the bank and auto-selected.
+  const handleManualQuestionsCreated = async (newQuestions: Question[]) => {
+    if (newQuestions.length === 0) return;
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetchClient('/questions/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newQuestions.map(buildCreateQuestionPayload)),
+      });
+
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(body?.message || 'Không thể lưu câu hỏi.');
+      }
+
+      const createdIds: string[] = Array.isArray(body?.questionIds) ? body.questionIds : [];
+      setSuccessMessage(`Đã thêm ${body?.count ?? newQuestions.length} câu hỏi và chọn vào bài kiểm tra.`);
+      await fetchQuestions();
+      if (createdIds.length > 0) {
+        setSelectedQuestionIds((prev) => Array.from(new Set([...prev, ...createdIds])));
+      }
+    } catch (err) {
+      console.error('Failed to create manual questions:', err);
+      setError(err instanceof Error ? err.message : 'Không thể lưu câu hỏi.');
+    }
+  };
+
   const handleQuestionToggle = (id: string) => {
     setSelectedQuestionIds(prev => 
       prev.includes(id) ? prev.filter(qId => qId !== id) : [...prev, id]
@@ -255,6 +289,12 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                 setSelectedQuestionIds((prev) => Array.from(new Set([...prev, ...(result.savedQuestionIds || [])])));
               }
             }}
+          />
+        )}
+        {isManualModalOpen && (
+          <AddQuestionMenu
+            onClose={() => setIsManualModalOpen(false)}
+            onAddQuestions={handleManualQuestionsCreated}
           />
         )}
         {/* Header */}
@@ -437,6 +477,15 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   </span>
                 </div>
 
+                <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsManualModalOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-white px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 transition-colors dark:bg-gray-800 dark:text-blue-300"
+                >
+                  <PlusCircle size={16} />
+                  Thêm thủ công (kể cả tự luận)
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsAIModalOpen(true)}
@@ -445,6 +494,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                   <Sparkles size={16} />
                   Tạo câu hỏi bằng AI
                 </button>
+                </div>
               </div>
               
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 h-64 overflow-y-auto p-2 space-y-2">
@@ -479,6 +529,9 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                           {q.competencyLabel && <span className="text-indigo-600 dark:text-indigo-400">{q.competencyLabel}</span>}
                           {q.questionFormatLabel && <span className="text-violet-600 dark:text-violet-400">{q.questionFormatLabel}</span>}
                           {q.difficultyLabel && <span className="text-amber-600 dark:text-amber-400">{q.difficultyLabel}</span>}
+                          {q.questionFormat === 'Essay' && (
+                            <span className="text-gray-600 dark:text-gray-300">{formatPoints(q.maxPoints ?? 1)} điểm</span>
+                          )}
                         </div>
                       </div>
                     </label>

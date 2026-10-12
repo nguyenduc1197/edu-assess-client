@@ -1,4 +1,4 @@
-export type QuestionFormat = 'SingleChoice' | 'TrueFalse';
+export type QuestionFormat = 'SingleChoice' | 'TrueFalse' | 'Essay';
 export type DifficultyLevel = 'Easy' | 'Medium' | 'Hard';
 
 export interface Choice {
@@ -26,6 +26,10 @@ export interface Question {
   sourceEvidence?: string;
   choices?: Choice[];
   dateCreated?: string;
+  /** Essay: max points (0 < x <= 10). Other formats always weigh 1 point. */
+  maxPoints?: number;
+  /** Essay: sample answer / grading criteria (teacher only, never sent to students). */
+  sampleAnswer?: string | null;
 }
 
 export interface AIQuestionGenerateResponse {
@@ -119,6 +123,8 @@ export type AppView = 'dashboard' | 'exam-session';
 export type AnswerState = {
   content?: string;
   choiceId?: string;
+  /** Essay answer text typed by the student. */
+  essayAnswer?: string;
 };
 
 export enum AssignmentStatus {
@@ -221,6 +227,8 @@ export interface StudentResultSummary {
   assessedAt?: string | null;
   assessmentError?: string | null;
   canRetryAssessment?: boolean;
+  pendingEssayCount?: number;
+  awaitingTeacherEssayCount?: number;
 }
 
 export type AntiCheatStatus = 'Normal' | 'Suspicious' | 'Violated';
@@ -435,8 +443,53 @@ export interface AssessmentResult {
   selfDevelopmentAccumulation: CompetencyAccumulation | null;
   economicSocialParticipationAccumulation: CompetencyAccumulation | null;
   wrongAnswers?: WrongAnswerReview[];
+  essayAnswers?: EssayAnswerReview[];
+  pendingEssayCount?: number;
+  awaitingTeacherEssayCount?: number;
   assessmentError: string | null;
   finishedAt: string;
   assessedAt: string | null;
   canRetryAssessment?: boolean;
+}
+
+export type EssayGradingStatus =
+  | 'NotApplicable'
+  | 'Pending'
+  | 'AiGraded'
+  | 'AwaitingTeacher'
+  | 'TeacherGraded'
+  | 'NoAnswer';
+
+/** One essay answer in a result. score / maxPoints are POINTS; score is null while pending or awaiting teacher. */
+export interface EssayAnswerReview {
+  answerId: string;
+  questionId: string;
+  questionContent: string;
+  competencyType?: string;
+  competencyLabel?: string;
+  difficultyLevel?: DifficultyLevel;
+  difficultyLabel?: string;
+  maxPoints: number;
+  studentAnswer?: string | null;
+  score: number | null;
+  gradingStatus: EssayGradingStatus;
+  gradingStatusLabel?: string;
+  gradingFeedback?: string | null;
+  gradedAt?: string | null;
+  gradedByTeacherId?: string | null;
+  isTeacherGraded?: boolean;
+  canRegradeWithAi?: boolean;
+  /** Only returned for teachers. */
+  sampleAnswer?: string | null;
+}
+
+export interface EssayGradeResult {
+  studentExamId: string;
+  answer: EssayAnswerReview;
+  score: number | null;
+  behaviorAdjustmentScore: number | null;
+  selfDevelopmentScore: number | null;
+  economicSocialParticipationScore: number | null;
+  pendingEssayCount: number;
+  awaitingTeacherEssayCount: number;
 }

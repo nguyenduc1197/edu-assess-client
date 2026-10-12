@@ -5,6 +5,7 @@ import Sidebar from '../../Common/Sidebar/Sidebar';
 import AddQuestionMenu from '../Exam/AddQuestionMenu';
 import AIQuestionGeneratorModal from './AIQuestionGeneratorModal';
 import { fetchClient } from '../../../api/fetchClient';
+import { buildCreateQuestionPayload } from '../../../utils/questionPayload';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 
 interface QuestionManagementProps {
@@ -101,6 +102,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         passageGroupKey: item.passageGroupKey,
         statementOrder: item.statementOrder,
         sourceEvidence: item.sourceEvidence,
+        maxPoints: item.maxPoints,
+        sampleAnswer: item.sampleAnswer,
         choices: (item.choices || []).map((choice: any) => ({
           id: choice.id,
           optionLabel: choice.optionLabel,
@@ -140,21 +143,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
     setSortDirection(column === 'dateCreated' ? 'desc' : 'asc');
   };
 
-  const mapQuestionPayload = (question: Question) => ({
-    content: question.content.trim(),
-    competencyType: question.competencyType,
-    questionFormat: question.questionFormat,
-    difficultyLevel: question.difficultyLevel,
-    passageText: question.passageText?.trim() || undefined,
-    passageGroupKey: question.passageGroupKey?.trim() || undefined,
-    statementOrder: question.statementOrder ?? undefined,
-    sourceEvidence: question.sourceEvidence?.trim() || undefined,
-    choices: (question.choices || []).map((choice) => ({
-      optionLabel: choice.optionLabel,
-      content: choice.content.trim(),
-      isCorrect: !!choice.isCorrect,
-    })),
-  });
+  const mapQuestionPayload = buildCreateQuestionPayload;
 
   const handleAddQuestion = async (newQuestion: Question) => {
     try {
@@ -170,7 +159,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
       });
 
       if (!response.ok) {
-        throw new Error('Thêm câu hỏi thất bại');
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.message || 'Thêm câu hỏi thất bại');
       }
 
       setSuccessMessage('Thêm câu hỏi thành công.');
@@ -178,7 +168,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
       fetchQuestions();
     } catch (submitError) {
       console.error('Error adding question:', submitError);
-      setError('Thêm câu hỏi thất bại. Vui lòng thử lại.');
+      const apiMessage = submitError instanceof Error && submitError.message !== 'Thêm câu hỏi thất bại' ? ` ${submitError.message}` : '';
+      setError(`Thêm câu hỏi thất bại.${apiMessage} Vui lòng thử lại.`);
     }
   };
 
@@ -210,7 +201,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
       fetchQuestions();
     } catch (submitError) {
       console.error('Error adding questions:', submitError);
-      setError('Đã xảy ra lỗi khi thêm bộ câu hỏi.');
+      const apiMessage = submitError instanceof Error && submitError.message !== 'Bulk create failed' ? ` ${submitError.message}` : '';
+      setError(`Đã xảy ra lỗi khi thêm bộ câu hỏi.${apiMessage}`);
     }
   };
 
@@ -365,6 +357,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
               <option value="">Tất cả dạng câu</option>
               <option value="SingleChoice">Trắc nghiệm</option>
               <option value="TrueFalse">Đúng / Sai</option>
+              <option value="Essay">Tự luận</option>
             </select>
 
             <button
@@ -406,6 +399,9 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         <span className="text-violet-600 dark:text-violet-400">{question.questionFormatLabel || question.questionFormat || '—'}</span>
                         {question.difficultyLabel && <span className="ml-2 text-amber-600 dark:text-amber-400">{question.difficultyLabel}</span>}
+                        {question.questionFormat === 'Essay' && (
+                          <span className="ml-2 text-gray-600 dark:text-gray-300">{question.maxPoints ?? 1} điểm</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         {question.dateCreated || '—'}

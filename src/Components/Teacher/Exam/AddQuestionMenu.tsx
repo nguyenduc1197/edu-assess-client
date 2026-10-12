@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, X, ChevronDown, Info } from 'lucide-react';
 import { Question, CompetencyOption, DifficultyLevel, QuestionFormat } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
+import {
+  ESSAY_DEFAULT_MAX_POINTS,
+  ESSAY_SAMPLE_ANSWER_MAX_LENGTH,
+  formatPoints,
+  parseEssayNumber,
+  validateEssayMaxPoints,
+  validateEssaySampleAnswer,
+} from '../../../utils/essay';
 
 interface AddQuestionMenuProps {
   onAddQuestion?: (question: Question) => void;
@@ -20,6 +28,9 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
   const [selectedQuestionFormat, setSelectedQuestionFormat] = useState<QuestionFormat>('SingleChoice');
   const [selectedDifficultyLevel, setSelectedDifficultyLevel] = useState<DifficultyLevel>('Medium');
   const [sourceEvidence, setSourceEvidence] = useState('');
+  const [sampleAnswer, setSampleAnswer] = useState('');
+  const [maxPointsInput, setMaxPointsInput] = useState(String(ESSAY_DEFAULT_MAX_POINTS));
+  const isEssay = selectedQuestionFormat === 'Essay';
   const [competencyLoading, setCompetencyLoading] = useState(true);
 
   useEffect(() => {
@@ -41,6 +52,10 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
   }, []);
 
   useEffect(() => {
+    if (selectedQuestionFormat === 'Essay') {
+      return;
+    }
+
     if (selectedQuestionFormat === 'TrueFalse') {
       setChoices(['Đúng', 'Sai']);
       setCorrectChoice((prev) => (prev > 1 ? 0 : prev));
@@ -85,7 +100,19 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
       return;
     }
 
-    if (choices.some(choice => !choice.trim())) {
+    if (isEssay) {
+      const sampleAnswerError = validateEssaySampleAnswer(sampleAnswer);
+      if (sampleAnswerError) {
+        setError(sampleAnswerError);
+        return;
+      }
+
+      const maxPointsError = validateEssayMaxPoints(maxPointsInput);
+      if (maxPointsError) {
+        setError(maxPointsError);
+        return;
+      }
+    } else if (choices.some(choice => !choice.trim())) {
       setError('Vui lòng điền đầy đủ tất cả các đáp án');
       return;
     }
@@ -103,11 +130,19 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
       questionFormat: selectedQuestionFormat,
       difficultyLevel: selectedDifficultyLevel,
       sourceEvidence: sourceEvidence.trim() || undefined,
-      choices: choices.map((choice, index) => ({
-        optionLabel: optionLabels[index] || String(index),
-        content: choice.trim(),
-        isCorrect: index === correctChoice
-      }))
+      choices: isEssay
+        ? []
+        : choices.map((choice, index) => ({
+            optionLabel: optionLabels[index] || String(index),
+            content: choice.trim(),
+            isCorrect: index === correctChoice
+          })),
+      ...(isEssay
+        ? {
+            sampleAnswer: sampleAnswer.trim(),
+            maxPoints: parseEssayNumber(maxPointsInput) ?? ESSAY_DEFAULT_MAX_POINTS,
+          }
+        : {}),
     };
 
     // Add question to the list
@@ -124,6 +159,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
     setChoices(selectedQuestionFormat === 'TrueFalse' ? ['Đúng', 'Sai'] : ['', '', '', '']);
     setCorrectChoice(0);
     setSourceEvidence('');
+    setSampleAnswer('');
   };
 
   const handleRemoveQuestion = (index: number) => {
@@ -210,6 +246,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                 >
                   <option value="SingleChoice">Trắc nghiệm một đáp án</option>
                   <option value="TrueFalse">Đúng / Sai</option>
+                  <option value="Essay">Tự luận</option>
                 </select>
               </div>
 
@@ -255,6 +292,45 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
               />
             </div>
 
+            {isEssay ? (
+              <div className="space-y-4 rounded-lg border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
+                <div>
+                  <label htmlFor="essay-sample-answer" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Đáp án mẫu / tiêu chí chấm <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="essay-sample-answer"
+                    value={sampleAnswer}
+                    onChange={(e) => setSampleAnswer(e.target.value)}
+                    maxLength={ESSAY_SAMPLE_ANSWER_MAX_LENGTH}
+                    placeholder="Ví dụ: Ý 1 (0.5đ): ... ; Ý 2 (0.5đ): ..."
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+                    rows={5}
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    AI sẽ dựa vào nội dung này để chấm điểm và nhận xét bài làm của học sinh. Học sinh không nhìn thấy nội dung này.
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="essay-max-points" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Điểm tối đa <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="essay-max-points"
+                    type="number"
+                    min={0.25}
+                    max={10}
+                    step={0.25}
+                    value={maxPointsInput}
+                    onChange={(e) => setMaxPointsInput(e.target.value)}
+                    className="w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Từ 0.25 đến 10 điểm. Mỗi câu trắc nghiệm / nhóm Đúng-Sai được tính 1 điểm khi quy đổi thang 10.
+                  </p>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Đáp Án
@@ -311,6 +387,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                 </button>
               )}
             </div>
+            )}
 
             <button
               type="submit"
@@ -348,7 +425,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                           )}
                           {question.questionFormat && (
                             <span className="text-xs text-violet-600 dark:text-violet-400">
-                              Dạng: {question.questionFormat === 'TrueFalse' ? 'Đúng / Sai' : 'Một đáp án'}
+                              Dạng: {question.questionFormat === 'TrueFalse' ? 'Đúng / Sai' : question.questionFormat === 'Essay' ? `Tự luận (${formatPoints(question.maxPoints ?? 1)} điểm)` : 'Một đáp án'}
                             </span>
                           )}
                           {question.difficultyLevel && (
@@ -357,6 +434,11 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                             </span>
                           )}
                         </div>
+                        {question.questionFormat === 'Essay' && question.sampleAnswer && (
+                          <p className="text-xs text-green-700 dark:text-green-400 mb-2 whitespace-pre-line">
+                            Đáp án mẫu / tiêu chí chấm: {question.sampleAnswer}
+                          </p>
+                        )}
                         {question.sourceEvidence && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 italic">
                             Gợi ý học lại: {question.sourceEvidence}
