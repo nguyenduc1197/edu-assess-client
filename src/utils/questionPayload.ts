@@ -25,3 +25,23 @@ export const buildCreateQuestionPayload = (question: Question) => ({
       }
     : {}),
 });
+
+/**
+ * Request body for PUT /questions/{id}. Same as create, but every existing choice keeps its id so the
+ * backend updates it in place (choices without id are added, missing ones are removed).
+ */
+export const buildUpdateQuestionPayload = (question: Question) => {
+  const base = buildCreateQuestionPayload(question);
+  return {
+    ...base,
+    choices:
+      question.questionFormat === 'Essay'
+        ? []
+        : (question.choices || []).map((choice) => ({
+            id: choice.id || null,
+            optionLabel: choice.optionLabel,
+            content: choice.content.trim(),
+            isCorrect: !!choice.isCorrect,
+          })),
+  };
+};

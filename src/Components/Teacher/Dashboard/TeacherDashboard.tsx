@@ -24,6 +24,8 @@ import { formatVietnamDateTime } from '../../../utils/apiDateTime';
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 import { emitExamDataChangedEvent } from '../../../utils/examDataEvents';
 import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
+import AddQuestionMenu from '../Exam/AddQuestionMenu';
+import { buildUpdateQuestionPayload } from '../../../utils/questionPayload';
 
 let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
@@ -109,6 +111,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
   const [updatingQuestionId, setUpdatingQuestionId] = useState<string | null>(null);
   const [removeQuestionCandidate, setRemoveQuestionCandidate] = useState<Question | null>(null);
+  const [editingExamQuestion, setEditingExamQuestion] = useState<Question | null>(null);
+  const [editExamQuestionError, setEditExamQuestionError] = useState<string | null>(null);
   const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
   const [restoringQuestionId, setRestoringQuestionId] = useState<string | null>(null);
   const [deletingExamId, setDeletingExamId] = useState<string | null>(null);
@@ -843,6 +847,39 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
 
     fetchDeletedExamQuestions(selectedExam.id);
   }, [fetchDeletedExamQuestions, selectedExam?.id]);
+
+  const handleEditExamQuestion = async (updatedQuestion: Question) => {
+    setEditExamQuestionError(null);
+    try {
+      const response = await fetchClient(`/questions/${encodeURIComponent(updatedQuestion.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildUpdateQuestionPayload(updatedQuestion)),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        setEditExamQuestionError(body?.message || 'Cập nhật câu hỏi thất bại. Vui lòng thử lại.');
+        return;
+      }
+
+      const regraded =
+        (body?.rescoredAnswerCount ?? 0) + (body?.scaledEssayAnswerCount ?? 0) + (body?.essayAnswersQueuedForRegrade ?? 0);
+      setToast({
+        type: 'success',
+        message: regraded > 0
+          ? 'Đã cập nhật câu hỏi và chấm lại các bài làm liên quan.'
+          : 'Đã cập nhật câu hỏi.',
+      });
+      setEditingExamQuestion(null);
+      if (selectedExam?.id) {
+        await refreshExamQuestionLists(selectedExam.id);
+      }
+      emitExamDataChangedEvent();
+    } catch (err) {
+      console.error('Failed to update question', err);
+      setEditExamQuestionError('Cập nhật câu hỏi thất bại. Vui lòng kiểm tra kết nối rồi thử lại.');
+    }
+  };
 
   const handleUpdateQuestionCompetency = async (questionId: string, competencyType: string) => {
     if (!selectedExam) return;
@@ -2128,7 +2165,18 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                               </td>
                               <td className="px-3 py-2 text-xs text-violet-600 dark:text-violet-400">{q.questionFormatLabel ?? '—'}</td>
                               <td className="px-3 py-2 text-xs text-amber-600 dark:text-amber-400">{q.difficultyLabel ?? '—'}</td>
-                              <td className="px-3 py-2 text-right">
+                              <td className="px-3 py-2 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditExamQuestionError(null);
+                                    setEditingExamQuestion(q);
+                                  }}
+                                  className="mr-1 rounded-lg p-1.5 text-blue-600 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                                  title="Chỉnh sửa câu hỏi"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
                                 <button
                                   type="button"
                                   disabled={removingQuestionId === q.id}
@@ -2213,6 +2261,19 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {editingExamQuestion && (
+        <AddQuestionMenu
+          key={editingExamQuestion.id}
+          initialQuestion={editingExamQuestion}
+          onUpdateQuestion={handleEditExamQuestion}
+          externalError={editExamQuestionError}
+          onClose={() => {
+            setEditingExamQuestion(null);
+            setEditExamQuestionError(null);
+          }}
+        />
       )}
 
       {removeQuestionCandidate && (

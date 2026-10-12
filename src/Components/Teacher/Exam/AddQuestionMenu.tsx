@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, X, ChevronDown, Info } from 'lucide-react';
 import { Question, CompetencyOption, DifficultyLevel, QuestionFormat } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
@@ -15,21 +15,42 @@ interface AddQuestionMenuProps {
   onAddQuestion?: (question: Question) => void;
   onAddQuestions?: (questions: Question[]) => void;
   onClose?: () => void;
+  /** Edit mode: form is prefilled from this question and submit calls onUpdateQuestion. */
+  initialQuestion?: Question | null;
+  onUpdateQuestion?: (question: Question) => void | Promise<void>;
+  /** Error coming from the save request (edit mode), shown inside the form. */
+  externalError?: string | null;
 }
 
-const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQuestions, onClose }) => {
-  const [content, setContent] = useState('');
-  const [choices, setChoices] = useState(['', '', '', '']);
-  const [correctChoice, setCorrectChoice] = useState(0);
+const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
+  onAddQuestion,
+  onAddQuestions,
+  onClose,
+  initialQuestion,
+  onUpdateQuestion,
+  externalError,
+}) => {
+  const isEditMode = !!initialQuestion;
+  const initialChoices = initialQuestion && initialQuestion.questionFormat !== 'Essay' ? initialQuestion.choices || [] : [];
+  const [content, setContent] = useState(initialQuestion?.content || '');
+  const [choices, setChoices] = useState<string[]>(
+    initialChoices.length > 0 ? initialChoices.map((choice) => choice.content) : ['', '', '', '']
+  );
+  // Ids of existing choices (edit mode) kept parallel to `choices` so the backend updates them in place.
+  const [choiceIds, setChoiceIds] = useState<(string | undefined)[]>(initialChoices.map((choice) => choice.id));
+  const [correctChoice, setCorrectChoice] = useState(Math.max(0, initialChoices.findIndex((choice) => choice.isCorrect)));
   const [error, setError] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
-  const [selectedCompetencyType, setSelectedCompetencyType] = useState('');
-  const [selectedQuestionFormat, setSelectedQuestionFormat] = useState<QuestionFormat>('SingleChoice');
-  const [selectedDifficultyLevel, setSelectedDifficultyLevel] = useState<DifficultyLevel>('Medium');
-  const [sourceEvidence, setSourceEvidence] = useState('');
-  const [sampleAnswer, setSampleAnswer] = useState('');
-  const [maxPointsInput, setMaxPointsInput] = useState(String(ESSAY_DEFAULT_MAX_POINTS));
+  const [selectedCompetencyType, setSelectedCompetencyType] = useState(initialQuestion?.competencyType || '');
+  const [selectedQuestionFormat, setSelectedQuestionFormat] = useState<QuestionFormat>(initialQuestion?.questionFormat || 'SingleChoice');
+  const [selectedDifficultyLevel, setSelectedDifficultyLevel] = useState<DifficultyLevel>(initialQuestion?.difficultyLevel || 'Medium');
+  const [sourceEvidence, setSourceEvidence] = useState(initialQuestion?.sourceEvidence || '');
+  const [sampleAnswer, setSampleAnswer] = useState(initialQuestion?.sampleAnswer || '');
+  const [maxPointsInput, setMaxPointsInput] = useState(String(initialQuestion?.maxPoints ?? ESSAY_DEFAULT_MAX_POINTS));
+  const [isSaving, setIsSaving] = useState(false);
+  const isFormatLocked = isEditMode && initialQuestion?.hasStudentAnswers === true;
+  const skipInitialFormatEffect = useRef(isEditMode);
   const isEssay = selectedQuestionFormat === 'Essay';
   const [competencyLoading, setCompetencyLoading] = useState(true);
 
@@ -40,7 +61,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
         if (res.ok) {
           const data: CompetencyOption[] = await res.json();
           setCompetencyOptions(data);
-          if (data.length > 0) setSelectedCompetencyType(data[0].value);
+          if (data.length > 0) setSelectedCompetencyType((current) => current || data[0].value);
         }
       } catch {
         // silently ignore; user can still see emptied dropdown
@@ -52,6 +73,15 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
   }, []);
 
   useEffect(() => {
+    // Edit mode: keep the prefilled choices on first render.
+    if (skipInitialFormatEffect.current) {
+      skipInitialFormatEffect.current = false;
+      return;
+    }
+
+    // Format changed: choices become new ones (no ids).
+    setChoiceIds([]);
+
     if (selectedQuestionFormat === 'Essay') {
       return;
     }
@@ -75,6 +105,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
   const handleAddChoice = () => {
     if (selectedQuestionFormat === 'TrueFalse') return;
     setChoices([...choices, '']);
+    setChoiceIds([...choiceIds, undefined]);
   };
 
   const handleRemoveChoice = (index: number) => {
@@ -82,11 +113,13 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
     if (choices.length > 2) {
       const newChoices = choices.filter((_, i) => i !== index);
       setChoices(newChoices);
+      setChoiceIds(choiceIds.filter((_, i) => i !== index));
       if (correctChoice === index) setCorrectChoice(0);
+      else if (correctChoice > index) setCorrectChoice(correctChoice - 1);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -123,7 +156,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
     const competencyLabel = competencyOptions.find(o => o.value === selectedCompetencyType)?.label;
 
     const newQuestion: Question = {
-      id: `q-${Date.now()}`,
+      id: initialQuestion?.id || `q-${Date.now()}`,
       content: content.trim(),
       competencyType: selectedCompetencyType,
       competencyLabel,
@@ -133,6 +166,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
       choices: isEssay
         ? []
         : choices.map((choice, index) => ({
+            ...(choiceIds[index] ? { id: choiceIds[index] } : {}),
             optionLabel: optionLabels[index] || String(index),
             content: choice.trim(),
             isCorrect: index === correctChoice
@@ -144,6 +178,23 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
           }
         : {}),
     };
+
+    if (isEditMode) {
+      // Keep fields the form does not edit (passage data of true/false statements).
+      const updatedQuestion: Question = {
+        ...newQuestion,
+        passageText: initialQuestion?.passageText,
+        passageGroupKey: initialQuestion?.passageGroupKey,
+        statementOrder: initialQuestion?.statementOrder,
+      };
+      setIsSaving(true);
+      try {
+        await onUpdateQuestion?.(updatedQuestion);
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
 
     // Add question to the list
     setQuestions([...questions, newQuestion]);
@@ -187,7 +238,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Thêm Câu Hỏi Mới</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">{isEditMode ? 'Chỉnh Sửa Câu Hỏi' : 'Thêm Câu Hỏi Mới'}</h3>
           <button
             onClick={() => {
               if (onClose) onClose();
@@ -200,6 +251,12 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
 
         <div className="p-6 overflow-y-auto max-h-[calc(100vh-200px)]">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isEditMode && externalError && !error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
+                {externalError}
+              </div>
+            )}
+
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
                 {error}
@@ -242,12 +299,18 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
                 <select
                   value={selectedQuestionFormat}
                   onChange={(e) => setSelectedQuestionFormat(e.target.value as QuestionFormat)}
+                  disabled={isFormatLocked}
                   className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="SingleChoice">Trắc nghiệm một đáp án</option>
                   <option value="TrueFalse">Đúng / Sai</option>
                   <option value="Essay">Tự luận</option>
                 </select>
+                {isFormatLocked && (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                    Câu hỏi đã có học sinh làm nên không thể đổi định dạng.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -391,9 +454,10 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
 
             <button
               type="submit"
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors dark:bg-green-700 dark:hover:bg-green-800"
+              disabled={isSaving}
+              className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors dark:bg-green-700 dark:hover:bg-green-800 disabled:opacity-50"
             >
-              Thêm Câu Hỏi
+              {isEditMode ? (isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi') : 'Thêm Câu Hỏi'}
             </button>
           </form>
 
@@ -488,13 +552,15 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({ onAddQuestion, onAddQ
           >
             Hủy
           </button>
-          <button
-            onClick={handleFinish}
-            disabled={questions.length === 0}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Xong ({questions.length})
-          </button>
+          {!isEditMode && (
+            <button
+              onClick={handleFinish}
+              disabled={questions.length === 0}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Xong ({questions.length})
+            </button>
+          )}
         </div>
       </div>
     </div>

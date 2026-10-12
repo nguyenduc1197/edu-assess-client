@@ -1,4 +1,4 @@
-import { buildCreateQuestionPayload } from './questionPayload';
+import { buildCreateQuestionPayload, buildUpdateQuestionPayload } from './questionPayload';
 import { Question } from '../types';
 
 // Requirements 1 + 9: request body for POST /questions and /questions/bulk
@@ -68,5 +68,30 @@ describe('buildCreateQuestionPayload', () => {
     const json = JSON.stringify(buildCreateQuestionPayload({ ...base, questionFormat: 'Essay', maxPoints: 0.25, sampleAnswer: 's' }));
     expect(json).toContain('"maxPoints":0.25');
     expect(json).toContain('"questionFormat":"Essay"');
+  });
+});
+
+// Round 2: PUT /questions/{id} body keeps choice ids (update in place).
+describe('buildUpdateQuestionPayload', () => {
+
+  it('keeps existing choice ids and sends null for new choices', () => {
+    const p: any = buildUpdateQuestionPayload({
+      ...base,
+      choices: [
+        { id: 'c1', optionLabel: 'A', content: ' a ', isCorrect: true },
+        { optionLabel: 'B', content: 'b', isCorrect: false },
+      ],
+    });
+    expect(p.choices).toEqual([
+      { id: 'c1', optionLabel: 'A', content: 'a', isCorrect: true },
+      { id: null, optionLabel: 'B', content: 'b', isCorrect: false },
+    ]);
+  });
+
+  it('essay: no choices, essay fields included', () => {
+    const p: any = buildUpdateQuestionPayload({ ...base, questionFormat: 'Essay', maxPoints: 2.5, sampleAnswer: ' mẫu ' });
+    expect(p.choices).toEqual([]);
+    expect(p.maxPoints).toBe(2.5);
+    expect(p.sampleAnswer).toBe('mẫu');
   });
 });

@@ -5,7 +5,7 @@ import Sidebar from '../../Common/Sidebar/Sidebar';
 import AddQuestionMenu from '../Exam/AddQuestionMenu';
 import AIQuestionGeneratorModal from './AIQuestionGeneratorModal';
 import { fetchClient } from '../../../api/fetchClient';
-import { buildCreateQuestionPayload } from '../../../utils/questionPayload';
+import { buildCreateQuestionPayload, buildUpdateQuestionPayload } from '../../../utils/questionPayload';
 import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/MobileAppChrome';
 
 interface QuestionManagementProps {
@@ -27,6 +27,8 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -104,6 +106,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         sourceEvidence: item.sourceEvidence,
         maxPoints: item.maxPoints,
         sampleAnswer: item.sampleAnswer,
+        hasStudentAnswers: item.hasStudentAnswers === true,
         choices: (item.choices || []).map((choice: any) => ({
           id: choice.id,
           optionLabel: choice.optionLabel,
@@ -206,6 +209,42 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
     }
   };
 
+  const handleUpdateQuestion = async (updatedQuestion: Question) => {
+    setEditError(null);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const response = await fetchClient(`/questions/${encodeURIComponent(updatedQuestion.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildUpdateQuestionPayload(updatedQuestion)),
+      });
+
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        setEditError(body?.message || 'Cập nhật câu hỏi thất bại. Vui lòng thử lại.');
+        return;
+      }
+
+      const regradeNotes: string[] = [];
+      if (body?.rescoredAnswerCount > 0) regradeNotes.push(`chấm lại ${body.rescoredAnswerCount} câu trả lời trắc nghiệm`);
+      if (body?.scaledEssayAnswerCount > 0) regradeNotes.push(`quy đổi điểm ${body.scaledEssayAnswerCount} bài tự luận`);
+      if (body?.essayAnswersQueuedForRegrade > 0) regradeNotes.push(`gửi AI chấm lại ${body.essayAnswersQueuedForRegrade} bài tự luận`);
+
+      setSuccessMessage(
+        regradeNotes.length > 0
+          ? `Cập nhật câu hỏi thành công. Hệ thống đã ${regradeNotes.join(', ')} và tính lại điểm.`
+          : 'Cập nhật câu hỏi thành công.'
+      );
+      setEditingQuestion(null);
+      fetchQuestions();
+    } catch (updateError) {
+      console.error('Error updating question:', updateError);
+      setEditError('Cập nhật câu hỏi thất bại. Vui lòng kiểm tra kết nối rồi thử lại.');
+    }
+  };
+
   const handleDeleteQuestion = async (id: string) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa câu hỏi này không?')) return;
 
@@ -246,6 +285,19 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
           onClose={() => setIsAddModalOpen(false)}
           onAddQuestion={handleAddQuestion}
           onAddQuestions={handleAddQuestions}
+        />
+      )}
+
+      {editingQuestion && (
+        <AddQuestionMenu
+          key={editingQuestion.id}
+          initialQuestion={editingQuestion}
+          onUpdateQuestion={handleUpdateQuestion}
+          externalError={editError}
+          onClose={() => {
+            setEditingQuestion(null);
+            setEditError(null);
+          }}
         />
       )}
 
@@ -412,7 +464,10 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
                             type="button"
                             className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors dark:text-blue-400"
                             title="Chỉnh sửa"
-                            disabled
+                            onClick={() => {
+                              setEditError(null);
+                              setEditingQuestion(question);
+                            }}
                           >
                             <Edit2 size={18} />
                           </button>

@@ -30,6 +30,8 @@ export interface Question {
   maxPoints?: number;
   /** Essay: sample answer / grading criteria (teacher only, never sent to students). */
   sampleAnswer?: string | null;
+  /** True when students already answered this question: its format can no longer be changed. */
+  hasStudentAnswers?: boolean;
 }
 
 export interface AIQuestionGenerateResponse {
