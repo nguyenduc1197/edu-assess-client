@@ -23,6 +23,8 @@ export interface Question {
   passageText?: string | null;
   passageGroupKey?: string | null;
   statementOrder?: number | null;
+  /** Position in the exam for exams created from a scanned file (original order is kept). */
+  examOrder?: number | null;
   sourceEvidence?: string;
   choices?: Choice[];
   dateCreated?: string;

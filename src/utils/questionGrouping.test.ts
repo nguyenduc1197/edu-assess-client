@@ -227,3 +227,18 @@ describe('questionGrouping', () => {
     expect(blocks[1]).toMatchObject({ key: 'q-3', type: 'single' });
   });
 });
+
+// Round 5: exams created from a scanned file keep the original order (examOrder), true/false groups included.
+describe('questionGrouping with examOrder', () => {
+  it('keeps original order instead of pushing true/false groups to the end', () => {
+    const questions: Question[] = [
+      { id: 'q1', content: 'MC 1', questionFormat: 'SingleChoice', examOrder: 1 },
+      { id: 't1', content: 'a', questionFormat: 'TrueFalse', passageGroupKey: 'g1', statementOrder: 1, passageText: 'Đoạn', examOrder: 2 },
+      { id: 't2', content: 'b', questionFormat: 'TrueFalse', passageGroupKey: 'g1', statementOrder: 2, examOrder: 3 },
+      { id: 'e1', content: 'Tự luận', questionFormat: 'Essay', examOrder: 4 },
+    ];
+    const blocks = buildQuestionBlocks(questions);
+    expect(blocks.map((b) => b.key)).toEqual(['q1', 'group-key:g1', 'e1']);
+    expect(blocks.map((b) => b.questionNumbers)).toEqual([[1], [2, 3], [4]]);
+  });
+});

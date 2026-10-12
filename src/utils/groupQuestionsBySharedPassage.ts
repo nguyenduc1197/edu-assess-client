@@ -94,6 +94,19 @@ export const buildQuestionRenderGroups = (questions: Question[]): SharedPassageQ
   const processedTrueFalseKeys = new Set<string>();
   const leadingGroups: SharedPassageQuestionGroup[] = [];
   const trailingTrueFalseGroups: SharedPassageQuestionGroup[] = [];
+  // Exams created from a scanned file carry examOrder: keep their original order (no "true/false last").
+  const preserveOriginalOrder = questions.some(
+    (question) => question.examOrder !== null && question.examOrder !== undefined
+  );
+  const groupsInOriginalOrder: SharedPassageQuestionGroup[] = [];
+  const pushLeading = (group: SharedPassageQuestionGroup) => {
+    leadingGroups.push(group);
+    groupsInOriginalOrder.push(group);
+  };
+  const pushTrailing = (group: SharedPassageQuestionGroup) => {
+    trailingTrueFalseGroups.push(group);
+    groupsInOriginalOrder.push(group);
+  };
 
   questions.forEach((question) => {
     if (isGroupedTrueFalseQuestion(question)) {
@@ -106,9 +119,9 @@ export const buildQuestionRenderGroups = (questions: Question[]): SharedPassageQ
       const items = sortGroupedQuestions(group?.questions || [question]);
 
       if (items.length === 1) {
-        trailingTrueFalseGroups.push(getStandaloneGroup(items[0]));
+        pushTrailing(getStandaloneGroup(items[0]));
       } else {
-        trailingTrueFalseGroups.push({
+        pushTrailing({
           key: groupKey,
           type: 'group',
           groupKind: 'trueFalse',
@@ -123,7 +136,7 @@ export const buildQuestionRenderGroups = (questions: Question[]): SharedPassageQ
     }
 
     if (question.questionFormat === 'TrueFalse') {
-      leadingGroups.push(getStandaloneGroup(question));
+      pushLeading(getStandaloneGroup(question));
       return;
     }
 
@@ -136,7 +149,7 @@ export const buildQuestionRenderGroups = (questions: Question[]): SharedPassageQ
         : null;
 
     if (!groupKey) {
-      leadingGroups.push(getStandaloneGroup(question));
+      pushLeading(getStandaloneGroup(question));
       return;
     }
 
@@ -148,9 +161,9 @@ export const buildQuestionRenderGroups = (questions: Question[]): SharedPassageQ
     const items = sortGroupedQuestions(group?.questions || [question]);
 
     if (items.length === 1) {
-      leadingGroups.push(getStandaloneGroup(items[0]));
+      pushLeading(getStandaloneGroup(items[0]));
     } else {
-      leadingGroups.push({
+      pushLeading({
         key: groupKey,
         type: 'group',
         groupKind: 'passage',
@@ -163,7 +176,7 @@ export const buildQuestionRenderGroups = (questions: Question[]): SharedPassageQ
     processedNonTrueFalseKeys.add(groupKey);
   });
 
-  return [...leadingGroups, ...trailingTrueFalseGroups];
+  return preserveOriginalOrder ? groupsInOriginalOrder : [...leadingGroups, ...trailingTrueFalseGroups];
 };
 
 export const groupQuestionsBySharedPassage = buildQuestionRenderGroups;
