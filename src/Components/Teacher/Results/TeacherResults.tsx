@@ -8,6 +8,7 @@ import {
   AssessmentResult,
   Class as SchoolClass,
   CompetencyAccumulation,
+  EssayGradeResult,
   Student,
   StudentResultSummary,
   User,
@@ -19,6 +20,25 @@ import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
 import { competencyScoreToPercent, formatCompetencyPercent } from '../../../utils/competencyPercent';
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 import { EXAM_DATA_CHANGED_EVENT } from '../../../utils/examDataEvents';
+import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
+
+const EssayStatusHint: React.FC<{ pending?: number; awaitingTeacher?: number }> = ({ pending = 0, awaitingTeacher = 0 }) => {
+  if (pending <= 0 && awaitingTeacher <= 0) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {pending > 0 && (
+        <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+          Tự luận: Đang chấm ({pending})
+        </span>
+      )}
+      {awaitingTeacher > 0 && (
+        <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+          Chờ giáo viên chấm ({awaitingTeacher})
+        </span>
+      )}
+    </div>
+  );
+};
 
 interface TeacherResultsProps {
   onLogout?: () => void;
@@ -319,6 +339,8 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
               ...current,
               assessmentStatus: data.assessmentStatus,
               score: data.assessmentStatus === 'Completed' ? data.score : current.score,
+              pendingEssayCount: data.pendingEssayCount ?? current.pendingEssayCount,
+              awaitingTeacherEssayCount: data.awaitingTeacherEssayCount ?? current.awaitingTeacherEssayCount,
               assessedAt: data.assessedAt,
               assessmentError: data.assessmentError,
               canRetryAssessment: data.canRetryAssessment,
@@ -332,6 +354,8 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                 ...result,
                 assessmentStatus: data.assessmentStatus,
                 score: data.assessmentStatus === 'Completed' ? data.score : result.score,
+                pendingEssayCount: data.pendingEssayCount ?? result.pendingEssayCount,
+                awaitingTeacherEssayCount: data.awaitingTeacherEssayCount ?? result.awaitingTeacherEssayCount,
                 assessedAt: data.assessedAt,
                 assessmentError: data.assessmentError,
                 canRetryAssessment: data.canRetryAssessment,
@@ -347,6 +371,36 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
     } finally {
       if (!silent) setIsDetailLoading(false);
     }
+  }, []);
+
+  const handleEssayGraded = useCallback((gradeResult: EssayGradeResult) => {
+    setSelectedResult((current) =>
+      current && current.studentExamId === gradeResult.studentExamId
+        ? {
+            ...current,
+            score: gradeResult.score ?? current.score,
+            behaviorAdjustmentScore: gradeResult.behaviorAdjustmentScore,
+            selfDevelopmentScore: gradeResult.selfDevelopmentScore,
+            economicSocialParticipationScore: gradeResult.economicSocialParticipationScore,
+            pendingEssayCount: gradeResult.pendingEssayCount,
+            awaitingTeacherEssayCount: gradeResult.awaitingTeacherEssayCount,
+            essayAnswers: (current.essayAnswers || []).map((item) =>
+              item.answerId === gradeResult.answer.answerId ? gradeResult.answer : item
+            ),
+          }
+        : current
+    );
+    const applySummary = <T extends StudentResultSummary>(item: T): T =>
+      item.studentExamId === gradeResult.studentExamId
+        ? {
+            ...item,
+            score: gradeResult.score,
+            pendingEssayCount: gradeResult.pendingEssayCount,
+            awaitingTeacherEssayCount: gradeResult.awaitingTeacherEssayCount,
+          }
+        : item;
+    setSelectedResultSummary((current) => (current ? applySummary(current) : current));
+    setResults((current) => current.map(applySummary));
   }, []);
 
   useEffect(() => {
@@ -568,6 +622,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                       <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
                         {getAssessmentStatusLabel(result.assessmentStatus)} · {formatDateTime(result.finishedAt)}
                       </p>
+                      <EssayStatusHint pending={result.pendingEssayCount} awaitingTeacher={result.awaitingTeacherEssayCount} />
                       <div className="mt-3 space-y-2 text-sm text-gray-500 dark:text-gray-400">
                         <div className="font-medium text-gray-700 dark:text-gray-200">
                           {result.completedExamCount ? `${result.completedExamCount} bài đã tính` : 'Chưa có lịch sử'}
@@ -624,7 +679,10 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{getAssessmentStatusLabel(result.assessmentStatus)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {getAssessmentStatusLabel(result.assessmentStatus)}
+                            <EssayStatusHint pending={result.pendingEssayCount} awaitingTeacher={result.awaitingTeacherEssayCount} />
+                          </td>
                           <td className="px-6 py-4">
                             <AntiCheatStatusBadge status={result.antiCheatStatus} />
                           </td>
@@ -803,6 +861,21 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                       </div>
                     )}
                   </div>
+
+                  {(selectedResult.essayAnswers || []).length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Câu tự luận</p>
+                      <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                        Điểm tự luận được AI chấm tự động theo đáp án mẫu / tiêu chí chấm. Thầy/cô có thể sửa điểm và nhận xét; tổng điểm sẽ được tính lại.
+                      </p>
+                      <EssayAnswerList
+                        items={selectedResult.essayAnswers || []}
+                        mode="teacher"
+                        studentExamId={selectedResult.studentExamId}
+                        onGraded={handleEssayGraded}
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Danh sách câu cần học lại</p>

@@ -23,6 +23,7 @@ import { MobileBottomNav, MobileHeaderBar } from '../../Common/MobileAppChrome/M
 import { formatVietnamDateTime } from '../../../utils/apiDateTime';
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 import { emitExamDataChangedEvent } from '../../../utils/examDataEvents';
+import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
 
 let mockUser: User = {
   id: "81114DB7-EF7C-4CEC-97B1-4428AA7AADA6",
@@ -1879,6 +1880,36 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                   </div>
                                 </div>
                               )}
+                            </div>
+                          )}
+
+                          {(selectedAssessment.essayAnswers || []).length > 0 && (
+                            <div>
+                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Câu tự luận</p>
+                              <EssayAnswerList
+                                items={selectedAssessment.essayAnswers || []}
+                                mode="teacher"
+                                studentExamId={selectedAssessment.studentExamId}
+                                onGraded={(gradeResult) => {
+                                  setSelectedAssessment((current) =>
+                                    current && current.studentExamId === gradeResult.studentExamId
+                                      ? {
+                                          ...current,
+                                          score: gradeResult.score ?? current.score,
+                                          behaviorAdjustmentScore: gradeResult.behaviorAdjustmentScore,
+                                          selfDevelopmentScore: gradeResult.selfDevelopmentScore,
+                                          economicSocialParticipationScore: gradeResult.economicSocialParticipationScore,
+                                          pendingEssayCount: gradeResult.pendingEssayCount,
+                                          awaitingTeacherEssayCount: gradeResult.awaitingTeacherEssayCount,
+                                          essayAnswers: (current.essayAnswers || []).map((item) =>
+                                            item.answerId === gradeResult.answer.answerId ? gradeResult.answer : item
+                                          ),
+                                        }
+                                      : current
+                                  );
+                                  emitExamDataChangedEvent();
+                                }}
+                              />
                             </div>
                           )}
 
