@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
-import EssayAnswerList, { ESSAY_REGRADE_POLL_INTERVAL_MS, ESSAY_REGRADE_POLL_MAX_MS } from './EssayAnswerList';
+import EssayAnswerList, { ESSAY_REGRADE_POLL_INTERVAL_MS, ESSAY_REGRADE_POLL_MAX_MS, regradeOutcomeMessage } from './EssayAnswerList';
 import { fetchClient } from '../../../api/fetchClient';
 import { EssayAnswerReview } from '../../../types';
 
@@ -115,5 +115,60 @@ describe('EssayAnswerList asynchronous AI re-grade', () => {
     const callsAfterCap = mockedFetch.mock.calls.length;
     await act(async () => { jest.advanceTimersByTime(ESSAY_REGRADE_POLL_INTERVAL_MS * 3); });
     expect(mockedFetch.mock.calls.length).toBe(callsAfterCap);
+  });
+});
+
+// Round 5 (A1): final message must match the final status, e.g. a teacher grade during polling.
+describe('EssayAnswerList re-grade outcome messages', () => {
+
+  it.each([
+    ['AiGraded', 'AI đã chấm lại câu tự luận.'],
+    ['AwaitingTeacher', 'AI vẫn chưa chấm được câu này. Thầy/cô có thể chấm thủ công.'],
+    ['TeacherGraded', 'Câu này đã được giáo viên chấm điểm.'],
+  ])('%s -> %s', (status, message) => {
+    expect(regradeOutcomeMessage(status)).toBe(message);
+  });
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockedFetch.mockReset();
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('poll finding a teacher grade does not claim the AI graded it', async () => {
+    mockedFetch.mockImplementation((url: string) =>
+      url.endsWith('/ai-regrade') ? accepted() : assessmentWith(item({ gradingStatus: 'TeacherGraded', score: 1, canRegradeWithAi: false })));
+    render(<EssayAnswerList items={[item()]} mode="teacher" studentExamId="se1" onGraded={jest.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Chấm lại bằng AI' }));
+    await waitFor(() => expect(screen.getByText('Đang chấm')).toBeInTheDocument());
+    await act(async () => { jest.advanceTimersByTime(ESSAY_REGRADE_POLL_INTERVAL_MS); });
+    expect(await screen.findByText('Câu này đã được giáo viên chấm điểm.')).toBeInTheDocument();
+    expect(screen.queryByText('AI đã chấm lại câu tự luận.')).not.toBeInTheDocument();
+  });
+
+  it('manual grade while polling stops polling and keeps the teacher message', async () => {
+    mockedFetch.mockImplementation((url: string) => {
+      if (url.endsWith('/ai-regrade')) return accepted();
+      if (url.endsWith('/grade')) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({
+          studentExamId: 'se1', answer: item({ gradingStatus: 'TeacherGraded', score: 1, canRegradeWithAi: false }),
+          score: 5, behaviorAdjustmentScore: 50, selfDevelopmentScore: null, economicSocialParticipationScore: null,
+          pendingEssayCount: 0, awaitingTeacherEssayCount: 0 }) });
+      }
+      return assessmentWith(item({ gradingStatus: 'TeacherGraded', score: 1, canRegradeWithAi: false }));
+    });
+    render(<EssayAnswerList items={[item()]} mode="teacher" studentExamId="se1" onGraded={jest.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Chấm lại bằng AI' }));
+    await waitFor(() => expect(screen.getByText('Đang chấm')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chấm điểm' }));
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu điểm' }));
+    expect(await screen.findByText('Đã lưu điểm và cập nhật lại tổng điểm bài làm.')).toBeInTheDocument();
+
+    const calls = mockedFetch.mock.calls.length;
+    await act(async () => { jest.advanceTimersByTime(ESSAY_REGRADE_POLL_INTERVAL_MS * 3); });
+    expect(mockedFetch.mock.calls.length).toBe(calls);
+    expect(screen.queryByText('AI đã chấm lại câu tự luận.')).not.toBeInTheDocument();
   });
 });

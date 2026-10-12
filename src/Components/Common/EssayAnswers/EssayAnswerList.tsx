@@ -53,8 +53,21 @@ export const toEssayGradeResult = (assessment: AssessmentResult, answer: EssayAn
   awaitingTeacherEssayCount: assessment.awaitingTeacherEssayCount ?? 0,
 });
 
-const regradeOutcomeMessage = (status: string) =>
-  status === 'AwaitingTeacher' ? REGRADE_FAILED_MESSAGE : REGRADE_DONE_MESSAGE;
+const REGRADE_TEACHER_MESSAGE = 'Câu này đã được giáo viên chấm điểm.';
+
+/** Message matching the final grading status after an AI re-grade request. */
+export const regradeOutcomeMessage = (status: string) => {
+  switch (status) {
+    case 'AwaitingTeacher':
+      return REGRADE_FAILED_MESSAGE;
+    case 'TeacherGraded':
+      return REGRADE_TEACHER_MESSAGE;
+    case 'AiGraded':
+      return REGRADE_DONE_MESSAGE;
+    default:
+      return getEssayGradingStatusLabel(status) || REGRADE_DONE_MESSAGE;
+  }
+};
 
 const readApiMessage = async (response: Response, fallback: string) => {
   const data = await response.json().catch(() => null);
@@ -157,6 +170,8 @@ const EssayAnswerCard: React.FC<{
         return;
       }
       const result: EssayGradeResult = await response.json();
+      // A manual grade ends any AI re-grade polling (the teacher grade is final and never overwritten).
+      stopPolling();
       setIsEditing(false);
       setMessage('Đã lưu điểm và cập nhật lại tổng điểm bài làm.');
       onGraded?.(result);
