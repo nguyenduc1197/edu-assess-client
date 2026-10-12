@@ -106,3 +106,41 @@ export const formatEssayScore = (score: number | null | undefined, maxPoints: nu
   if (status === 'AwaitingTeacher' || score === null || score === undefined) return 'Chờ giáo viên chấm';
   return `${formatPoints(score)} / ${formatPoints(maxPoints)} điểm`;
 };
+
+/** One saved draft answer from GET /exams/{examId}/draft. */
+export interface DraftAnswer {
+  questionId: string;
+  choiceId?: string | null;
+  essayAnswer?: string | null;
+}
+
+/**
+ * Rebuilds the exam UI answer state from saved draft answers. Only questions of the current exam are kept;
+ * a choice must still exist on its question; essay text is restored for essay questions.
+ */
+export const restoreDraftAnswers = (
+  draftAnswers: DraftAnswer[] | null | undefined,
+  questions: Question[]
+): Record<string, AnswerState> => {
+  const restored: Record<string, AnswerState> = {};
+  const questionById = new Map(questions.map((question) => [question.id, question]));
+
+  for (const draft of draftAnswers || []) {
+    const question = questionById.get(draft.questionId);
+    if (!question) continue;
+
+    if (isEssayQuestion(question)) {
+      if (draft.essayAnswer && draft.essayAnswer.trim()) {
+        restored[question.id] = { content: draft.essayAnswer, essayAnswer: draft.essayAnswer };
+      }
+      continue;
+    }
+
+    const choice = draft.choiceId ? (question.choices || []).find((c) => c.id === draft.choiceId) : undefined;
+    if (choice?.id) {
+      restored[question.id] = { choiceId: choice.id, content: choice.content };
+    }
+  }
+
+  return restored;
+};

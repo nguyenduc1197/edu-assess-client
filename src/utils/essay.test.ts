@@ -1,3 +1,4 @@
+import { Question } from '../types';
 import {
   buildAnswerPayload,
   formatEssayScore,
@@ -7,6 +8,7 @@ import {
   validateEssayMaxPoints,
   validateEssaySampleAnswer,
   validateEssayScore,
+  restoreDraftAnswers,
 } from './essay';
 
 describe('essay utils', () => {
@@ -66,5 +68,32 @@ describe('essay utils', () => {
     expect(formatEssayScore(null, 2, 'AwaitingTeacher')).toBe('Chờ giáo viên chấm');
     expect(formatEssayScore(1.25, 2, 'AiGraded')).toBe('1.25 / 2 điểm');
     expect(getEssayGradingStatusLabel('TeacherGraded')).toBe('Giáo viên đã chấm');
+  });
+});
+
+// Round 4: draft restore mapping
+describe('restoreDraftAnswers', () => {
+  const qs: Question[] = [
+    { id: 'm1', content: 'MC', questionFormat: 'SingleChoice', choices: [{ id: 'c1', optionLabel: 'A', content: 'A1' }] },
+    { id: 'e1', content: 'Essay', questionFormat: 'Essay', choices: [] },
+  ];
+
+  it('maps choices (with content) and essay text; drops unknown questions/choices and blank essays', () => {
+    expect(
+      restoreDraftAnswers(
+        [
+          { questionId: 'm1', choiceId: 'c1', essayAnswer: null },
+          { questionId: 'e1', choiceId: null, essayAnswer: 'Bài' },
+          { questionId: 'gone', choiceId: 'c1' },
+          { questionId: 'm1', choiceId: 'missing' },
+        ],
+        qs
+      )
+    ).toEqual({
+      m1: { choiceId: 'c1', content: 'A1' },
+      e1: { content: 'Bài', essayAnswer: 'Bài' },
+    });
+    expect(restoreDraftAnswers([{ questionId: 'e1', essayAnswer: '   ' }], qs)).toEqual({});
+    expect(restoreDraftAnswers(null, qs)).toEqual({});
   });
 });

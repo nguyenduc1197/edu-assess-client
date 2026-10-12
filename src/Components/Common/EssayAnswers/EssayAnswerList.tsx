@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { EssayAnswerReview, EssayGradeResult } from '../../../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { AssessmentResult, EssayAnswerReview, EssayGradeResult } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
 import {
   ESSAY_FEEDBACK_MAX_LENGTH,
@@ -33,6 +33,29 @@ const statusBadgeClass = (status: string) => {
   }
 };
 
+/** "Chấm lại bằng AI" is asynchronous: poll the assessment while the answer is Pending. */
+export const ESSAY_REGRADE_POLL_INTERVAL_MS = 4000;
+export const ESSAY_REGRADE_POLL_MAX_MS = 120000;
+
+const REGRADE_DONE_MESSAGE = 'AI đã chấm lại câu tự luận.';
+const REGRADE_FAILED_MESSAGE = 'AI vẫn chưa chấm được câu này. Thầy/cô có thể chấm thủ công.';
+const REGRADE_TIMEOUT_MESSAGE = 'AI vẫn đang chấm câu này. Vui lòng tải lại trang sau ít phút.';
+
+/** Builds the same shape as the grade endpoints from a fresh assessment result. */
+export const toEssayGradeResult = (assessment: AssessmentResult, answer: EssayAnswerReview): EssayGradeResult => ({
+  studentExamId: assessment.studentExamId,
+  answer,
+  score: assessment.score,
+  behaviorAdjustmentScore: assessment.behaviorAdjustmentScore,
+  selfDevelopmentScore: assessment.selfDevelopmentScore,
+  economicSocialParticipationScore: assessment.economicSocialParticipationScore,
+  pendingEssayCount: assessment.pendingEssayCount ?? 0,
+  awaitingTeacherEssayCount: assessment.awaitingTeacherEssayCount ?? 0,
+});
+
+const regradeOutcomeMessage = (status: string) =>
+  status === 'AwaitingTeacher' ? REGRADE_FAILED_MESSAGE : REGRADE_DONE_MESSAGE;
+
 const readApiMessage = async (response: Response, fallback: string) => {
   const data = await response.json().catch(() => null);
   if (data && typeof data.message === 'string' && data.message.trim()) return data.message as string;
@@ -53,6 +76,46 @@ const EssayAnswerCard: React.FC<{
   const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isRegrading, setIsRegrading] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = () => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    pollTimerRef.current = null;
+    setIsPolling(false);
+  };
+
+  useEffect(() => () => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+  }, []);
+
+  const startPolling = (examId: string) => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    const startedAt = Date.now();
+    setIsPolling(true);
+
+    pollTimerRef.current = setInterval(async () => {
+      if (Date.now() - startedAt >= ESSAY_REGRADE_POLL_MAX_MS) {
+        stopPolling();
+        setMessage(REGRADE_TIMEOUT_MESSAGE);
+        return;
+      }
+
+      try {
+        const response = await fetchClient(`/student-exams/${encodeURIComponent(examId)}/assessment`);
+        if (!response.ok) return;
+        const assessment: AssessmentResult = await response.json();
+        const fresh = (assessment.essayAnswers || []).find((x) => x.answerId === item.answerId);
+        if (!fresh || fresh.gradingStatus === 'Pending') return;
+
+        stopPolling();
+        setMessage(regradeOutcomeMessage(fresh.gradingStatus));
+        onGraded?.(toEssayGradeResult(assessment, fresh));
+      } catch {
+        // transient error: keep polling until the cap
+      }
+    }, ESSAY_REGRADE_POLL_INTERVAL_MS);
+  };
 
   const statusLabel = item.gradingStatusLabel || getEssayGradingStatusLabel(item.gradingStatus);
   const isPending = item.gradingStatus === 'Pending';
@@ -119,12 +182,15 @@ const EssayAnswerCard: React.FC<{
         return;
       }
       const result: EssayGradeResult = await response.json();
-      setMessage(
-        result.answer.gradingStatus === 'AwaitingTeacher'
-          ? 'AI vẫn chưa chấm được câu này. Thầy/cô có thể chấm thủ công.'
-          : 'AI đã chấm lại câu tự luận.'
-      );
       onGraded?.(result);
+
+      if (result.answer.gradingStatus === 'Pending') {
+        // 202: grading runs in the background -> show "Đang chấm" and poll for the outcome.
+        setMessage('AI đang chấm lại câu này...');
+        startPolling(studentExamId);
+      } else {
+        setMessage(regradeOutcomeMessage(result.answer.gradingStatus));
+      }
     } catch {
       setError('Không thể chấm lại bằng AI. Vui lòng kiểm tra kết nối rồi thử lại.');
     } finally {
@@ -165,8 +231,8 @@ const EssayAnswerCard: React.FC<{
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-semibold text-gray-700 dark:text-gray-300">Điểm:</span>
-        <span className={isPending || isAwaitingTeacher ? 'font-semibold text-amber-700 dark:text-amber-300' : 'font-bold text-blue-700 dark:text-blue-300'}>
-          {formatEssayScore(item.score, item.maxPoints, item.gradingStatus)}
+        <span className={isPending || isAwaitingTeacher || isPolling ? 'font-semibold text-amber-700 dark:text-amber-300' : 'font-bold text-blue-700 dark:text-blue-300'}>
+          {isPolling ? 'Đang chấm' : formatEssayScore(item.score, item.maxPoints, item.gradingStatus)}
         </span>
       </div>
 
@@ -242,7 +308,7 @@ const EssayAnswerCard: React.FC<{
               >
                 {item.gradingStatus === 'TeacherGraded' || item.gradingStatus === 'AiGraded' ? 'Sửa điểm' : 'Chấm điểm'}
               </button>
-              {(item.canRegradeWithAi || isAwaitingTeacher) && (
+              {(item.canRegradeWithAi || isAwaitingTeacher) && !isPolling && (
                 <button
                   type="button"
                   onClick={handleAiRegrade}

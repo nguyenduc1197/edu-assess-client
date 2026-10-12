@@ -6,7 +6,7 @@ import { fetchClient } from '../../../api/fetchClient';
 import { useAntiCheatMonitoring } from './useAntiCheatMonitoring';
 import { parseApiDateTime, resolveAttemptDeadlineUtc } from '../../../utils/apiDateTime';
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
-import { buildAnswerPayload } from '../../../utils/essay';
+import { buildAnswerPayload, DraftAnswer, restoreDraftAnswers } from '../../../utils/essay';
 import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
 
 
@@ -281,6 +281,21 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       return;
     }
 
+    // Restore answers saved by auto-save (page reload / reopening an in-progress attempt).
+    const restoreSavedDraft = async (questionItems: Question[]) => {
+      try {
+        const draftResponse = await fetchClient(`/exams/${examId}/draft`);
+        if (!draftResponse.ok) return;
+        const draft: { answers?: DraftAnswer[] } | null = await draftResponse.json().catch(() => null);
+        const restored = restoreDraftAnswers(draft?.answers, questionItems);
+        if (Object.keys(restored).length === 0) return;
+        // Answers the student already changed in this session win over the saved draft.
+        setAnswers((current) => ({ ...restored, ...current }));
+      } catch {
+        // no draft available: start with empty answers
+      }
+    };
+
     const fetchQuestions = async () => {
       try {
         setAttemptEntryError(null);
@@ -301,6 +316,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
           const nextAttemptDeadlineDate = parseApiDateTime(nextAttemptDeadlineUtc);
 
           setQuestions(questionItems);
+          await restoreSavedDraft(questionItems);
           setAttemptStartedAt(nextStartedAt);
           setAttemptDurationMinutes(nextDurationMinutes);
           setAttemptDeadlineUtc(nextAttemptDeadlineUtc);
