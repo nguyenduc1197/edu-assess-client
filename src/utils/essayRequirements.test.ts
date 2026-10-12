@@ -36,7 +36,7 @@ describe('isEssayQuestion', () => {
 });
 
 describe('validateEssayMaxPoints boundaries', () => {
-  it.each(['0.01', '0.25', '1', '9.99', '10', '10.00', ' 5 ', '2,5', 0.01, 10, 1.5])('accepts %p', (v) => {
+  it.each(['0.25', '0.5', '1', '9.75', '10', '10.00', ' 5 ', '2,5', 0.75, 10, 1.5])('accepts %p', (v) => {
     expect(validateEssayMaxPoints(v as any)).toBeNull();
   });
 
@@ -44,8 +44,9 @@ describe('validateEssayMaxPoints boundaries', () => {
     expect(validateEssayMaxPoints(v as any)).toBe('Điểm tối đa của câu tự luận phải lớn hơn 0 và không vượt quá 10.');
   });
 
-  it.each(['0.001', '1.255', '9.999', 1.125])('rejects more than 2 decimals %p', (v) => {
-    expect(validateEssayMaxPoints(v as any)).toMatch(/2 chữ số thập phân/);
+  // Product owner (round 2): only multiples of 0.25 are allowed.
+  it.each(['0.001', '0.01', '1.255', '9.99', '9.999', '1.3', 1.125, 0.1])('rejects non-quarter steps %p', (v) => {
+    expect(validateEssayMaxPoints(v as any)).toMatch(/bội số của 0\.25/);
   });
 
   it.each(['', '   ', 'abc', '1e1', '1..2', null, undefined])('rejects non-numeric %p', (v) => {

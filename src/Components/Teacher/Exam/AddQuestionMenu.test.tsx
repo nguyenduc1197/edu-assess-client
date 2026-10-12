@@ -60,17 +60,18 @@ describe('AddQuestionMenu essay', () => {
     expect(onAddQuestion).not.toHaveBeenCalled();
   });
 
-  it('rejects max points with more than 2 decimals', async () => {
+  // Product owner (round 2): max points must be multiples of 0.25.
+  it.each(['1.125', '0.01', '1.3'])('rejects max points that are not multiples of 0.25 (%s)', async (value) => {
     const { onAddQuestion } = await setup();
     fireEvent.change(screen.getByLabelText(/Đáp án mẫu \/ tiêu chí chấm/), { target: { value: 'Ý 1' } });
-    fireEvent.change(screen.getByLabelText(/Điểm tối đa/), { target: { value: '1.125' } });
+    fireEvent.change(screen.getByLabelText(/Điểm tối đa/), { target: { value } });
     submit();
-    expect(await screen.findByText(/2 chữ số thập phân/)).toBeInTheDocument();
+    expect(await screen.findByText(/bội số của 0\.25/)).toBeInTheDocument();
     expect(onAddQuestion).not.toHaveBeenCalled();
   });
 
   it.each([
-    ['0.01', 0.01],
+    ['0.25', 0.25],
     ['10', 10],
     ['2.5', 2.5],
   ])('creates essay with max points %s', async (input, expected) => {

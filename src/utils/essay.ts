@@ -38,6 +38,11 @@ const parseDecimal = (value: string | number | null | undefined): number | null 
 
 const hasAtMostTwoDecimals = (value: number) => Math.abs(Math.round(value * 100) - value * 100) < 1e-9;
 
+/** True when value is a multiple of 0.25 (0.25, 0.5, 0.75, ...). */
+const isQuarterStep = (value: number) => Math.abs(Math.round(value * 4) - value * 4) < 1e-9;
+
+export const ESSAY_MAX_POINTS_STEP_MESSAGE = 'Điểm tối đa của câu tự luận phải là bội số của 0.25 (ví dụ 0.25, 0.5, 1.75).';
+
 /** Validates the teacher-entered max points of an essay. Returns an error message or null. */
 export const validateEssayMaxPoints = (value: string | number | null | undefined): string | null => {
   const parsed = parseDecimal(value);
@@ -45,8 +50,8 @@ export const validateEssayMaxPoints = (value: string | number | null | undefined
   if (parsed <= 0 || parsed > ESSAY_MAX_ALLOWED_POINTS) {
     return 'Điểm tối đa của câu tự luận phải lớn hơn 0 và không vượt quá 10.';
   }
-  if (!hasAtMostTwoDecimals(parsed)) {
-    return 'Điểm tối đa chỉ được có tối đa 2 chữ số thập phân (ví dụ 0.25, 1.5).';
+  if (!isQuarterStep(parsed)) {
+    return ESSAY_MAX_POINTS_STEP_MESSAGE;
   }
   return null;
 };
