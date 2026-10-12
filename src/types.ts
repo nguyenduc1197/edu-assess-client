@@ -497,3 +497,53 @@ export interface EssayGradeResult {
   pendingEssayCount: number;
   awaitingTeacherEssayCount: number;
 }
+
+// ---- "Tạo đề thi từ file" (exam scan) ----
+export interface ScannedChoice {
+  optionLabel: string;
+  content: string;
+  isCorrect: boolean;
+}
+
+/** One question extracted from an exam file (true/false groups are flattened: one item per statement). */
+export interface ScannedQuestion {
+  order: number;
+  sourceNumber?: string | null;
+  questionFormat: QuestionFormat;
+  content: string;
+  competencyType: string;
+  difficultyLevel: DifficultyLevel;
+  passageText?: string | null;
+  passageGroupKey?: string | null;
+  statementOrder?: number | null;
+  choices: ScannedChoice[];
+  /** Correct answer proposed by AI (not in the file): "AI đoán – cần kiểm tra". */
+  isAnswerAiGuessed: boolean;
+  hasFigure: boolean;
+  figureDescription?: string | null;
+  sampleAnswer?: string | null;
+  statedPoints?: number | null;
+  maxPoints?: number | null;
+  missingCorrectAnswer?: boolean;
+  missingSampleAnswer?: boolean;
+  missingMaxPoints?: boolean;
+}
+
+export interface SkippedScanQuestion {
+  number?: string | null;
+  excerpt: string;
+  reason: string;
+}
+
+export interface ExamScanResult {
+  sourceFileNames: string[];
+  sourceType: string;
+  suggestedTitle?: string | null;
+  suggestedSubject?: string | null;
+  suggestedDurationMinutes?: number | null;
+  singleChoicePoints?: number | null;
+  trueFalseGroupPoints?: number | null;
+  questions: ScannedQuestion[];
+  skippedQuestions: SkippedScanQuestion[];
+  warnings: string[];
+}
