@@ -1004,6 +1004,11 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
             refreshExamLists();
           }}
           examToEdit={editingExam}
+          onOpenScanExam={() => {
+            setIsCreateModalOpen(false);
+            setEditingExam(null);
+            setIsScanModalOpen(true);
+          }}
         />
       )}
 

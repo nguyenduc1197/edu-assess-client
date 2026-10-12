@@ -16,7 +16,6 @@ import { buildQuestionPreviewBlocks } from '../../../utils/questionGrouping';
 
 type SourceMode = 'text' | 'pdf' | 'url' | 'youtube';
 type GeneratorTab = 'content' | 'scan';
-type FileMode = 'content' | 'exam';
 
 type GeneratedQuestion = Question & {
   sourceEvidence?: string;
@@ -28,6 +27,8 @@ interface AIQuestionGeneratorModalProps {
   onSaved?: (result: { message: string; savedQuestionIds?: string[] }) => void;
   enableExamVariantMode?: boolean;
   initialTab?: GeneratorTab;
+  /** Opens "Tạo đề thi từ file" (replaces the old "exam file" mode of this modal). */
+  onOpenScanExam?: () => void;
 }
 
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -88,13 +89,13 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   onSaved,
   enableExamVariantMode = false,
   initialTab = 'content',
+  onOpenScanExam,
 }) => {
   const [activeTab, setActiveTab] = useState<GeneratorTab>(enableExamVariantMode ? initialTab : 'content');
   const [sourceMode, setSourceMode] = useState<SourceMode>('text');
   const [sourceText, setSourceText] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [fileMode, setFileMode] = useState<FileMode>('content');
   const [scanFile, setScanFile] = useState<File | null>(null);
   const [selectedCompetencies, setSelectedCompetencies] = useState<string[]>([]);
   const [questionCount, setQuestionCount] = useState<number | ''>(40);
@@ -116,8 +117,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
     );
   };
 
-  const isExamFileMode = activeTab === 'content' && sourceMode === 'pdf' && fileMode === 'exam';
-  const uploadSourceLabel = sourceMode === 'pdf' && fileMode === 'exam' ? 'PDF/Ảnh' : 'PDF';
+  const uploadSourceLabel = 'PDF';
 
   const validateSource = () => {
     if (activeTab === 'scan') {
@@ -132,11 +132,11 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
       return '';
     }
 
-    if (!isExamFileMode && selectedCompetencies.length === 0) {
+    if (selectedCompetencies.length === 0) {
       return 'Vui lòng chọn ít nhất một năng lực cần đánh giá.';
     }
 
-    if (!isExamFileMode && (!questionCount || questionCount < 1 || questionCount > 40)) {
+    if (!questionCount || questionCount < 1 || questionCount > 40) {
       return 'Số câu hỏi phải từ 1 đến 40.';
     }
 
@@ -149,9 +149,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
     }
 
     if (sourceMode === 'pdf' && !file) {
-      return isExamFileMode
-        ? 'Vui lòng chọn file đề thi PDF hoặc ảnh để tải lên.'
-        : 'Vui lòng chọn tệp PDF để tải lên.';
+      return 'Vui lòng chọn tệp PDF để tải lên.';
     }
 
     return '';
@@ -237,15 +235,13 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
         formData.append('sourceUrl', sourceUrl.trim());
       }
 
-      formData.append('fileMode', sourceMode === 'pdf' ? fileMode : 'content');
+      formData.append('fileMode', 'content');
 
-      if (!isExamFileMode) {
-        selectedCompetencies.forEach((competency) => {
-          formData.append('competencies', competency);
-        });
+      selectedCompetencies.forEach((competency) => {
+        formData.append('competencies', competency);
+      });
 
-        formData.append('questionCount', String(questionCount));
-      }
+      formData.append('questionCount', String(questionCount));
 
       formData.append('saveToQuestionBank', String(saveToQuestionBank));
 
@@ -674,83 +670,47 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
 
                {activeTab === 'content' && sourceMode === 'pdf' && (
                  <div>
-                   <div className="mb-4 space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
-                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                       Loại file tải lên
-                     </label>
-                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                       {[
-                         {
-                           value: 'content',
-                           label: 'Nội dung học',
-                           description: 'AI sinh câu hỏi mới từ nội dung trong file.',
-                         },
-                         {
-                           value: 'exam',
-                           label: 'Đề thi có sẵn câu hỏi',
-                           description: 'AI đọc trực tiếp câu hỏi và đáp án từ đề thi.',
-                         },
-                       ].map((item) => (
-                         <label
-                           key={item.value}
-                           className={`flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
-                             fileMode === item.value
-                               ? 'border-violet-500 bg-white text-violet-700 dark:border-violet-400 dark:bg-gray-900 dark:text-violet-300'
-                               : 'border-gray-300 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-900/60 dark:text-gray-300'
-                           }`}
-                         >
-                           <input
-                             type="radio"
-                             name="file-mode"
-                             value={item.value}
-                             checked={fileMode === item.value}
-                             onChange={() => {
-                               setFileMode(item.value as FileMode);
-                               setError('');
-                               setSuccessMessage('');
-                               resetGeneratedState();
-                             }}
-                             className="mt-1 h-4 w-4 border-gray-300 text-violet-600 focus:ring-violet-500"
-                           />
-                           <span>
-                             <span className="block font-medium">{item.label}</span>
-                             <span className="block text-xs text-gray-500 dark:text-gray-400">{item.description}</span>
-                           </span>
-                         </label>
-                       ))}
-                     </div>
+                   <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-100">
+                     <p className="font-medium">Muốn tạo bài thi giống hệt một đề có sẵn?</p>
+                     <p className="mt-1 text-xs">
+                       Chế độ "Đề thi có sẵn câu hỏi" đã được thay bằng chức năng <strong>"Tạo đề thi từ file"</strong> trong trang Quản lý bài thi
+                       (hỗ trợ PDF, ảnh, Word và câu tự luận).
+                     </p>
+                     {onOpenScanExam && (
+                       <button
+                         type="button"
+                         onClick={onOpenScanExam}
+                         className="mt-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                       >
+                         Mở "Tạo đề thi từ file"
+                       </button>
+                     )}
                    </div>
 
                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                     {isExamFileMode ? 'File đề thi' : 'Tệp PDF'}
+                     Tệp PDF
                    </label>
                    <label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 px-4 py-6 text-sm text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
                      <UploadCloud size={18} />
                      <span>
-                       {file
-                         ? file.name
-                         : isExamFileMode
-                           ? 'Tải lên file PDF hoặc ảnh đề thi'
-                           : 'Chọn tệp PDF để tải lên'}
+                       {file ? file.name : 'Chọn tệp PDF để tải lên'}
                      </span>
                      <input
                        type="file"
-                       accept={isExamFileMode ? 'application/pdf,image/png,image/jpeg,image/webp' : 'application/pdf'}
+                       accept="application/pdf"
                        className="hidden"
                        onChange={(e) => setFile(e.target.files?.[0] || null)}
                      />
                    </label>
                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                     {isExamFileMode
-                       ? 'Tải lên file PDF đề thi đã có câu hỏi và đáp án. Hệ thống sẽ đọc và hiển thị trực tiếp.'
-                       : 'Tải lên file PDF chứa nội dung học để AI tạo câu hỏi mới.'}
+                     Tải lên file PDF chứa nội dung học để AI tạo câu hỏi mới.
                    </p>
                  </div>
                )}
             </div>
 
             <div className="space-y-4">
-              {activeTab === 'content' && !isExamFileMode ? (
+              {activeTab === 'content' ? (
                <div>
                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                    Năng lực cần đánh giá
@@ -769,17 +729,6 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                   ))}
                 </div>
               </div>
-              ) : activeTab === 'content' ? (
-                <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900/60">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Chế độ đọc đề thi có sẵn</p>
-                    <ul className="mt-2 space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <li>Hệ thống sẽ trích xuất trực tiếp câu hỏi và đáp án từ file PDF hoặc ảnh.</li>
-                      <li>Bạn có thể rà soát, chỉnh sửa đáp án và gán lại năng lực trước khi lưu.</li>
-                      <li>Không cần nhập số lượng câu hỏi hay chọn năng lực trước khi chạy.</li>
-                    </ul>
-                  </div>
-                </div>
               ) : (
                 <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900/60">
                   <div>
@@ -793,7 +742,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 </div>
               )}
 
-              {activeTab === 'content' && !isExamFileMode && (
+              {activeTab === 'content' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1024,11 +973,6 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                 <div>
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Xem trước và chỉnh sửa</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Bạn có thể sửa nội dung trước khi lưu vào ngân hàng câu hỏi.</p>
-                  {responseMeta?.sourceType === 'examPdf' && (
-                    <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
-                      Nếu AI chưa xác định chắc chắn đáp án đúng, hệ thống có thể chọn tạm phương án đầu tiên. Hãy rà soát kỹ trước khi lưu.
-                    </p>
-                  )}
                 </div>
                 {!saveToQuestionBank && (
                   <button

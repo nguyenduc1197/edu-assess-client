@@ -22,11 +22,13 @@ interface CreateExamModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   examToEdit?: ExamToEdit | null;
+  /** Opens "Tạo đề thi từ file" (link shown inside the AI generator). */
+  onOpenScanExam?: () => void;
 }
 
 const DEFAULT_DURATION_MINUTES = 45;
 
-const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, examToEdit }) => {
+const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, examToEdit, onOpenScanExam }) => {
   const isEditing = !!examToEdit;
   const [name, setName] = useState(examToEdit?.name || '');
   const toLocalDatetime = (iso: string) => {
@@ -279,6 +281,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
           <AIQuestionGeneratorModal
             competencyOptions={competencyOptions}
             enableExamVariantMode={true}
+            onOpenScanExam={onOpenScanExam}
             onClose={() => setIsAIModalOpen(false)}
             onSaved={(result) => {
               setSuccessMessage(result.message);
