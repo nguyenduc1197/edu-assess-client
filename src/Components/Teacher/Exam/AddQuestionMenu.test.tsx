@@ -51,12 +51,12 @@ describe('AddQuestionMenu essay', () => {
     expect(onAddQuestion).not.toHaveBeenCalled();
   });
 
-  it.each(['0', '10.01', '-1'])('rejects max points %s', async (value) => {
+  it.each(['0', '40.25', '-1'])('rejects max points %s', async (value) => {
     const { onAddQuestion } = await setup();
     fireEvent.change(screen.getByLabelText(/Đáp án mẫu \/ tiêu chí chấm/), { target: { value: 'Ý 1' } });
     fireEvent.change(screen.getByLabelText(/Điểm tối đa/), { target: { value } });
     submit();
-    expect(await screen.findByText('Điểm tối đa của câu tự luận phải lớn hơn 0 và không vượt quá 10.')).toBeInTheDocument();
+    expect(await screen.findByText('Điểm tối đa của câu tự luận phải lớn hơn 0 và không vượt quá 40.')).toBeInTheDocument();
     expect(onAddQuestion).not.toHaveBeenCalled();
   });
 

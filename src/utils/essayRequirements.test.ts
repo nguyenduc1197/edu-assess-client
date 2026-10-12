@@ -18,7 +18,7 @@ import {
 describe('essay constants', () => {
   it('match backend rules', () => {
     expect(ESSAY_DEFAULT_MAX_POINTS).toBe(1);
-    expect(ESSAY_MAX_ALLOWED_POINTS).toBe(10);
+    expect(ESSAY_MAX_ALLOWED_POINTS).toBe(40); // round 5: raised from 10 to 40
     expect(ESSAY_SAMPLE_ANSWER_MAX_LENGTH).toBe(4000);
   });
 });
@@ -36,12 +36,13 @@ describe('isEssayQuestion', () => {
 });
 
 describe('validateEssayMaxPoints boundaries', () => {
-  it.each(['0.25', '0.5', '1', '9.75', '10', '10.00', ' 5 ', '2,5', 0.75, 10, 1.5])('accepts %p', (v) => {
+  it.each(['0.25', '0.5', '1', '9.75', '10', '10.00', '11', '39.75', '40', ' 5 ', '2,5', 0.75, 10, 40, 1.5])('accepts %p', (v) => {
     expect(validateEssayMaxPoints(v as any)).toBeNull();
   });
 
-  it.each(['0', '0.00', '-0.01', '10.01', '11', 0, 10.01, -1])('rejects out of range %p', (v) => {
-    expect(validateEssayMaxPoints(v as any)).toBe('Điểm tối đa của câu tự luận phải lớn hơn 0 và không vượt quá 10.');
+  // Round 5: upper limit is 40.
+  it.each(['0', '0.00', '-0.01', '40.25', '41', 0, 40.5, -1])('rejects out of range %p', (v) => {
+    expect(validateEssayMaxPoints(v as any)).toBe('Điểm tối đa của câu tự luận phải lớn hơn 0 và không vượt quá 40.');
   });
 
   // Product owner (round 2): only multiples of 0.25 are allowed.

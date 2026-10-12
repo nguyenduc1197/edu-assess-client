@@ -39,7 +39,8 @@ describe('essay utils', () => {
     expect(validateEssayMaxPoints('10')).toBeNull();
     expect(validateEssayMaxPoints('2,5')).toBeNull();
     expect(validateEssayMaxPoints('0')).not.toBeNull();
-    expect(validateEssayMaxPoints('10.25')).not.toBeNull();
+    expect(validateEssayMaxPoints('40')).toBeNull();
+    expect(validateEssayMaxPoints('40.25')).not.toBeNull();
     expect(validateEssayMaxPoints('-1')).not.toBeNull();
     expect(validateEssayMaxPoints('abc')).not.toBeNull();
     expect(validateEssayMaxPoints('1.125')).not.toBeNull();

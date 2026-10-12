@@ -1,7 +1,7 @@
 import { AnswerState, EssayGradingStatus, Question } from '../types';
 
 export const ESSAY_DEFAULT_MAX_POINTS = 1;
-export const ESSAY_MAX_ALLOWED_POINTS = 10;
+export const ESSAY_MAX_ALLOWED_POINTS = 40;
 export const ESSAY_SAMPLE_ANSWER_MAX_LENGTH = 4000;
 export const ESSAY_FEEDBACK_MAX_LENGTH = 2000;
 
@@ -48,7 +48,7 @@ export const validateEssayMaxPoints = (value: string | number | null | undefined
   const parsed = parseDecimal(value);
   if (parsed === null) return 'Vui lòng nhập điểm tối đa hợp lệ cho câu tự luận.';
   if (parsed <= 0 || parsed > ESSAY_MAX_ALLOWED_POINTS) {
-    return 'Điểm tối đa của câu tự luận phải lớn hơn 0 và không vượt quá 10.';
+    return 'Điểm tối đa của câu tự luận phải lớn hơn 0 và không vượt quá 40.';
   }
   if (!isQuarterStep(parsed)) {
     return ESSAY_MAX_POINTS_STEP_MESSAGE;

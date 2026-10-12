@@ -382,14 +382,14 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
                     id="essay-max-points"
                     type="number"
                     min={0.25}
-                    max={10}
+                    max={40}
                     step={0.25}
                     value={maxPointsInput}
                     onChange={(e) => setMaxPointsInput(e.target.value)}
                     className="w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Từ 0.25 đến 10 điểm. Mỗi câu trắc nghiệm / nhóm Đúng-Sai được tính 1 điểm khi quy đổi thang 10.
+                    Từ 0.25 đến 40 điểm, theo bước 0.25. Mỗi câu trắc nghiệm / nhóm Đúng-Sai được tính 1 điểm khi quy đổi thang 10.
                   </p>
                 </div>
               </div>
