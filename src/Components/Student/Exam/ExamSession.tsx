@@ -6,6 +6,8 @@ import { fetchClient } from '../../../api/fetchClient';
 import { useAntiCheatMonitoring } from './useAntiCheatMonitoring';
 import { parseApiDateTime, resolveAttemptDeadlineUtc } from '../../../utils/apiDateTime';
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
+import { buildAnswerPayload } from '../../../utils/essay';
+import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
 
 
 interface ExamSessionProps {
@@ -90,6 +92,7 @@ const toPendingAssessmentResult = (
   selfDevelopmentAccumulation: previousResult?.selfDevelopmentAccumulation ?? null,
   economicSocialParticipationAccumulation: previousResult?.economicSocialParticipationAccumulation ?? null,
   wrongAnswers: [],
+  essayAnswers: previousResult?.essayAnswers ?? [],
   assessmentError: null,
   finishedAt: previousResult?.finishedAt || new Date().toISOString(),
   assessedAt: null,
@@ -152,11 +155,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
     try {
       const payload = {
-        answers: Object.entries(answersRef.current).map(([questionId, value]) => ({
-          questionId,
-          choiceId: value.choiceId ?? null,
-          essayAnswer: null,
-        })),
+        answers: buildAnswerPayload(answersRef.current),
       };
 
       const response = await fetchClient(`/exams/${examId}/save-draft`, {
@@ -340,6 +339,18 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     }));
   };
 
+  const handleEssayAnswer = (questionId: string, text: string) => {
+    if (isAttemptLocked) return;
+
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        content: text,
+        essayAnswer: text,
+      },
+    }));
+  };
+
   const handleSubmit = async () => {
     if (isAttemptLocked) {
       setAttemptActionMessage('Đã hết thời gian làm bài của lượt này. Em không thể nộp thêm.');
@@ -348,11 +359,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
     try {
       const payload = {
-        answers: Object.entries(answers).map(([questionId, value]) => ({
-          questionId,
-          choiceId: value.choiceId ?? null,
-          essayAnswer: null,
-        })),
+        answers: buildAnswerPayload(answers),
       };
 
       const response = await fetchClient(`/exams/${examId}/submit`, {
@@ -495,6 +502,10 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
 
     const failed = assessmentStatus === 'Failed';
     const wrongAnswers = assessmentResult.wrongAnswers || [];
+    const essayAnswers = assessmentResult.essayAnswers || [];
+    const pendingEssayCount = assessmentResult.pendingEssayCount ?? essayAnswers.filter((x) => x.gradingStatus === 'Pending').length;
+    const awaitingTeacherEssayCount =
+      assessmentResult.awaitingTeacherEssayCount ?? essayAnswers.filter((x) => x.gradingStatus === 'AwaitingTeacher').length;
     const wrongAnswerSections = buildWrongAnswerSections(wrongAnswers);
     const feedbackItems = getFeedbackItems(overallFeedback);
 
@@ -534,7 +545,21 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                 <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Điểm số</span>
                 <span className="text-5xl font-extrabold text-blue-700 dark:text-blue-300">{score?.toFixed(1)}</span>
                 <span className="text-sm text-gray-500 dark:text-gray-400">/ 10</span>
+                {(pendingEssayCount > 0 || awaitingTeacherEssayCount > 0) && (
+                  <span className="mt-1 text-center text-xs text-amber-700 dark:text-amber-300">
+                    {pendingEssayCount > 0
+                      ? 'Câu tự luận đang chấm — điểm sẽ được cập nhật khi chấm xong.'
+                      : 'Có câu tự luận đang chờ giáo viên chấm — điểm tạm tính câu đó là 0.'}
+                  </span>
+                )}
               </div>
+
+              {essayAnswers.length > 0 && (
+                <div className="mobile-premium-enter mobile-premium-delay-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-xl sm:p-5 sm:shadow-none">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Câu tự luận</p>
+                  <EssayAnswerList items={essayAnswers} mode="student" />
+                </div>
+              )}
 
               {/* Overall feedback */}
               {overallFeedback && (
@@ -869,6 +894,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       questions={questions}
       answers={answers}
       onAnswer={handleAnswer}
+      onEssayAnswer={handleEssayAnswer}
       onReview={() => setStep('review')}
       onExit={onExit}
       antiCheatEvents={antiCheatMonitoring.recentEvents}

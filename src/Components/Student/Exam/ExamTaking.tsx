@@ -4,6 +4,7 @@ import { AnswerState, Question } from '../../../types';
 import { AntiCheatUiEvent } from './antiCheat';
 import { parseApiDateTime } from '../../../utils/apiDateTime';
 import { buildQuestionBlocks } from '../../../utils/questionGrouping';
+import { formatPoints, hasAnswerContent, isEssayQuestion } from '../../../utils/essay';
 
 interface ExamTakingProps {
   examTitle: string;
@@ -11,6 +12,8 @@ interface ExamTakingProps {
   questions: Question[];
   answers: Record<string, AnswerState>;
   onAnswer: (questionId: string, id: string, content: string) => void;
+  /** Essay questions: called with the typed text. */
+  onEssayAnswer?: (questionId: string, text: string) => void;
   onReview: () => void;
   onExit: () => void;
   antiCheatEvents?: AntiCheatUiEvent[];
@@ -28,6 +31,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   questions, 
   answers, 
   onAnswer, 
+  onEssayAnswer,
   onReview,
   onExit,
   antiCheatEvents = [],
@@ -98,7 +102,8 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   const isPassageGroup = currentBlock?.type === 'group' && currentBlock.groupKind === 'passage';
   const currentBlockFirstNumber = currentBlock?.questionNumbers[0];
   const currentBlockLastNumber = currentBlock?.questionNumbers[currentBlock.questionNumbers.length - 1];
-  const progress = questions.length === 0 ? 0 : Math.round((Object.keys(answers).length / questions.length) * 100);
+  const answeredCount = questions.filter((q) => hasAnswerContent(answers[q.id])).length;
+  const progress = questions.length === 0 ? 0 : Math.round((answeredCount / questions.length) * 100);
   const isTimeUp = remainingSeconds !== null && remainingSeconds <= 0;
   const isLocked = disableExamActions || isTimeUp;
   const effectiveLockMessage =
@@ -279,6 +284,11 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                   <h2 className="whitespace-pre-line text-2xl font-medium leading-relaxed">
                     {currentQuestion.content}
                   </h2>
+                  {isEssayQuestion(currentQuestion) && (
+                    <p className="text-sm font-medium text-violet-600 dark:text-violet-400">
+                      Câu tự luận · {formatPoints(currentQuestion.maxPoints ?? 1)} điểm
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -364,6 +374,24 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                   </div>
                 ))}
               </div>
+            ) : isEssayQuestion(currentQuestion) ? (
+              <div className="space-y-2">
+                <label htmlFor={"essay-" + currentQuestion.id} className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Bài làm của em
+                </label>
+                <textarea
+                  id={"essay-" + currentQuestion.id}
+                  value={answers[currentQuestion.id]?.essayAnswer ?? ''}
+                  onChange={(e) => onEssayAnswer?.(currentQuestion.id, e.target.value)}
+                  disabled={isLocked}
+                  rows={10}
+                  placeholder="Nhập câu trả lời tự luận của em..."
+                  className="w-full rounded-xl border border-gray-300 bg-white p-4 text-base leading-7 text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 dark:border-gray-700 dark:bg-background-dark dark:text-gray-100"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {(answers[currentQuestion.id]?.essayAnswer ?? '').trim().length} ký tự · Bỏ trống sẽ được 0 điểm.
+                </p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {currentQuestion.choices?.map((option) => {
@@ -426,7 +454,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
             <h3 className="mb-4 text-sm font-semibold text-gray-900 dark:text-white">Danh sách câu hỏi</h3>
             <div className="grid grid-cols-5 gap-2">
               {questionBlocks.map((block, idx) => {
-                const isAnswered = block.questions.every((q) => !!answers[q.id]);
+                const isAnswered = block.questions.every((q) => hasAnswerContent(answers[q.id]));
                 const isCurrent = idx === currentBlockIndex;
                 return (
                   <button

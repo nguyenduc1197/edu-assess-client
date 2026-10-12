@@ -2,6 +2,7 @@ import React from 'react';
 import {  Send, Edit3 } from 'lucide-react';
 import { AnswerState, Question } from '../../../types';
 import { AntiCheatUiEvent } from './antiCheat';
+import { hasAnswerContent, isEssayQuestion } from '../../../utils/essay';
 
 interface ExamReviewProps {
   questions: Question[];
@@ -26,7 +27,7 @@ const ExamReview: React.FC<ExamReviewProps> = ({
   isAntiCheatMonitoring = false,
   antiCheatEnabled = false,
 }) => {
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = questions.filter((q) => hasAnswerContent(answers[q.id])).length;
   const totalCount = questions.length;
 
   return (
@@ -119,7 +120,8 @@ const ExamReview: React.FC<ExamReviewProps> = ({
         {/* Detailed List */}
         <div className="space-y-4">
           {questions.map((q, idx) => {
-            const answer = answers[q.id];
+            const answer = hasAnswerContent(answers[q.id]) ? answers[q.id] : undefined;
+            const isEssay = isEssayQuestion(q);
             return (
               <div 
                 key={q.id} 
@@ -136,9 +138,11 @@ const ExamReview: React.FC<ExamReviewProps> = ({
                   <div>
                     <p className="font-medium text-gray-900 dark:text-gray-200 line-clamp-1">{q.content}</p>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {answer 
-                        ? <span className="text-primary font-medium">Đã chọn: {answer.content}</span> 
-                        : <span className="text-yellow-600 dark:text-yellow-500 italic">Chưa chọn đáp án</span>
+                      {answer
+                        ? isEssay
+                          ? <span className="text-primary font-medium line-clamp-2">Bài làm: {answer.essayAnswer}</span>
+                          : <span className="text-primary font-medium">Đã chọn: {answer.content}</span>
+                        : <span className="text-yellow-600 dark:text-yellow-500 italic">{isEssay ? 'Chưa trả lời câu tự luận' : 'Chưa chọn đáp án'}</span>
                       }
                     </p>
                   </div>
