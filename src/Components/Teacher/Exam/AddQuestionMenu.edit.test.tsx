@@ -92,3 +92,26 @@ describe('AddQuestionMenu edit mode', () => {
     expect(await screen.findByText('Không thể xóa đáp án đã có học sinh chọn.')).toBeInTheDocument();
   });
 });
+
+// Round 6: question content limit is 4000 characters.
+describe('AddQuestionMenu content length', () => {
+  beforeEach(() => {
+    mockedFetch.mockReset();
+    mockedFetch.mockResolvedValue({ ok: true, json: async () => [{ value: 'SelfDevelopment', label: 'Phát triển bản thân' }] });
+  });
+
+  it('accepts 4000 characters and rejects 4001', async () => {
+    const onUpdate = jest.fn();
+    render(<AddQuestionMenu initialQuestion={{ ...mcQuestion, hasStudentAnswers: false }} onUpdateQuestion={onUpdate} />);
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Phát triển bản thân' })).toBeInTheDocument());
+
+    fireEvent.change(screen.getByDisplayValue('Câu trắc nghiệm'), { target: { value: 'x'.repeat(4001) } });
+    fireEvent.click(screen.getByRole('button', { name: /Lưu Thay Đổi/i }));
+    expect(await screen.findByText('Nội dung câu hỏi không được vượt quá 4000 ký tự.')).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByDisplayValue('x'.repeat(4001)), { target: { value: 'x'.repeat(4000) } });
+    fireEvent.click(screen.getByRole('button', { name: /Lưu Thay Đổi/i }));
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+  });
+});

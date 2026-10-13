@@ -7,6 +7,10 @@ import {
   ESSAY_SAMPLE_ANSWER_MAX_LENGTH,
   formatPoints,
   parseEssayNumber,
+  QUESTION_CONTENT_MAX_LENGTH,
+  QUESTION_CONTENT_TOO_LONG_MESSAGE,
+  QUESTION_PASSAGE_MAX_LENGTH,
+  QUESTION_PASSAGE_TOO_LONG_MESSAGE,
   validateEssayMaxPoints,
   validateEssaySampleAnswer,
 } from '../../../utils/essay';
@@ -130,6 +134,16 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
 
     if (!content.trim()) {
       setError('Vui lòng nhập nội dung câu hỏi');
+      return;
+    }
+
+    if (content.trim().length > QUESTION_CONTENT_MAX_LENGTH) {
+      setError(QUESTION_CONTENT_TOO_LONG_MESSAGE);
+      return;
+    }
+
+    if ((initialQuestion?.passageText || '').trim().length > QUESTION_PASSAGE_MAX_LENGTH) {
+      setError(QUESTION_PASSAGE_TOO_LONG_MESSAGE);
       return;
     }
 

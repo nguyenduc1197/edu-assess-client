@@ -5,6 +5,12 @@ export const ESSAY_MAX_ALLOWED_POINTS = 40;
 export const ESSAY_SAMPLE_ANSWER_MAX_LENGTH = 4000;
 export const ESSAY_FEEDBACK_MAX_LENGTH = 2000;
 
+/** Question text limits (same as backend QuestionTextRules). */
+export const QUESTION_CONTENT_MAX_LENGTH = 4000;
+export const QUESTION_PASSAGE_MAX_LENGTH = 8000;
+export const QUESTION_CONTENT_TOO_LONG_MESSAGE = 'Nội dung câu hỏi không được vượt quá 4000 ký tự.';
+export const QUESTION_PASSAGE_TOO_LONG_MESSAGE = 'Đoạn tư liệu không được vượt quá 8000 ký tự.';
+
 export const isEssayQuestion = (question?: Pick<Question, 'questionFormat'> | null) =>
   question?.questionFormat === 'Essay';
 

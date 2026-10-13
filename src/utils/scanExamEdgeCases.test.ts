@@ -77,8 +77,11 @@ describe('review validation', () => {
 
   it('content / choice length boundaries', () => {
     const [q] = toReviewQuestions(result([sq({})]));
-    expect(validateReviewQuestion({ ...q, content: 'x'.repeat(1000) }, 1)).toEqual([]);
-    expect(validateReviewQuestion({ ...q, content: 'x'.repeat(1001) }, 1)[0]).toMatch(/1000 ký tự/);
+    // Round 6: content limit raised from 1000 to 4000 characters, shared passage up to 8000.
+    expect(validateReviewQuestion({ ...q, content: 'x'.repeat(4000) }, 1)).toEqual([]);
+    expect(validateReviewQuestion({ ...q, content: 'x'.repeat(4001) }, 1)[0]).toMatch(/4000 ký tự/);
+    expect(validateReviewQuestion({ ...q, passageText: 'p'.repeat(8000) }, 1)).toEqual([]);
+    expect(validateReviewQuestion({ ...q, passageText: 'p'.repeat(8001) }, 1)[0]).toMatch(/8000 ký tự/);
     expect(validateReviewQuestion({ ...q, choices: [{ optionLabel: 'A', content: 'y'.repeat(501), isCorrect: true }, q.choices[1]] }, 1)[0]).toMatch(/500 ký tự/);
   });
 

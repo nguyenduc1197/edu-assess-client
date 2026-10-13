@@ -1,11 +1,18 @@
 import { ExamScanResult, ScannedChoice, ScannedQuestion } from '../types';
-import { parseEssayNumber, validateEssayMaxPoints, validateEssaySampleAnswer } from './essay';
+import {
+  parseEssayNumber,
+  QUESTION_CONTENT_MAX_LENGTH,
+  QUESTION_PASSAGE_MAX_LENGTH,
+  validateEssayMaxPoints,
+  validateEssaySampleAnswer,
+} from './essay';
 
 /** "Tạo đề thi từ file": client-side helpers (file checks, review validation, create payload). */
 
 export const SCAN_MAX_TOTAL_BYTES = 20 * 1024 * 1024;
 export const SCAN_MAX_IMAGES = 20;
-export const SCAN_CONTENT_MAX_LENGTH = 1000;
+export const SCAN_CONTENT_MAX_LENGTH = QUESTION_CONTENT_MAX_LENGTH;
+export const SCAN_PASSAGE_MAX_LENGTH = QUESTION_PASSAGE_MAX_LENGTH;
 export const SCAN_CHOICE_MAX_LENGTH = 500;
 export const SCAN_ACCEPT = '.pdf,.docx,.jpg,.jpeg,.png,.webp,.heic,.heif';
 
@@ -69,7 +76,10 @@ export const validateReviewQuestion = (question: ReviewQuestion, number: number)
   const content = (question.content || '').trim();
 
   if (!content) errors.push(`${prefix}: nội dung câu hỏi không được để trống.`);
-  else if (content.length > SCAN_CONTENT_MAX_LENGTH) errors.push(`${prefix}: nội dung câu hỏi không được vượt quá 1000 ký tự.`);
+  else if (content.length > SCAN_CONTENT_MAX_LENGTH) errors.push(`${prefix}: nội dung câu hỏi không được vượt quá 4000 ký tự.`);
+  if ((question.passageText || '').trim().length > SCAN_PASSAGE_MAX_LENGTH) {
+    errors.push(`${prefix}: đoạn tư liệu không được vượt quá 8000 ký tự.`);
+  }
 
   if (question.questionFormat === 'Essay') {
     const sampleError = validateEssaySampleAnswer(question.sampleAnswer);
