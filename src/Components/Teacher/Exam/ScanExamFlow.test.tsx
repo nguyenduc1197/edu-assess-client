@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import ScanExamModal from './ScanExamModal';
+import ScanExamFlow from './ScanExamFlow';
 import { fetchClient } from '../../../api/fetchClient';
 import { ExamScanResult } from '../../../types';
 
@@ -49,12 +49,12 @@ const uploadAndScan = async () => {
 };
 
 // Round 5: "Tạo đề thi từ file" upload -> review -> create
-describe('ScanExamModal', () => {
+describe('ScanExamFlow', () => {
   beforeEach(() => mockedFetch.mockReset());
 
   it('rejects unsupported / mixed files before calling the API', async () => {
     route();
-    render(<ScanExamModal onClose={jest.fn()} />);
+    render(<ScanExamFlow onClose={jest.fn()} />);
     fireEvent.change(screen.getByLabelText('Chọn file đề thi'), {
       target: { files: [new File(['x'], 'a.pdf', { type: 'application/pdf' }), new File(['y'], 'b.jpg', { type: 'image/jpeg' })] },
     });
@@ -67,7 +67,7 @@ describe('ScanExamModal', () => {
     route();
     const onCreated = jest.fn();
     const onClose = jest.fn();
-    render(<ScanExamModal onClose={onClose} onCreated={onCreated} />);
+    render(<ScanExamFlow onClose={onClose} onCreated={onCreated} />);
     await uploadAndScan();
 
     const [, init] = mockedFetch.mock.calls.find(([u]) => u === '/exams/scan-file')!;
@@ -112,7 +112,7 @@ describe('ScanExamModal', () => {
 
   it('deleting a question and editing content are reflected in the payload; API errors are shown', async () => {
     route(() => Promise.resolve({ ok: false, status: 400, json: async () => ({ message: 'Câu 1: nội dung câu hỏi không được để trống.' }) }));
-    render(<ScanExamModal onClose={jest.fn()} />);
+    render(<ScanExamFlow onClose={jest.fn()} />);
     await uploadAndScan();
 
     fireEvent.click(screen.getByLabelText('Xóa câu 2'));
@@ -137,7 +137,7 @@ describe('ScanExamModal', () => {
       url === '/exams/scan-file'
         ? Promise.resolve({ ok: false, status: 400, json: async () => ({ message: 'Tổng dung lượng file vượt quá 20MB.' }) })
         : ok([]));
-    render(<ScanExamModal onClose={jest.fn()} />);
+    render(<ScanExamFlow onClose={jest.fn()} />);
     fireEvent.change(screen.getByLabelText('Chọn file đề thi'), { target: { files: [new File(['x'], 'de.docx')] } });
     fireEvent.click(screen.getByRole('button', { name: 'Đọc đề bằng AI' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Tổng dung lượng file vượt quá 20MB.');

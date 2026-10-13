@@ -13,9 +13,10 @@ import {
   normalizeAiQuestions,
 } from '../../../utils/aiQuestionNormalization';
 import { buildQuestionPreviewBlocks } from '../../../utils/questionGrouping';
+import ScanExamFlow, { ScanExamInitialFields } from '../Exam/ScanExamFlow';
 
 type SourceMode = 'text' | 'pdf' | 'url' | 'youtube';
-type GeneratorTab = 'content' | 'scan';
+type GeneratorTab = 'content' | 'scan' | 'scanExact';
 
 type GeneratedQuestion = Question & {
   sourceEvidence?: string;
@@ -27,8 +28,12 @@ interface AIQuestionGeneratorModalProps {
   onSaved?: (result: { message: string; savedQuestionIds?: string[] }) => void;
   enableExamVariantMode?: boolean;
   initialTab?: GeneratorTab;
-  /** Opens "Tạo đề thi từ file" (replaces the old "exam file" mode of this modal). */
-  onOpenScanExam?: () => void;
+  /** Shows the "Tạo đề giống file gốc" tab (exam variant mode only). Default true. */
+  enableScanExactTab?: boolean;
+  /** Exam fields already entered by the teacher; passed to "Tạo đề giống file gốc" (they win over file suggestions). */
+  initialExamFields?: ScanExamInitialFields | null;
+  /** Called after "Tạo đề giống file gốc" created a new exam. */
+  onExamCreated?: (examId: string) => void;
 }
 
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -89,9 +94,14 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
   onSaved,
   enableExamVariantMode = false,
   initialTab = 'content',
-  onOpenScanExam,
+  enableScanExactTab = true,
+  initialExamFields,
+  onExamCreated,
 }) => {
-  const [activeTab, setActiveTab] = useState<GeneratorTab>(enableExamVariantMode ? initialTab : 'content');
+  const showScanExactTab = enableExamVariantMode && enableScanExactTab;
+  const [activeTab, setActiveTab] = useState<GeneratorTab>(
+    !enableExamVariantMode || (initialTab === 'scanExact' && !(enableScanExactTab ?? true)) ? 'content' : initialTab
+  );
   const [sourceMode, setSourceMode] = useState<SourceMode>('text');
   const [sourceText, setSourceText] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
@@ -488,7 +498,9 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">{enableExamVariantMode ? 'Tạo bài thi bằng AI' : 'Tạo câu hỏi bằng AI'}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {enableExamVariantMode
-                  ? 'Tạo câu hỏi từ nội dung hoặc tạo biến thể đề mới từ ảnh scan'
+                  ? showScanExactTab
+                    ? 'Tạo câu hỏi từ nội dung, tạo đề biến thể từ ảnh scan, hoặc tạo đề giống hệt file gốc'
+                    : 'Tạo câu hỏi từ nội dung hoặc tạo đề biến thể từ ảnh scan'
                   : 'Hỗ trợ từ văn bản, PDF, liên kết web hoặc YouTube'}
               </p>
             </div>
@@ -516,7 +528,10 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
           )}
 
           {enableExamVariantMode && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50">
+            <div
+              role="tablist"
+              className={`grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50 ${showScanExactTab ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -547,11 +562,37 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                     : 'text-gray-600 hover:bg-white/70 dark:text-gray-300 dark:hover:bg-gray-900/50'
                 }`}
               >
-                Tạo đề mới từ ảnh scan
+                Tạo đề biến thể từ ảnh scan
               </button>
+              {showScanExactTab && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('scanExact');
+                    setError('');
+                    setSuccessMessage('');
+                    resetGeneratedState();
+                  }}
+                  className={`rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
+                    activeTab === 'scanExact'
+                      ? 'bg-white text-violet-700 shadow-sm dark:bg-gray-900 dark:text-violet-300'
+                      : 'text-gray-600 hover:bg-white/70 dark:text-gray-300 dark:hover:bg-gray-900/50'
+                  }`}
+                >
+                  Tạo đề giống file gốc
+                </button>
+              )}
             </div>
           )}
 
+          {activeTab === 'scanExact' && (
+            <ScanExamFlow
+              initialExamFields={initialExamFields}
+              onCreated={(examId) => onExamCreated?.(examId)}
+            />
+          )}
+
+          {activeTab !== 'scanExact' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="space-y-4">
               {activeTab === 'content' ? (
@@ -673,16 +714,21 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
                    <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-100">
                      <p className="font-medium">Muốn tạo bài thi giống hệt một đề có sẵn?</p>
                      <p className="mt-1 text-xs">
-                       Chế độ "Đề thi có sẵn câu hỏi" đã được thay bằng chức năng <strong>"Tạo đề thi từ file"</strong> trong trang Quản lý bài thi
-                       (hỗ trợ PDF, ảnh, Word và câu tự luận).
+                       Chế độ "Đề thi có sẵn câu hỏi" đã được thay bằng <strong>"Tạo đề giống file gốc"</strong> trong cửa sổ
+                       "Tạo bài thi bằng AI" (Quản lý bài thi → Tạo Mới → Tạo câu hỏi bằng AI), hỗ trợ PDF, ảnh, Word và câu tự luận.
                      </p>
-                     {onOpenScanExam && (
+                     {showScanExactTab && (
                        <button
                          type="button"
-                         onClick={onOpenScanExam}
+                         onClick={() => {
+                           setActiveTab('scanExact');
+                           setError('');
+                           setSuccessMessage('');
+                           resetGeneratedState();
+                         }}
                          className="mt-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
                        >
-                         Mở "Tạo đề thi từ file"
+                         Chuyển sang "Tạo đề giống file gốc"
                        </button>
                      )}
                    </div>
@@ -792,6 +838,7 @@ const AIQuestionGeneratorModal: React.FC<AIQuestionGeneratorModalProps> = ({
               </button>
             </div>
           </div>
+          )}
 
           {activeTab === 'content' && responseMeta && (
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">

@@ -20,15 +20,16 @@ interface ExamToEdit {
 
 interface CreateExamModalProps {
   onClose: () => void;
-  onSuccess?: () => void;
+  /** Called after an exam was saved; an optional message is shown as a toast by the parent. */
+  onSuccess?: (message?: string) => void;
   examToEdit?: ExamToEdit | null;
-  /** Opens "Tạo đề thi từ file" (link shown inside the AI generator). */
-  onOpenScanExam?: () => void;
 }
 
 const DEFAULT_DURATION_MINUTES = 45;
 
-const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, examToEdit, onOpenScanExam }) => {
+export const SCAN_EXACT_CREATED_MESSAGE = 'Đã tạo bài thi từ file đề.';
+
+const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, examToEdit }) => {
   const isEditing = !!examToEdit;
   const [name, setName] = useState(examToEdit?.name || '');
   const toLocalDatetime = (iso: string) => {
@@ -281,7 +282,14 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
           <AIQuestionGeneratorModal
             competencyOptions={competencyOptions}
             enableExamVariantMode={true}
-            onOpenScanExam={onOpenScanExam}
+            // "Tạo đề giống file gốc" creates a NEW exam, so it is hidden while editing an existing one.
+            enableScanExactTab={!isEditing}
+            initialExamFields={{ name, schoolClassId: selectedClassId, start, end, durationMinutes, antiCheatEnabled }}
+            onExamCreated={() => {
+              setIsAIModalOpen(false);
+              onSuccess?.(SCAN_EXACT_CREATED_MESSAGE);
+              onClose();
+            }}
             onClose={() => setIsAIModalOpen(false)}
             onSaved={(result) => {
               setSuccessMessage(result.message);

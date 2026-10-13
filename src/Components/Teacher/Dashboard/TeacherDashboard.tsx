@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Download, FileUp, Search, PlusCircle, Copy, Edit2, BarChart2, RotateCw, Trash2, AlertTriangle } from 'lucide-react';
+import { Download, Search, PlusCircle, Copy, Edit2, BarChart2, RotateCw, Trash2, AlertTriangle } from 'lucide-react';
 import {
   AssessmentResult,
   Assignment,
@@ -15,7 +15,6 @@ import {
 } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
 import CreateExamModal from '../Exam/CreateExamModal';
-import ScanExamModal from '../Exam/ScanExamModal';
 import { fetchClient } from '../../../api/fetchClient';
 import { downloadFile } from '../../../utils/downloadFile';
 import { getAssessmentStatusLabel } from '../../../utils/assessmentStatus';
@@ -79,7 +78,6 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [isDeletedAssignmentsLoading, setIsDeletedAssignmentsLoading] = useState(false);
   const [deletedAssignmentsError, setDeletedAssignmentsError] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; durationMinutes?: number; questionIds: string[]; schoolClassId: string; antiCheatEnabled?: boolean } | null>(null);
   const [selectedExam, setSelectedExam] = useState<Assignment | null>(null);
   const [examStudents, setExamStudents] = useState<ExamStudentStatusItem[]>([]);
@@ -1000,25 +998,13 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
       {(isCreateModalOpen || editingExam) && (
         <CreateExamModal 
           onClose={() => { setIsCreateModalOpen(false); setEditingExam(null); }} 
-          onSuccess={() => {
+          onSuccess={(message) => {
             refreshExamLists();
+            if (message) {
+              setToast({ type: 'success', message });
+            }
           }}
           examToEdit={editingExam}
-          onOpenScanExam={() => {
-            setIsCreateModalOpen(false);
-            setEditingExam(null);
-            setIsScanModalOpen(true);
-          }}
-        />
-      )}
-
-      {isScanModalOpen && (
-        <ScanExamModal
-          onClose={() => setIsScanModalOpen(false)}
-          onCreated={() => {
-            refreshExamLists();
-            setToast({ type: 'success', message: 'Đã tạo bài thi từ file đề.' });
-          }}
         />
       )}
 
@@ -1077,20 +1063,10 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
               </div>
 
               {examListMode === 'active' && (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => setIsScanModalOpen(true)}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-2.5 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50 dark:border-blue-700 dark:bg-gray-900 dark:text-blue-300 transition-all"
-                >
-                  <FileUp size={20} />
-                  <span>Tạo đề thi từ file</span>
-                </button>
                 <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-violet-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all">
                   <PlusCircle size={20} />
                   <span>Tạo Mới</span>
                 </button>
-                </div>
               )}
             </div>
           </div>

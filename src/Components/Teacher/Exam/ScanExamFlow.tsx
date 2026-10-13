@@ -13,11 +13,19 @@ import {
   validateScanFiles,
 } from '../../../utils/scanExam';
 
-interface ScanExamModalProps {
-  onClose: () => void;
+/** Exam fields the teacher already entered elsewhere (e.g. in "Tạo bài kiểm tra"); non-empty values win over file suggestions. */
+export type ScanExamInitialFields = Partial<ScanExamFields>;
+
+interface ScanExamFlowProps {
+  /** Cancel / close (shows the "Hủy" button). Also called after the exam was created. */
+  onClose?: () => void;
   /** Called with the new exam id after the exam was created. */
   onCreated?: (examId: string) => void;
+  initialExamFields?: ScanExamInitialFields | null;
 }
+
+const hasValue = (value: unknown) =>
+  value !== undefined && value !== null && (typeof value !== 'string' || value.trim() !== '');
 
 const DEFAULT_DURATION_MINUTES = 45;
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -38,7 +46,11 @@ const readApiMessage = async (response: Response, fallback: string) => {
   return data && typeof data.message === 'string' && data.message.trim() ? (data.message as string) : fallback;
 };
 
-const ScanExamModal: React.FC<ScanExamModalProps> = ({ onClose, onCreated }) => {
+/**
+ * "Tạo đề giống file gốc": upload an exam file -> AI extraction -> review / edit -> exam fields -> create.
+ * Reusable flow (rendered inside the "Tạo bài thi bằng AI" window); logic lives in utils/scanExam.ts.
+ */
+const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initialExamFields }) => {
   const [step, setStep] = useState<'upload' | 'review'>('upload');
   const [files, setFiles] = useState<File[]>([]);
   const [isScanning, setIsScanning] = useState(false);
@@ -48,14 +60,16 @@ const ScanExamModal: React.FC<ScanExamModalProps> = ({ onClose, onCreated }) => 
   const [questions, setQuestions] = useState<ReviewQuestion[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
-  const [fields, setFields] = useState<ScanExamFields>({
-    name: '',
-    schoolClassId: '',
-    start: '',
-    end: '',
-    durationMinutes: String(DEFAULT_DURATION_MINUTES),
-    antiCheatEnabled: false,
-  });
+  const [fields, setFields] = useState<ScanExamFields>(() => ({
+    name: initialExamFields?.name ?? '',
+    schoolClassId: initialExamFields?.schoolClassId ?? '',
+    start: initialExamFields?.start ?? '',
+    end: initialExamFields?.end ?? '',
+    durationMinutes: hasValue(initialExamFields?.durationMinutes)
+      ? String(initialExamFields!.durationMinutes)
+      : String(DEFAULT_DURATION_MINUTES),
+    antiCheatEnabled: initialExamFields?.antiCheatEnabled ?? false,
+  }));
 
   useEffect(() => {
     const load = async () => {
@@ -119,10 +133,14 @@ const ScanExamModal: React.FC<ScanExamModalProps> = ({ onClose, onCreated }) => 
       const data: ExamScanResult = await response.json();
       setResult(data);
       setQuestions(toReviewQuestions(data));
+      // File suggestions only fill fields the teacher has not entered.
       setFields((current) => ({
         ...current,
-        name: data.suggestedTitle?.trim() || current.name,
-        durationMinutes: data.suggestedDurationMinutes ? String(data.suggestedDurationMinutes) : current.durationMinutes,
+        name: current.name.trim() ? current.name : data.suggestedTitle?.trim() || current.name,
+        durationMinutes:
+          !hasValue(initialExamFields?.durationMinutes) && data.suggestedDurationMinutes
+            ? String(data.suggestedDurationMinutes)
+            : current.durationMinutes,
       }));
       setStep('review');
     } catch {
@@ -157,7 +175,7 @@ const ScanExamModal: React.FC<ScanExamModalProps> = ({ onClose, onCreated }) => 
       }
       const data = await response.json().catch(() => null);
       onCreated?.(data?.examId);
-      onClose();
+      onClose?.();
     } catch {
       setError('Tạo đề thi thất bại. Vui lòng kiểm tra kết nối rồi thử lại.');
     } finally {
@@ -405,21 +423,11 @@ const ScanExamModal: React.FC<ScanExamModalProps> = ({ onClose, onCreated }) => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-4xl flex-col rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-background-dark" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-700">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Tạo đề thi từ file</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              AI đọc toàn bộ câu hỏi trong đề (giữ nguyên nội dung và thứ tự). Thầy/cô kiểm tra lại trước khi tạo bài thi.
-            </p>
-          </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Đóng">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="flex-1 space-y-5 overflow-y-auto p-6">
+    <div data-testid="scan-exam-flow" className="flex flex-col rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-background-dark">
+        <div className="space-y-5 p-4 sm:p-6">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            AI đọc toàn bộ câu hỏi trong đề (giữ nguyên nội dung và thứ tự). Thầy/cô kiểm tra lại trước khi tạo bài thi.
+          </p>
           {error && (
             <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
               {error}
@@ -554,9 +562,11 @@ const ScanExamModal: React.FC<ScanExamModalProps> = ({ onClose, onCreated }) => 
               Chọn file khác
             </button>
           )}
-          <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-            Hủy
-          </button>
+          {onClose && (
+            <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+              Hủy
+            </button>
+          )}
           {step === 'upload' ? (
             <button
               type="button"
@@ -579,9 +589,8 @@ const ScanExamModal: React.FC<ScanExamModalProps> = ({ onClose, onCreated }) => 
             </button>
           )}
         </div>
-      </div>
     </div>
   );
 };
 
-export default ScanExamModal;
+export default ScanExamFlow;

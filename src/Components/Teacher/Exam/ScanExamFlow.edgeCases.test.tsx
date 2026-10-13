@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import ScanExamModal from './ScanExamModal';
+import ScanExamFlow from './ScanExamFlow';
 import { fetchClient } from '../../../api/fetchClient';
 import { ExamScanResult } from '../../../types';
 
@@ -21,7 +21,7 @@ const scan: ExamScanResult = {
 } as ExamScanResult;
 
 // Round 5 (TEST agent): image page order sent to the API, AI-guess confirmation and answer selection gate creation.
-describe('ScanExamModal edge cases', () => {
+describe('ScanExamFlow edge cases', () => {
   let sentFiles: string[] = [];
   let createBody: any = null;
 
@@ -41,7 +41,7 @@ describe('ScanExamModal edge cases', () => {
   });
 
   it('reordered page images are uploaded in the displayed order', async () => {
-    render(<ScanExamModal onClose={jest.fn()} />);
+    render(<ScanExamFlow onClose={jest.fn()} />);
     fireEvent.change(screen.getByLabelText('Chọn file đề thi'), {
       target: { files: ['p1.jpg', 'p2.jpg', 'p3.jpg'].map((n) => new File(['x'], n, { type: 'image/jpeg' })) },
     });
@@ -53,7 +53,7 @@ describe('ScanExamModal edge cases', () => {
   });
 
   it('21 images: scan button disabled and no API call', async () => {
-    render(<ScanExamModal onClose={jest.fn()} />);
+    render(<ScanExamFlow onClose={jest.fn()} />);
     fireEvent.change(screen.getByLabelText('Chọn file đề thi'), {
       target: { files: Array.from({ length: 21 }, (_, i) => new File(['x'], `p${i}.png`, { type: 'image/png' })) },
     });
@@ -63,7 +63,7 @@ describe('ScanExamModal edge cases', () => {
   });
 
   it('creation blocked until AI guess confirmed and missing answer chosen; then payload is in order', async () => {
-    render(<ScanExamModal onClose={jest.fn()} />);
+    render(<ScanExamFlow onClose={jest.fn()} />);
     fireEvent.change(screen.getByLabelText('Chọn file đề thi'), { target: { files: [new File(['x'], 'p1.jpg', { type: 'image/jpeg' })] } });
     fireEvent.click(screen.getByRole('button', { name: 'Đọc đề bằng AI' }));
     const create = await screen.findByRole('button', { name: 'Tạo bài thi' });
