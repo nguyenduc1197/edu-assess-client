@@ -1,4 +1,5 @@
-import { AnswerState, EssayGradingStatus, Question } from '../types';
+import { AnswerState, EssayGradingStatus, EssayRubricItem, Question, SlotAnswer } from '../types';
+import { isStructuredQuestion, sanitizeSlotAnswers } from './structuredQuestion';
 
 export const ESSAY_DEFAULT_MAX_POINTS = 1;
 export const ESSAY_MAX_ALLOWED_POINTS = 40;
@@ -14,14 +15,15 @@ export const QUESTION_PASSAGE_TOO_LONG_MESSAGE = 'Đoạn tư liệu không đư
 export const isEssayQuestion = (question?: Pick<Question, 'questionFormat'> | null) =>
   question?.questionFormat === 'Essay';
 
-/** True when the student actually answered (a choice picked, or non-blank essay text). */
+/** True when the student actually answered (a choice picked, non-blank essay text, or at least one slot filled). */
 export const hasAnswerContent = (answer?: AnswerState | null) =>
-  !!answer && (!!answer.choiceId || !!answer.essayAnswer?.trim());
+  !!answer && (!!answer.choiceId || !!answer.essayAnswer?.trim() || !!answer.slotAnswers?.some((item) => !!item.choiceId));
 
 export interface SubmitAnswerPayload {
   questionId: string;
   choiceId: string | null;
   essayAnswer: string | null;
+  slotAnswers?: SlotAnswer[] | null;
 }
 
 /** Builds the `answers` array sent to save-draft / submit (essay text included, trimmed; blank => null). */
@@ -32,6 +34,7 @@ export const buildAnswerPayload = (answers: Record<string, AnswerState>): Submit
       questionId,
       choiceId: value.choiceId ? value.choiceId : null,
       essayAnswer: essayText ? essayText : null,
+      ...(value.slotAnswers ? { slotAnswers: value.slotAnswers.filter((item) => !!item.choiceId) } : {}),
     };
   });
 
@@ -61,6 +64,53 @@ export const validateEssayMaxPoints = (value: string | number | null | undefined
   }
   return null;
 };
+
+export const ESSAY_RUBRIC_MAX_ITEMS = 20;
+export const ESSAY_RUBRIC_ITEM_MAX_LENGTH = 2000;
+
+/** Rubric item being edited: points kept as raw text. */
+export interface RubricItemInput {
+  content: string;
+  points: string;
+}
+
+export const toRubricInputs = (items: EssayRubricItem[] | null | undefined): RubricItemInput[] =>
+  (items || []).map((item) => ({ content: item.content, points: item.points != null ? String(item.points) : '' }));
+
+/**
+ * Rubric of an existing essay for editing; a legacy essay without rubric becomes one ý
+ * (sample answer, old max points) as the backend does.
+ */
+export const rubricInputsForQuestion = (question: Pick<Question, 'rubricItems' | 'sampleAnswer' | 'maxPoints'>): RubricItemInput[] => {
+  if (question.rubricItems && question.rubricItems.length > 0) return toRubricInputs(question.rubricItems);
+  if (question.sampleAnswer?.trim()) {
+    return [{ content: question.sampleAnswer, points: String(question.maxPoints ?? ESSAY_DEFAULT_MAX_POINTS) }];
+  }
+  return [{ content: '', points: '' }];
+};
+
+/** Sum of valid item points (invalid items count as 0). */
+export const rubricTotal = (items: RubricItemInput[]) =>
+  items.reduce((sum, item) => sum + (parseDecimal(item.points) ?? 0), 0);
+
+/** Validates a rubric (same rules as backend EssayRubricRules). Returns the first error message or null. */
+export const validateRubric = (items: RubricItemInput[]): string | null => {
+  if (items.length === 0) return 'Câu tự luận phải có ít nhất một ý trong danh sách ý (đáp án / tiêu chí chấm).';
+  if (items.length > ESSAY_RUBRIC_MAX_ITEMS) return 'Danh sách ý tối đa 20 ý.';
+  for (const item of items) {
+    const content = item.content.trim();
+    if (!content) return 'Nội dung mỗi ý không được để trống.';
+    if (content.length > ESSAY_RUBRIC_ITEM_MAX_LENGTH) return 'Nội dung mỗi ý không được vượt quá 2000 ký tự.';
+    const points = parseDecimal(item.points);
+    if (points === null || points <= 0 || !isQuarterStep(points)) return 'Điểm của mỗi ý phải lớn hơn 0 và là bội số của 0.25.';
+  }
+  const total = rubricTotal(items);
+  if (total <= 0 || total > ESSAY_MAX_ALLOWED_POINTS) return 'Tổng điểm các ý phải lớn hơn 0 và không vượt quá 40.';
+  return null;
+};
+
+export const toRubricPayload = (items: RubricItemInput[]): EssayRubricItem[] =>
+  items.map((item) => ({ content: item.content.trim(), points: parseDecimal(item.points) }));
 
 /** Validates the sample answer / grading criteria. Returns an error message or null. */
 export const validateEssaySampleAnswer = (value: string | null | undefined): string | null => {
@@ -118,6 +168,7 @@ export interface DraftAnswer {
   questionId: string;
   choiceId?: string | null;
   essayAnswer?: string | null;
+  slotAnswers?: SlotAnswer[] | null;
 }
 
 /**
@@ -139,6 +190,12 @@ export const restoreDraftAnswers = (
       if (draft.essayAnswer && draft.essayAnswer.trim()) {
         restored[question.id] = { content: draft.essayAnswer, essayAnswer: draft.essayAnswer };
       }
+      continue;
+    }
+
+    if (isStructuredQuestion(question)) {
+      const slotAnswers = sanitizeSlotAnswers(question, draft.slotAnswers);
+      if (slotAnswers.length > 0) restored[question.id] = { slotAnswers };
       continue;
     }
 

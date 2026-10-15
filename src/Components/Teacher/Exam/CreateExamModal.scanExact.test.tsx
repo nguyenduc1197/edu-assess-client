@@ -53,6 +53,7 @@ describe('CreateExamModal scanExact', () => {
       end: '2026-10-21T08:00',
       durationMinutes: '30',
       antiCheatEnabled: false,
+      trueFalseScoringMode: 'Tiered',
     });
   });
 

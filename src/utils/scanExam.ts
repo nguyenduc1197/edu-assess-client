@@ -1,11 +1,14 @@
-import { ExamScanResult, ScannedChoice, ScannedQuestion } from '../types';
+import { ExamScanResult, ScannedChoice, ScannedQuestion, TrueFalseScoringMode } from '../types';
 import {
-  parseEssayNumber,
   QUESTION_CONTENT_MAX_LENGTH,
   QUESTION_PASSAGE_MAX_LENGTH,
-  validateEssayMaxPoints,
-  validateEssaySampleAnswer,
+  RubricItemInput,
+  rubricTotal,
+  toRubricInputs,
+  toRubricPayload,
+  validateRubric,
 } from './essay';
+import { isStructuredFormat, toStructuredChoicePayload, validateStructuredQuestion } from './structuredQuestion';
 
 /** "Tạo đề thi từ file": client-side helpers (file checks, review validation, create payload). */
 
@@ -54,8 +57,8 @@ export const validateScanFiles = (files: Array<Pick<File, 'name' | 'type' | 'siz
 /** A scanned question being reviewed by the teacher. */
 export interface ReviewQuestion extends ScannedQuestion {
   key: string;
-  /** Raw text of the max points input (essays). */
-  maxPointsInput: string;
+  /** Essays: rubric being edited (max points = sum of ý points). */
+  rubricInputs: RubricItemInput[];
   /** Teacher confirmed (or changed) an answer that AI guessed. */
   answerConfirmed: boolean;
 }
@@ -64,10 +67,22 @@ export const toReviewQuestions = (result: ExamScanResult): ReviewQuestion[] =>
   (result.questions || []).map((question, index) => ({
     ...question,
     choices: (question.choices || []).map((choice) => ({ ...choice })),
+    matchingPrompts: [...(question.matchingPrompts || [])],
     key: `scan-${index}-${question.order}`,
-    maxPointsInput: question.maxPoints !== null && question.maxPoints !== undefined ? String(question.maxPoints) : '',
+    rubricInputs: scannedRubricInputs(question),
     answerConfirmed: !question.isAnswerAiGuessed,
   }));
+
+/** Rubric of a scanned essay: AI rubric, else the free-text answer as one ý, else one empty ý for the teacher. */
+const scannedRubricInputs = (question: ScannedQuestion): RubricItemInput[] => {
+  if (question.questionFormat !== 'Essay') return [];
+  if (question.rubricItems && question.rubricItems.length > 0) return toRubricInputs(question.rubricItems);
+  const points = question.maxPoints != null ? String(question.maxPoints) : '';
+  return [{ content: question.sampleAnswer || '', points }];
+};
+
+/** Essay max points shown in the review (sum of ý points). */
+export const reviewEssayMaxPoints = (question: ReviewQuestion) => rubricTotal(question.rubricInputs);
 
 /** Validation errors of one question (1-based number = position in the exam). */
 export const validateReviewQuestion = (question: ReviewQuestion, number: number): string[] => {
@@ -82,10 +97,17 @@ export const validateReviewQuestion = (question: ReviewQuestion, number: number)
   }
 
   if (question.questionFormat === 'Essay') {
-    const sampleError = validateEssaySampleAnswer(question.sampleAnswer);
-    if (sampleError) errors.push(`${prefix}: ${sampleError}`);
-    const maxPointsError = question.maxPointsInput.trim() ? validateEssayMaxPoints(question.maxPointsInput) : 'Câu tự luận chưa có điểm tối đa.';
-    if (maxPointsError) errors.push(`${prefix}: ${maxPointsError}`);
+    const rubricError = validateRubric(question.rubricInputs);
+    if (rubricError) errors.push(`${prefix}: ${rubricError}`);
+    return errors;
+  }
+
+  if (isStructuredFormat(question.questionFormat)) {
+    const structuredError = validateStructuredQuestion(question);
+    if (structuredError) errors.push(`${prefix}: ${structuredError}`);
+    else if (question.isAnswerAiGuessed && !question.answerConfirmed) {
+      errors.push(`${prefix}: đáp án do AI đoán – cần kiểm tra và xác nhận.`);
+    }
     return errors;
   }
 
@@ -111,6 +133,7 @@ export interface ScanExamFields {
   end: string;
   durationMinutes: string;
   antiCheatEnabled: boolean;
+  trueFalseScoringMode: TrueFalseScoringMode;
 }
 
 export const validateScanExamFields = (fields: ScanExamFields): string[] => {
@@ -143,6 +166,7 @@ export const buildCreateFromScanPayload = (questions: ReviewQuestion[], fields: 
   end: new Date(fields.end).toISOString(),
   durationMinutes: Number(fields.durationMinutes),
   antiCheatEnabled: fields.antiCheatEnabled,
+  trueFalseScoringMode: fields.trueFalseScoringMode,
   schoolClassId: fields.schoolClassId,
   questions: questions.map((question) => ({
     questionFormat: question.questionFormat,
@@ -153,9 +177,16 @@ export const buildCreateFromScanPayload = (questions: ReviewQuestion[], fields: 
     passageGroupKey: question.passageGroupKey || null,
     statementOrder: question.statementOrder ?? null,
     sourceEvidence: null,
-    choices: question.questionFormat === 'Essay' ? [] : toChoicePayload(question.choices || []),
-    sampleAnswer: question.questionFormat === 'Essay' ? question.sampleAnswer?.trim() || '' : null,
-    maxPoints: question.questionFormat === 'Essay' ? parseEssayNumber(question.maxPointsInput) : null,
+    choices:
+      question.questionFormat === 'Essay'
+        ? []
+        : isStructuredFormat(question.questionFormat)
+          ? toStructuredChoicePayload(question.choices || [], false)
+          : toChoicePayload(question.choices || []),
+    matchingPrompts: question.questionFormat === 'Matching' ? (question.matchingPrompts || []).map((prompt) => prompt.trim()) : null,
+    rubricItems: question.questionFormat === 'Essay' ? toRubricPayload(question.rubricInputs) : null,
+    sampleAnswer: null,
+    maxPoints: question.questionFormat === 'Essay' ? rubricTotal(question.rubricInputs) : null,
   })),
 });
 
@@ -165,3 +196,4 @@ export const setCorrectChoice = (question: ReviewQuestion, choiceIndex: number):
   choices: question.choices.map((choice, index) => ({ ...choice, isCorrect: index === choiceIndex })),
   answerConfirmed: true,
 });
+

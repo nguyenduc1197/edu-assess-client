@@ -76,8 +76,7 @@ describe('ScanExamFlow', () => {
 
     expect(screen.getByText('AI đoán – cần kiểm tra')).toBeInTheDocument();
     expect(screen.getByText('Có hình – đã mô tả bằng chữ')).toBeInTheDocument();
-    expect(screen.getByText('Thiếu đáp án mẫu')).toBeInTheDocument();
-    expect(screen.getByText('Thiếu điểm tối đa')).toBeInTheDocument();
+    expect(screen.getByText('Danh sách ý / điểm chưa đầy đủ')).toBeInTheDocument();
     expect(screen.getByText(/Câu điền khuyết/)).toBeInTheDocument();
     expect(screen.getByText(/nhóm Đúng\/Sai 1 điểm/)).toBeInTheDocument();
     expect(screen.getByLabelText('Tên bài thi')).toHaveValue('Đề kiểm tra giữa kì');
@@ -88,8 +87,8 @@ describe('ScanExamFlow', () => {
     expect(screen.getByTestId('scan-review-errors')).toHaveTextContent('đáp án do AI đoán');
 
     fireEvent.click(screen.getByLabelText('Đã kiểm tra đáp án câu 1'));
-    fireEvent.change(screen.getByLabelText('Đáp án mẫu câu 2'), { target: { value: 'Ý 1, ý 2' } });
-    fireEvent.change(screen.getByLabelText('Điểm tối đa câu 2'), { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText('Câu 2 nội dung ý 1'), { target: { value: 'Ý 1, ý 2' } });
+    fireEvent.change(screen.getByLabelText('Câu 2 điểm ý 1'), { target: { value: '8' } });
     await waitFor(() => expect(screen.getByLabelText('Lớp')).toHaveTextContent('10A1'));
     fireEvent.change(screen.getByLabelText('Lớp'), { target: { value: 'c1' } });
     fireEvent.change(screen.getByLabelText('Thời gian bắt đầu'), { target: { value: '2026-10-20T08:00' } });
@@ -107,7 +106,7 @@ describe('ScanExamFlow', () => {
     expect(body.schoolClassId).toBe('c1');
     expect(body.durationMinutes).toBe(30);
     expect(body.questions).toHaveLength(2);
-    expect(body.questions[1]).toMatchObject({ questionFormat: 'Essay', sampleAnswer: 'Ý 1, ý 2', maxPoints: 8 });
+    expect(body.questions[1]).toMatchObject({ questionFormat: 'Essay', maxPoints: 8, rubricItems: [{ content: 'Ý 1, ý 2', points: 8 }] });
   });
 
   it('deleting a question and editing content are reflected in the payload; API errors are shown', async () => {

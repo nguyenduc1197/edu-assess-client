@@ -56,7 +56,7 @@ const result = (questions: ScannedQuestion[]): ExamScanResult => ({
   sourceFileNames: ['x.pdf'], sourceType: 'pdf', questions, skippedQuestions: [], warnings: [],
 } as ExamScanResult);
 
-const fields: ScanExamFields = { name: 'Đề', schoolClassId: 'c1', start: '2026-10-20T08:00', end: '2026-10-21T08:00', durationMinutes: '45', antiCheatEnabled: false };
+const fields: ScanExamFields = { name: 'Đề', schoolClassId: 'c1', start: '2026-10-20T08:00', end: '2026-10-21T08:00', durationMinutes: '45', antiCheatEnabled: false, trueFalseScoringMode: 'Tiered' };
 
 describe('review validation', () => {
   it('AI-guessed true/false statement blocks until confirmed or answer chosen', () => {
@@ -86,20 +86,20 @@ describe('review validation', () => {
   });
 
   it.each([
-    ['', 'mẫu', /chưa có điểm tối đa/],
+    ['', 'mẫu', /bội số của 0\.25/],
     ['40.25', 'mẫu', /không vượt quá 40/],
     ['2.1', 'mẫu', /bội số của 0\.25/],
-    ['8', '   ', /đáp án mẫu/],
-  ])('essay maxPoints=%p sample=%p rejected', (maxPointsInput, sampleAnswer, pattern) => {
+    ['8', '   ', /không được để trống/],
+  ])('essay ý points=%p content=%p rejected', (points, content, pattern) => {
     const [q] = toReviewQuestions(result([sq({ questionFormat: 'Essay', choices: [] })]));
-    const errors = validateReviewQuestion({ ...q, maxPointsInput, sampleAnswer } as ReviewQuestion, 2);
+    const errors = validateReviewQuestion({ ...q, rubricInputs: [{ content, points }] } as ReviewQuestion, 2);
     expect(errors.join(' ')).toMatch(pattern);
     expect(errors.every((e) => e.startsWith('Câu 2:'))).toBe(true);
   });
 
-  it('essay converted max points from scan prefill the input and 40 is accepted', () => {
+  it('essay free-text answer with converted points becomes one ý and 40 is accepted', () => {
     const [q] = toReviewQuestions(result([sq({ questionFormat: 'Essay', choices: [], maxPoints: 40, sampleAnswer: 'mẫu' })]));
-    expect(q.maxPointsInput).toBe('40');
+    expect(q.rubricInputs).toEqual([{ content: 'mẫu', points: '40' }]);
     expect(validateReviewQuestion(q, 1)).toEqual([]);
   });
 
@@ -120,7 +120,7 @@ describe('create payload', () => {
     const p = buildCreateFromScanPayload(qs, fields);
     expect(p.questions.map((q) => q.content)).toEqual(['S1', 'S2', 'MC3', 'E4']);
     expect(p.questions[0]).toMatchObject({ passageGroupKey: 'scan-g1', statementOrder: 1, passageText: 'Đoạn', sourceEvidence: null, sampleAnswer: null, maxPoints: null });
-    expect(p.questions[3]).toMatchObject({ choices: [], sampleAnswer: 'mẫu', maxPoints: 8 });
+    expect(p.questions[3]).toMatchObject({ choices: [], sampleAnswer: null, maxPoints: 8, rubricItems: [{ content: 'mẫu', points: 8 }] });
     expect(p.durationMinutes).toBe(45);
   });
 });

@@ -64,29 +64,26 @@ const scanResult: ExamScanResult = {
 };
 
 const fields: ScanExamFields = {
-  name: 'Đề', schoolClassId: 'c1', start: '2026-10-20T08:00', end: '2026-10-21T08:00', durationMinutes: '45', antiCheatEnabled: false,
+  name: 'Đề', schoolClassId: 'c1', start: '2026-10-20T08:00', end: '2026-10-21T08:00', durationMinutes: '45', antiCheatEnabled: false, trueFalseScoringMode: 'Tiered',
 };
 
 describe('scan review validation', () => {
-  it('flags AI-guessed answer, missing true/false answer, missing essay sample answer and max points', () => {
+  it('flags AI-guessed answer, missing true/false answer, essay without rubric', () => {
     const [mc, tf, essay] = toReviewQuestions(scanResult);
     expect(mc.answerConfirmed).toBe(false);
     expect(validateReviewQuestion(mc, 1)).toEqual(['Câu 1: đáp án do AI đoán – cần kiểm tra và xác nhận.']);
     expect(validateReviewQuestion(tf, 2)).toEqual(['Câu 2: phải chọn đúng một đáp án đúng.']);
-    expect(validateReviewQuestion(essay, 3)).toEqual([
-      'Câu 3: Câu tự luận bắt buộc phải có đáp án mẫu / tiêu chí chấm.',
-      'Câu 3: Câu tự luận chưa có điểm tối đa.',
-    ]);
+    expect(validateReviewQuestion(essay, 3)).toEqual(['Câu 3: Nội dung mỗi ý không được để trống.']);
   });
 
-  it('choosing an answer confirms it; essay needs quarter-step max points up to 40', () => {
+  it('choosing an answer confirms it; essay rubric needs quarter-step points, total up to 40', () => {
     const [mc, tf, essay] = toReviewQuestions(scanResult);
     expect(validateReviewQuestion(setCorrectChoice(mc, 0), 1)).toEqual([]);
     expect(validateReviewQuestion(setCorrectChoice(tf, 0), 2)).toEqual([]);
-    const filled = { ...essay, sampleAnswer: 'Ý chính', maxPointsInput: '8' };
+    const filled = { ...essay, rubricInputs: [{ content: 'Ý chính', points: '8' }] };
     expect(validateReviewQuestion(filled, 3)).toEqual([]);
-    expect(validateReviewQuestion({ ...filled, maxPointsInput: '1.3' }, 3)[0]).toMatch(/bội số của 0\.25/);
-    expect(validateReviewQuestion({ ...filled, maxPointsInput: '40.25' }, 3)[0]).toMatch(/không vượt quá 40/);
+    expect(validateReviewQuestion({ ...filled, rubricInputs: [{ content: 'Ý', points: '1.3' }] }, 3)[0]).toMatch(/bội số của 0\.25/);
+    expect(validateReviewQuestion({ ...filled, rubricInputs: [{ content: 'Ý', points: '40' }, { content: 'Ý 2', points: '0.25' }] }, 3)[0]).toMatch(/không vượt quá 40/);
   });
 
   it('validates exam fields', () => {
@@ -101,13 +98,13 @@ describe('scan review validation', () => {
 
   it('collects all blocking errors and requires at least one question', () => {
     expect(collectScanReviewErrors([], fields)).toContain('Đề thi cần có ít nhất một câu hỏi.');
-    expect(collectScanReviewErrors(toReviewQuestions(scanResult), fields)).toHaveLength(4);
+    expect(collectScanReviewErrors(toReviewQuestions(scanResult), fields)).toHaveLength(3);
   });
 
   it('builds the create payload in order with essay fields', () => {
     const [mc, tf, essay] = toReviewQuestions(scanResult);
     const payload = buildCreateFromScanPayload(
-      [setCorrectChoice(mc, 1), setCorrectChoice(tf, 1), { ...essay, sampleAnswer: ' Ý chính ', maxPointsInput: '8' }],
+      [setCorrectChoice(mc, 1), setCorrectChoice(tf, 1), { ...essay, rubricInputs: [{ content: ' Ý chính ', points: '5' }, { content: 'Ý phụ', points: '3' }] }],
       fields
     );
     expect(payload.name).toBe('Đề');
@@ -119,6 +116,8 @@ describe('scan review validation', () => {
       { optionLabel: 'B', content: 'b', isCorrect: true },
     ]);
     expect(payload.questions[1]).toMatchObject({ passageGroupKey: 'scan-g1', statementOrder: 1, passageText: 'Đoạn' });
-    expect(payload.questions[2]).toMatchObject({ sampleAnswer: 'Ý chính', maxPoints: 8, choices: [] });
+    expect(payload.questions[2]).toMatchObject({ sampleAnswer: null, maxPoints: 8, choices: [] });
+    expect(payload.questions[2].rubricItems).toEqual([{ content: 'Ý chính', points: 5 }, { content: 'Ý phụ', points: 3 }]);
+    expect(payload.trueFalseScoringMode).toBe('Tiered');
   });
 });

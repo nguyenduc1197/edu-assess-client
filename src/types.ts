@@ -1,11 +1,35 @@
-export type QuestionFormat = 'SingleChoice' | 'TrueFalse' | 'Essay';
+export type QuestionFormat = 'SingleChoice' | 'TrueFalse' | 'Essay' | 'FillInBlank' | 'Matching';
 export type DifficultyLevel = 'Easy' | 'Medium' | 'Hard';
+/** How a true/false passage group is scored, chosen per exam. */
+export type TrueFalseScoringMode = 'Tiered' | 'PerStatement';
 
 export interface Choice {
-  id?: string;        
+  id?: string;
   optionLabel: string;
   content: string;
-  isCorrect?: boolean; 
+  isCorrect?: boolean;
+  /** Fill-in-the-blank: blank number this word fills; matching: column A number. Null = distractor. Never sent to students. */
+  correctSlot?: number | null;
+}
+
+/** One "ý" of an essay rubric: content + points (multiple of 0.25). */
+export interface EssayRubricItem {
+  content: string;
+  points?: number | null;
+}
+
+/** AI points for one ý of an essay answer (teachers only). */
+export interface EssayRubricResult {
+  order: number;
+  points: number;
+  maxPoints?: number | null;
+  comment?: string | null;
+}
+
+/** Fill-in-the-blank: slot = blank number; matching: slot = column A number. */
+export interface SlotAnswer {
+  slot: number;
+  choiceId: string | null;
 }
 
 export interface Question {
@@ -34,6 +58,10 @@ export interface Question {
   sampleAnswer?: string | null;
   /** True when students already answered this question: its format can no longer be changed. */
   hasStudentAnswers?: boolean;
+  /** Matching: column A items in order. */
+  matchingPrompts?: string[];
+  /** Essay: rubric ("danh sách ý"); teachers only. maxPoints = sum of points. */
+  rubricItems?: EssayRubricItem[];
 }
 
 export interface AIQuestionGenerateResponse {
@@ -129,6 +157,8 @@ export type AnswerState = {
   choiceId?: string;
   /** Essay answer text typed by the student. */
   essayAnswer?: string;
+  /** Fill-in-the-blank / matching: chosen word / option per slot. */
+  slotAnswers?: SlotAnswer[];
 };
 
 export enum AssignmentStatus {
@@ -448,6 +478,8 @@ export interface AssessmentResult {
   economicSocialParticipationAccumulation: CompetencyAccumulation | null;
   wrongAnswers?: WrongAnswerReview[];
   essayAnswers?: EssayAnswerReview[];
+  /** Fill-in-the-blank / matching answers with per-slot correctness (submitted attempts only). */
+  structuredAnswers?: StructuredAnswerReview[];
   pendingEssayCount?: number;
   awaitingTeacherEssayCount?: number;
   assessmentError: string | null;
@@ -485,6 +517,38 @@ export interface EssayAnswerReview {
   canRegradeWithAi?: boolean;
   /** Only returned for teachers. */
   sampleAnswer?: string | null;
+  /** Rubric and AI points per ý; teachers only. */
+  rubricItems?: EssayRubricItem[];
+  rubricResults?: EssayRubricResult[];
+  /** Shared situation of an essay group (displayed once above the group). */
+  passageText?: string | null;
+  passageGroupKey?: string | null;
+}
+
+export interface StructuredSlotReview {
+  slot: number;
+  /** Matching: column A text. */
+  prompt?: string | null;
+  selectedChoiceId?: string | null;
+  selectedText?: string | null;
+  correctText?: string | null;
+  isCorrect: boolean;
+}
+
+export interface StructuredAnswerReview {
+  questionId: string;
+  questionFormat: QuestionFormat;
+  questionFormatLabel?: string;
+  /** Fill-in-the-blank: passage with [[n]] markers. Matching: instruction. */
+  questionContent: string;
+  passageText?: string | null;
+  competencyType?: string;
+  competencyLabel?: string;
+  /** Earned fraction 0..1 (the question weighs 1 unit). */
+  score: number;
+  correctCount: number;
+  slotCount: number;
+  slots: StructuredSlotReview[];
 }
 
 export interface EssayGradeResult {
@@ -503,6 +567,8 @@ export interface ScannedChoice {
   optionLabel: string;
   content: string;
   isCorrect: boolean;
+  /** Fill-in-the-blank: blank number; matching: column A number; null = distractor / not set. */
+  correctSlot?: number | null;
 }
 
 /** One question extracted from an exam file (true/false groups are flattened: one item per statement). */
@@ -524,6 +590,10 @@ export interface ScannedQuestion {
   sampleAnswer?: string | null;
   statedPoints?: number | null;
   maxPoints?: number | null;
+  /** Essay: rubric from the marking guide; points null when not convertible (teacher must fill). */
+  rubricItems?: EssayRubricItem[];
+  /** Matching: column A items in order. */
+  matchingPrompts?: string[];
   missingCorrectAnswer?: boolean;
   missingSampleAnswer?: boolean;
   missingMaxPoints?: boolean;

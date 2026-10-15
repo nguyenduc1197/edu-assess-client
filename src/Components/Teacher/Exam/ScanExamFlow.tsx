@@ -12,6 +12,11 @@ import {
   toReviewQuestions,
   validateScanFiles,
 } from '../../../utils/scanExam';
+import { validateRubric } from '../../../utils/essay';
+import { isStructuredFormat, validateStructuredQuestion } from '../../../utils/structuredQuestion';
+import RubricEditor from '../Question/RubricEditor';
+import StructuredChoicesEditor from '../Question/StructuredChoicesEditor';
+import TrueFalseScoringModePicker from './TrueFalseScoringModePicker';
 
 /** Exam fields the teacher already entered elsewhere (e.g. in "Tạo bài kiểm tra"); non-empty values win over file suggestions. */
 export type ScanExamInitialFields = Partial<ScanExamFields>;
@@ -34,6 +39,8 @@ const FORMAT_BADGES: Record<string, { label: string; className: string }> = {
   SingleChoice: { label: 'Trắc nghiệm', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
   TrueFalse: { label: 'Đúng / Sai', className: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' },
   Essay: { label: 'Tự luận', className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' },
+  FillInBlank: { label: 'Điền khuyết', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+  Matching: { label: 'Ghép đôi', className: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300' },
 };
 
 const flagClass = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold';
@@ -69,6 +76,7 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
       ? String(initialExamFields!.durationMinutes)
       : String(DEFAULT_DURATION_MINUTES),
     antiCheatEnabled: initialExamFields?.antiCheatEnabled ?? false,
+    trueFalseScoringMode: initialExamFields?.trueFalseScoringMode ?? 'Tiered',
   }));
 
   useEffect(() => {
@@ -188,6 +196,9 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
     const correctCount = question.choices.filter((choice) => choice.isCorrect).length;
     const isEssay = question.questionFormat === 'Essay';
     const isTrueFalse = question.questionFormat === 'TrueFalse';
+    const isStructured = isStructuredFormat(question.questionFormat);
+    const rubricIncomplete = isEssay && !!validateRubric(question.rubricInputs);
+    const answerMissing = isStructured ? !!validateStructuredQuestion(question) : !isEssay && correctCount !== 1;
 
     return (
       <div key={question.key} data-testid="scan-question" className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
@@ -204,14 +215,13 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
             {question.hasFigure && (
               <span className={`${flagClass} bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300`}>Có hình – đã mô tả bằng chữ</span>
             )}
-            {!isEssay && correctCount !== 1 && (
-              <span className={`${flagClass} bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300`}>Chưa có đáp án đúng</span>
+            {answerMissing && (
+              <span className={`${flagClass} bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300`}>
+                {isStructured ? 'Đáp án chưa đầy đủ' : 'Chưa có đáp án đúng'}
+              </span>
             )}
-            {isEssay && !question.sampleAnswer?.trim() && (
-              <span className={`${flagClass} bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300`}>Thiếu đáp án mẫu</span>
-            )}
-            {isEssay && !question.maxPointsInput.trim() && (
-              <span className={`${flagClass} bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300`}>Thiếu điểm tối đa</span>
+            {rubricIncomplete && (
+              <span className={`${flagClass} bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300`}>Danh sách ý / điểm chưa đầy đủ</span>
             )}
           </div>
           <button
@@ -230,12 +240,12 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
         )}
 
         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300">
-          {isTrueFalse ? 'Nội dung mệnh đề' : 'Nội dung câu hỏi'}
+          {isTrueFalse ? 'Nội dung mệnh đề' : question.questionFormat === 'FillInBlank' ? 'Đoạn văn (chỗ trống là [[1]], [[2]], ...)' : 'Nội dung câu hỏi'}
           <textarea
             aria-label={`Nội dung câu ${index + 1}`}
             value={question.content}
             onChange={(e) => updateQuestion(question.key, (q) => ({ ...q, content: e.target.value }))}
-            rows={isEssay ? 3 : 2}
+            rows={isEssay || question.questionFormat === 'FillInBlank' ? 3 : 2}
             className={`mt-1 ${inputClass}`}
           />
         </label>
@@ -271,34 +281,34 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
         </div>
 
         {isEssay ? (
-          <div className="space-y-3">
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300">
-              Đáp án mẫu / tiêu chí chấm (bắt buộc)
-              <textarea
-                aria-label={`Đáp án mẫu câu ${index + 1}`}
-                value={question.sampleAnswer || ''}
-                onChange={(e) => updateQuestion(question.key, (q) => ({ ...q, sampleAnswer: e.target.value }))}
-                rows={3}
-                className={`mt-1 ${inputClass}`}
-              />
-            </label>
-            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300">
-              Điểm tối đa (bắt buộc, 0.25 – 40, theo bước 0.25; 1 câu trắc nghiệm = 1 điểm)
-              <input
-                aria-label={`Điểm tối đa câu ${index + 1}`}
-                type="number"
-                min={0.25}
-                max={40}
-                step={0.25}
-                value={question.maxPointsInput}
-                onChange={(e) => updateQuestion(question.key, (q) => ({ ...q, maxPointsInput: e.target.value }))}
-                className={`mt-1 w-40 ${inputClass}`}
-              />
-            </label>
+          <div className="space-y-2">
+            <RubricEditor
+              items={question.rubricInputs}
+              onChange={(items) => updateQuestion(question.key, (q) => ({ ...q, rubricInputs: items }))}
+              labelPrefix={`Câu ${index + 1}`}
+              inputClassName={inputClass}
+            />
             {question.statedPoints !== null && question.statedPoints !== undefined && (
               <p className="text-xs text-gray-500 dark:text-gray-400">Đề gốc ghi: {question.statedPoints} điểm.</p>
             )}
           </div>
+        ) : isStructured ? (
+          <StructuredChoicesEditor
+            format={question.questionFormat as 'FillInBlank' | 'Matching'}
+            content={question.content}
+            matchingPrompts={question.matchingPrompts || []}
+            choices={question.choices}
+            onChange={(patch) =>
+              updateQuestion(question.key, (q) => ({
+                ...q,
+                ...(patch.matchingPrompts ? { matchingPrompts: patch.matchingPrompts } : {}),
+                ...(patch.choices ? { choices: patch.choices.map((c) => ({ ...c, isCorrect: c.correctSlot != null })) } : {}),
+                answerConfirmed: patch.choices ? true : q.answerConfirmed,
+              }))
+            }
+            labelPrefix={`Câu ${index + 1}`}
+            inputClassName={inputClass}
+          />
         ) : isTrueFalse ? (
           <div className="flex flex-wrap gap-4 text-sm" role="radiogroup" aria-label={`Đáp án câu ${index + 1}`}>
             {question.choices.map((choice, choiceIndex) => (
@@ -392,17 +402,20 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
     let index = 0;
     while (index < questions.length) {
       const question = questions[index];
-      const groupKey = question.questionFormat === 'TrueFalse' ? question.passageGroupKey : null;
+      const isGroupFormat = question.questionFormat === 'TrueFalse' || question.questionFormat === 'Essay';
+      const groupKey = isGroupFormat ? question.passageGroupKey : null;
       if (groupKey) {
         const start = index;
-        while (index < questions.length && questions[index].passageGroupKey === groupKey && questions[index].questionFormat === 'TrueFalse') {
+        const groupFormat = question.questionFormat;
+        const isEssayGroup = groupFormat === 'Essay';
+        while (index < questions.length && questions[index].passageGroupKey === groupKey && questions[index].questionFormat === groupFormat) {
           index += 1;
         }
         const members = questions.slice(start, index);
         nodes.push(
           <div key={`group-${groupKey}-${start}`} className="space-y-3 rounded-2xl border border-teal-200 bg-teal-50/40 p-3 dark:border-teal-900/40 dark:bg-teal-950/10">
             <label className="block text-xs font-semibold text-teal-800 dark:text-teal-300">
-              Đoạn tư liệu chung của nhóm Đúng/Sai
+              {isEssayGroup ? 'Tình huống chung của nhóm câu tự luận' : 'Đoạn tư liệu chung của nhóm Đúng/Sai'}
               <textarea
                 aria-label={`Đoạn tư liệu nhóm câu ${start + 1}`}
                 value={members[0].passageText || ''}
@@ -542,6 +555,7 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
                   Bật giám sát vi phạm
                 </label>
               </div>
+              <TrueFalseScoringModePicker value={fields.trueFalseScoringMode} onChange={(mode) => setFields({ ...fields, trueFalseScoringMode: mode })} />
 
               {reviewErrors.length > 0 && (
                 <div data-testid="scan-review-errors" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">

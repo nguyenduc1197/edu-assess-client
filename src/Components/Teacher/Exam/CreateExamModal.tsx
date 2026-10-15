@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PlusCircle, Sparkles } from 'lucide-react';
-import { Class, CompetencyOption, Question, SubjectLabel } from '../../../types';
+import { Class, CompetencyOption, Question, SubjectLabel, TrueFalseScoringMode } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
 import AIQuestionGeneratorModal from '../Question/AIQuestionGeneratorModal';
 import AddQuestionMenu from './AddQuestionMenu';
 import { buildCreateQuestionPayload } from '../../../utils/questionPayload';
 import { formatPoints } from '../../../utils/essay';
+import TrueFalseScoringModePicker from './TrueFalseScoringModePicker';
 
 interface ExamToEdit {
   id: string;
@@ -16,6 +17,7 @@ interface ExamToEdit {
   questionIds: string[];
   schoolClassId: string;
   antiCheatEnabled?: boolean;
+  trueFalseScoringMode?: TrueFalseScoringMode;
 }
 
 interface CreateExamModalProps {
@@ -74,6 +76,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>(examToEdit?.schoolClassId || '');
   const [antiCheatEnabled, setAntiCheatEnabled] = useState<boolean>(examToEdit?.antiCheatEnabled === true);
+  const [trueFalseScoringMode, setTrueFalseScoringMode] = useState<TrueFalseScoringMode>(examToEdit?.trueFalseScoringMode ?? 'Tiered');
   const [isFetchingClasses, setIsFetchingClasses] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -243,6 +246,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
       questionIds: selectedQuestionIds,
       schoolClassId: selectedClassId,
       antiCheatEnabled,
+      // Editing an exam whose mode could not be loaded keeps the stored mode (null = unchanged on the server).
+      trueFalseScoringMode: isEditing && !examToEdit?.trueFalseScoringMode ? null : trueFalseScoringMode,
     };
 
     try {
@@ -284,7 +289,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
             enableExamVariantMode={true}
             // "Tạo đề giống file gốc" creates a NEW exam, so it is hidden while editing an existing one.
             enableScanExactTab={!isEditing}
-            initialExamFields={{ name, schoolClassId: selectedClassId, start, end, durationMinutes, antiCheatEnabled }}
+            initialExamFields={{ name, schoolClassId: selectedClassId, start, end, durationMinutes, antiCheatEnabled, trueFalseScoringMode }}
             onExamCreated={() => {
               setIsAIModalOpen(false);
               onSuccess?.(SCAN_EXACT_CREATED_MESSAGE);
@@ -476,6 +481,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
                 </label>
               </div>
             </div>
+
+            <TrueFalseScoringModePicker value={trueFalseScoringMode} onChange={setTrueFalseScoringMode} />
 
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-2">
