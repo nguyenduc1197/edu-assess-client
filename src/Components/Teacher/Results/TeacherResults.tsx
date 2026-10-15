@@ -21,6 +21,7 @@ import { competencyScoreToPercent, formatCompetencyPercent } from '../../../util
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 import { EXAM_DATA_CHANGED_EVENT } from '../../../utils/examDataEvents';
 import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
+import StructuredAnswerReviewList from '../../Common/StructuredAnswers/StructuredAnswerReviewList';
 
 const EssayStatusHint: React.FC<{ pending?: number; awaitingTeacher?: number }> = ({ pending = 0, awaitingTeacher = 0 }) => {
   if (pending <= 0 && awaitingTeacher <= 0) return null;
@@ -866,7 +867,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                     <div>
                       <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Câu tự luận</p>
                       <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-                        Điểm tự luận được AI chấm tự động theo đáp án mẫu / tiêu chí chấm. Thầy/cô có thể sửa điểm và nhận xét; tổng điểm sẽ được tính lại.
+                        Điểm tự luận được AI chấm tự động theo danh sách ý (đáp án / tiêu chí chấm). Thầy/cô có thể sửa điểm và nhận xét; tổng điểm sẽ được tính lại.
                       </p>
                       <EssayAnswerList
                         items={selectedResult.essayAnswers || []}
@@ -874,6 +875,13 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                         studentExamId={selectedResult.studentExamId}
                         onGraded={handleEssayGraded}
                       />
+                    </div>
+                  )}
+
+                  {(selectedResult.structuredAnswers || []).length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Điền khuyết / Ghép đôi</p>
+                      <StructuredAnswerReviewList items={selectedResult.structuredAnswers || []} />
                     </div>
                   )}
 

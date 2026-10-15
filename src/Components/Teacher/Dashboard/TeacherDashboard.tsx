@@ -25,6 +25,7 @@ import { formatVietnamDateTime } from '../../../utils/apiDateTime';
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 import { emitExamDataChangedEvent } from '../../../utils/examDataEvents';
 import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
+import StructuredAnswerReviewList from '../../Common/StructuredAnswers/StructuredAnswerReviewList';
 import AddQuestionMenu from '../Exam/AddQuestionMenu';
 import { buildUpdateQuestionPayload } from '../../../utils/questionPayload';
 
@@ -1952,6 +1953,13 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                                   emitExamDataChangedEvent();
                                 }}
                               />
+                            </div>
+                          )}
+
+                          {(selectedAssessment.structuredAnswers || []).length > 0 && (
+                            <div>
+                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Điền khuyết / Ghép đôi</p>
+                              <StructuredAnswerReviewList items={selectedAssessment.structuredAnswers || []} />
                             </div>
                           )}
 

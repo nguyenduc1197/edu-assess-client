@@ -237,7 +237,32 @@ const EssayAnswerCard: React.FC<{
         </p>
       </div>
 
-      {mode === 'teacher' && item.sampleAnswer && (
+      {mode === 'teacher' && (item.rubricItems || []).length > 0 && (
+        <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 text-sm" data-testid="essay-rubric">
+          <p className="font-semibold text-green-700 dark:text-green-300">Danh sách ý {item.rubricResults?.length ? '– điểm AI từng ý' : ''}</p>
+          <ol className="mt-1 space-y-1.5">
+            {(item.rubricItems || []).map((rubricItem, itemIndex) => {
+              const result = item.rubricResults?.find((r) => r.order === itemIndex + 1);
+              return (
+                <li key={itemIndex} className="text-green-800 dark:text-green-200">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <span className="whitespace-pre-line">
+                      <span className="font-semibold">Ý {itemIndex + 1}:</span> {rubricItem.content}
+                    </span>
+                    <span className="shrink-0 font-semibold">
+                      {result ? `${formatPoints(result.points)} / ` : ''}
+                      {formatPoints(rubricItem.points ?? null)} điểm
+                    </span>
+                  </div>
+                  {result?.comment && <p className="text-xs text-gray-600 dark:text-gray-300">{result.comment}</p>}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+
+      {mode === 'teacher' && !(item.rubricItems || []).length && item.sampleAnswer && (
         <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 text-sm">
           <p className="font-semibold text-green-700 dark:text-green-300">Đáp án mẫu / tiêu chí chấm</p>
           <p className="mt-1 whitespace-pre-line text-green-800 dark:text-green-200">{item.sampleAnswer}</p>
@@ -346,16 +371,23 @@ const EssayAnswerList: React.FC<EssayAnswerListProps> = ({ items, mode, studentE
 
   return (
     <div className="space-y-3">
-      {items.map((item, index) => (
-        <EssayAnswerCard
-          key={item.answerId}
-          item={item}
-          index={index}
-          mode={mode}
-          studentExamId={studentExamId}
-          onGraded={onGraded}
-        />
-      ))}
+      {items.map((item, index) => {
+        // Shared situation (round 8 F): shown once above the first essay of its group.
+        const groupKey = item.passageGroupKey?.trim();
+        const startsGroup =
+          !!item.passageText?.trim() && (!groupKey || items[index - 1]?.passageGroupKey?.trim() !== groupKey);
+        return (
+          <React.Fragment key={item.answerId}>
+            {startsGroup && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tình huống</p>
+                <p className="whitespace-pre-line">{item.passageText}</p>
+              </div>
+            )}
+            <EssayAnswerCard item={item} index={index} mode={mode} studentExamId={studentExamId} onGraded={onGraded} />
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 };

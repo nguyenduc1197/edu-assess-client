@@ -8,6 +8,7 @@ import { parseApiDateTime, resolveAttemptDeadlineUtc } from '../../../utils/apiD
 import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 import { buildAnswerPayload, DraftAnswer, restoreDraftAnswers } from '../../../utils/essay';
 import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
+import StructuredAnswerReviewList from '../../Common/StructuredAnswers/StructuredAnswerReviewList';
 
 
 interface ExamSessionProps {
@@ -583,6 +584,13 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                 <div className="mobile-premium-enter mobile-premium-delay-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-xl sm:p-5 sm:shadow-none">
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Câu tự luận</p>
                   <EssayAnswerList items={essayAnswers} mode="student" />
+                </div>
+              )}
+
+              {(assessmentResult.structuredAnswers || []).length > 0 && (
+                <div className="mobile-premium-enter mobile-premium-delay-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-xl sm:p-5 sm:shadow-none">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Điền khuyết / Ghép đôi</p>
+                  <StructuredAnswerReviewList items={assessmentResult.structuredAnswers || []} />
                 </div>
               )}
 
