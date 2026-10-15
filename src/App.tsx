@@ -15,17 +15,20 @@ import TeacherResults from './Components/Teacher/Results/TeacherResults';
 import FailedAssessments from './Components/Teacher/FailedAssessments/FailedAssessments';
 import SettingsPage from './Components/Common/Settings/SettingsPage';
 import StudentAnalyticsPage from './Components/Student/Analytics/StudentAnalyticsPage';
+import ForceChangePasswordPage, { MUST_CHANGE_PASSWORD_KEY } from './Components/Common/Settings/ForceChangePasswordPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isTeacher, setIsTeacher] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
 useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       setIsAuthenticated(true);
     }
+    setMustChangePassword(localStorage.getItem(MUST_CHANGE_PASSWORD_KEY) === '1');
     const role = localStorage.getItem('role');
     if (role && role === 'Teacher') {
       setIsTeacher(true);
@@ -46,6 +49,8 @@ useEffect(() => {
     localStorage.removeItem('userId');
     localStorage.removeItem('accountId');
     localStorage.removeItem('profileId');
+    localStorage.removeItem(MUST_CHANGE_PASSWORD_KEY);
+    setMustChangePassword(false);
     setIsAuthenticated(false);
   };
 
@@ -57,7 +62,12 @@ useEffect(() => {
     return <Login onLogin={(role) => {
     setIsAuthenticated(true);
     setIsTeacher(role === "Teacher");
+    setMustChangePassword(localStorage.getItem(MUST_CHANGE_PASSWORD_KEY) === '1');
   }} />;
+  }
+
+  if (mustChangePassword) {
+    return <ForceChangePasswordPage onChanged={() => setMustChangePassword(false)} onLogout={handleLogout} />;
   }
 
    return (

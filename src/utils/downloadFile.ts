@@ -5,9 +5,10 @@ import { fetchClient } from '../api/fetchClient';
  * The filename is extracted from the Content-Disposition response header when available.
  * @param endpoint - API path (e.g. `/classes/123/report/export`)
  * @param fallbackFilename - Filename to use when Content-Disposition is absent
+ * @param options - Optional request options (e.g. a POST with a JSON body)
  */
-export async function downloadFile(endpoint: string, fallbackFilename: string): Promise<void> {
-  const response = await fetchClient(endpoint);
+export async function downloadFile(endpoint: string, fallbackFilename: string, options?: RequestInit): Promise<void> {
+  const response = await fetchClient(endpoint, options);
 
   if (!response.ok) {
     throw new Error(`API returned ${response.status}`);

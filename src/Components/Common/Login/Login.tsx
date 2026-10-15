@@ -3,6 +3,7 @@ import { ArrowRight, BookOpen, Eye, EyeOff, Lock, ShieldCheck, Sparkles, User } 
 import { API_BASE_URL } from '../../../config/env';
 import { LoginProps } from '../../../types';
 import { decodeJwtPayload } from '../../../api/fetchClient';
+import { MUST_CHANGE_PASSWORD_KEY } from '../Settings/ForceChangePasswordPage';
 interface LoginData {
   name: string;
   role: string;
@@ -11,6 +12,7 @@ interface LoginData {
   accesstoken?: string;
   accountId?: string;
   profileId?: string;
+  mustChangePassword?: boolean;
 }
 
 interface LoginAPIResponse {
@@ -58,6 +60,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         if (loginResponse.accountId) {
           localStorage.setItem('accountId', loginResponse.accountId);
           localStorage.setItem('userId', loginResponse.accountId);
+        }
+
+        if (loginResponse.mustChangePassword) {
+          localStorage.setItem(MUST_CHANGE_PASSWORD_KEY, '1');
+        } else {
+          localStorage.removeItem(MUST_CHANGE_PASSWORD_KEY);
         }
 
         if (loginResponse.profileId) {
