@@ -3,6 +3,7 @@ import {  Send, Edit3 } from 'lucide-react';
 import { AnswerState, Question } from '../../../types';
 import { AntiCheatUiEvent } from './antiCheat';
 import { hasAnswerContent, isEssayQuestion } from '../../../utils/essay';
+import { isStructuredQuestion, slotCountOf } from '../../../utils/structuredQuestion';
 
 interface ExamReviewProps {
   questions: Question[];
@@ -136,13 +137,21 @@ const ExamReview: React.FC<ExamReviewProps> = ({
                     {idx + 1}
                   </span>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-200 line-clamp-1">{q.content}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-200 line-clamp-1">
+                      {q.questionFormat === 'FillInBlank' ? q.content.replace(/\[\[\s*\d+\s*\]\]/g, '___') : q.content}
+                    </p>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                       {answer
                         ? isEssay
                           ? <span className="text-primary font-medium line-clamp-2">Bài làm: {answer.essayAnswer}</span>
-                          : <span className="text-primary font-medium">Đã chọn: {answer.content}</span>
-                        : <span className="text-yellow-600 dark:text-yellow-500 italic">{isEssay ? 'Chưa trả lời câu tự luận' : 'Chưa chọn đáp án'}</span>
+                          : isStructuredQuestion(q)
+                            ? (
+                              <span className="text-primary font-medium">
+                                {q.questionFormat === 'FillInBlank' ? 'Đã điền' : 'Đã ghép'} {(answer.slotAnswers || []).filter((a) => a.choiceId).length}/{slotCountOf(q)}
+                              </span>
+                            )
+                            : <span className="text-primary font-medium">Đã chọn: {answer.content}</span>
+                        : <span className="text-yellow-600 dark:text-yellow-500 italic">{isEssay ? 'Chưa trả lời câu tự luận' : isStructuredQuestion(q) ? 'Chưa làm' : 'Chưa chọn đáp án'}</span>
                       }
                     </p>
                   </div>

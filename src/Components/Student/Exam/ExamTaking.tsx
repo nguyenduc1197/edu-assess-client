@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { AnswerState, Question } from '../../../types';
+import { AnswerState, Question, SlotAnswer } from '../../../types';
 import { AntiCheatUiEvent } from './antiCheat';
 import { parseApiDateTime } from '../../../utils/apiDateTime';
 import { buildQuestionBlocks } from '../../../utils/questionGrouping';
 import { formatPoints, hasAnswerContent, isEssayQuestion } from '../../../utils/essay';
+import { isStructuredQuestion } from '../../../utils/structuredQuestion';
+import StructuredAnswerInput from './StructuredAnswerInput';
 
 interface ExamTakingProps {
   examTitle: string;
@@ -14,6 +16,8 @@ interface ExamTakingProps {
   onAnswer: (questionId: string, id: string, content: string) => void;
   /** Essay questions: called with the typed text. */
   onEssayAnswer?: (questionId: string, text: string) => void;
+  /** Fill-in-the-blank / matching: called with the full list of slot answers. */
+  onSlotAnswer?: (questionId: string, slotAnswers: SlotAnswer[]) => void;
   onReview: () => void;
   onExit: () => void;
   antiCheatEvents?: AntiCheatUiEvent[];
@@ -32,6 +36,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   answers, 
   onAnswer, 
   onEssayAnswer,
+  onSlotAnswer,
   onReview,
   onExit,
   antiCheatEvents = [],
@@ -108,6 +113,39 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
   const isLocked = disableExamActions || isTimeUp;
   const effectiveLockMessage =
     lockMessage || (isTimeUp ? 'Đã hết thời gian làm bài cho lượt này. Em không thể chỉnh sửa thêm.' : null);
+
+  const renderEssayInput = (question: Question) => (
+    <div className="space-y-2">
+      <label htmlFor={'essay-' + question.id} className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+        Bài làm của em
+      </label>
+      <textarea
+        id={'essay-' + question.id}
+        value={answers[question.id]?.essayAnswer ?? ''}
+        onChange={(e) => onEssayAnswer?.(question.id, e.target.value)}
+        disabled={isLocked}
+        rows={10}
+        placeholder="Nhập câu trả lời tự luận của em..."
+        className="w-full rounded-xl border border-gray-300 bg-white p-4 text-base leading-7 text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 dark:border-gray-700 dark:bg-background-dark dark:text-gray-100"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        {(answers[question.id]?.essayAnswer ?? '').trim().length} ký tự · Bỏ trống sẽ được 0 điểm.
+      </p>
+    </div>
+  );
+
+  const renderStructuredInput = (question: Question) => (
+    <StructuredAnswerInput
+      question={question}
+      slotAnswers={answers[question.id]?.slotAnswers ?? []}
+      onChange={(slotAnswers) => onSlotAnswer?.(question.id, slotAnswers)}
+      disabled={isLocked}
+    />
+  );
+
+  /** Heading of a question: fill-in-the-blank passages are shown with their blanks below, not as raw [[n]] text. */
+  const questionHeading = (question: Question) =>
+    question.questionFormat === 'FillInBlank' ? 'Điền từ thích hợp vào chỗ trống' : question.content;
 
   const handleNext = () => {
     if (currentBlockIndex < questionBlocks.length - 1) {
@@ -282,7 +320,7 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                   )}
 
                   <h2 className="whitespace-pre-line text-2xl font-medium leading-relaxed">
-                    {currentQuestion.content}
+                    {questionHeading(currentQuestion)}
                   </h2>
                   {isEssayQuestion(currentQuestion) && (
                     <p className="text-sm font-medium text-violet-600 dark:text-violet-400">
@@ -339,8 +377,18 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                 {currentBlock.questions.map((question, questionIdx) => (
                   <div key={question.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-background-dark">
                     <p className="mb-4 whitespace-pre-line text-base font-semibold text-gray-900 dark:text-white">
-                      Câu {currentBlock.questionNumbers[questionIdx]}: {question.content}
+                      Câu {currentBlock.questionNumbers[questionIdx]}: {questionHeading(question)}
+                      {isEssayQuestion(question) && (
+                        <span className="ml-2 text-sm font-medium text-violet-600 dark:text-violet-400">
+                          (Tự luận · {formatPoints(question.maxPoints ?? 1)} điểm)
+                        </span>
+                      )}
                     </p>
+                    {isEssayQuestion(question) ? (
+                      renderEssayInput(question)
+                    ) : isStructuredQuestion(question) ? (
+                      renderStructuredInput(question)
+                    ) : (
                     <div className="space-y-3">
                       {question.choices?.map((option) => {
                         const isSelected = answers[question.id]?.choiceId === option.id;
@@ -371,27 +419,14 @@ const ExamTaking: React.FC<ExamTakingProps> = ({
                         );
                       })}
                     </div>
+                    )}
                   </div>
                 ))}
               </div>
+            ) : isStructuredQuestion(currentQuestion) ? (
+              renderStructuredInput(currentQuestion)
             ) : isEssayQuestion(currentQuestion) ? (
-              <div className="space-y-2">
-                <label htmlFor={"essay-" + currentQuestion.id} className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Bài làm của em
-                </label>
-                <textarea
-                  id={"essay-" + currentQuestion.id}
-                  value={answers[currentQuestion.id]?.essayAnswer ?? ''}
-                  onChange={(e) => onEssayAnswer?.(currentQuestion.id, e.target.value)}
-                  disabled={isLocked}
-                  rows={10}
-                  placeholder="Nhập câu trả lời tự luận của em..."
-                  className="w-full rounded-xl border border-gray-300 bg-white p-4 text-base leading-7 text-gray-900 placeholder-gray-400 focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 dark:border-gray-700 dark:bg-background-dark dark:text-gray-100"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {(answers[currentQuestion.id]?.essayAnswer ?? '').trim().length} ký tự · Bỏ trống sẽ được 0 điểm.
-                </p>
-              </div>
+              renderEssayInput(currentQuestion)
             ) : (
               <div className="space-y-3">
                 {currentQuestion.choices?.map((option) => {

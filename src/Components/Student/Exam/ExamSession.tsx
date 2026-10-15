@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { AnswerState, Assignment, AssessmentResult, Question, WrongAnswerReview } from '../../../types';
+import { AnswerState, Assignment, AssessmentResult, Question, SlotAnswer, WrongAnswerReview } from '../../../types';
 import ExamReview from './ExamReview';
 import ExamTaking from './ExamTaking';
 import { fetchClient } from '../../../api/fetchClient';
@@ -364,6 +364,15 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
         content: text,
         essayAnswer: text,
       },
+    }));
+  };
+
+  const handleSlotAnswer = (questionId: string, slotAnswers: SlotAnswer[]) => {
+    if (isAttemptLocked) return;
+
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: { slotAnswers },
     }));
   };
 
@@ -911,6 +920,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       answers={answers}
       onAnswer={handleAnswer}
       onEssayAnswer={handleEssayAnswer}
+      onSlotAnswer={handleSlotAnswer}
       onReview={() => setStep('review')}
       onExit={onExit}
       antiCheatEvents={antiCheatMonitoring.recentEvents}
