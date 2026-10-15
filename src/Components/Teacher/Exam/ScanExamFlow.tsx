@@ -303,7 +303,12 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
                 ...q,
                 ...(patch.matchingPrompts ? { matchingPrompts: patch.matchingPrompts } : {}),
                 ...(patch.choices ? { choices: patch.choices.map((c) => ({ ...c, isCorrect: c.correctSlot != null })) } : {}),
-                answerConfirmed: patch.choices ? true : q.answerConfirmed,
+                // Only changing an answer key confirms an AI-guessed answer; editing text does not.
+                answerConfirmed:
+                  q.answerConfirmed ||
+                  (!!patch.choices &&
+                    patch.choices.length === q.choices.length &&
+                    patch.choices.some((c, i) => (c.correctSlot ?? null) !== (q.choices[i]?.correctSlot ?? null))),
               }))
             }
             labelPrefix={`Câu ${index + 1}`}
