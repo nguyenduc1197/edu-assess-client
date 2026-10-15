@@ -112,7 +112,10 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
           optionLabel: choice.optionLabel,
           content: choice.content,
           isCorrect: choice.isCorrect || false,
+          correctSlot: choice.correctSlot ?? null,
         })),
+        matchingPrompts: item.matchingPrompts || [],
+        rubricItems: item.rubricItems || [],
         dateCreated: item.dateCreated ? new Date(item.dateCreated).toLocaleDateString('vi-VN') : '',
       }));
 

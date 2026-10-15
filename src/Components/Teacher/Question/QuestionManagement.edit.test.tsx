@@ -90,3 +90,54 @@ describe('QuestionManagement edit question', () => {
     expect(screen.getByText('Chỉnh Sửa Câu Hỏi')).toBeInTheDocument();
   });
 });
+
+// Round 8: editing from the bank keeps answer keys of the new formats and the essay rubric.
+describe('QuestionManagement edit – round 8 formats', () => {
+  const matchingItem = {
+    id: 'q-m', content: 'Nối cột', competencyType: 'BehaviorAdjustment', questionFormat: 'Matching',
+    questionFormatLabel: 'Ghép nối', difficultyLevel: 'Medium', hasStudentAnswers: false, maxPoints: 1,
+    matchingPrompts: ['Cung', 'Cầu'],
+    choices: [
+      { id: 'b-1', optionLabel: 'A', content: 'Người bán', isCorrect: true, correctSlot: 1 },
+      { id: 'b-2', optionLabel: 'B', content: 'Người mua', isCorrect: true, correctSlot: 2 },
+      { id: 'b-3', optionLabel: 'C', content: 'Nhà nước', isCorrect: false, correctSlot: null },
+    ],
+  };
+  const essayItem = {
+    id: 'q-e', content: 'Tự luận ý', competencyType: 'BehaviorAdjustment', questionFormat: 'Essay',
+    questionFormatLabel: 'Tự luận', difficultyLevel: 'Medium', hasStudentAnswers: false, maxPoints: 1.5,
+    rubricItems: [{ content: 'Ý một', points: 1 }, { content: 'Ý hai', points: 0.5 }], choices: [],
+  };
+
+  beforeEach(() => {
+    mockedFetch.mockReset();
+    mockedFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/questions/competency-types') return json([{ value: 'BehaviorAdjustment', label: 'Điều chỉnh hành vi' }]);
+      if (url.startsWith('/questions/without-exam')) return json([matchingItem, essayItem]);
+      if (init?.method === 'PUT') return json({ question: matchingItem });
+      return json([]);
+    });
+  });
+
+  const saveFirstPut = async (index: number) => {
+    render(<QuestionManagement />);
+    await screen.findAllByText('Nối cột');
+    fireEvent.click(screen.getAllByTitle('Chỉnh sửa')[index]);
+    expect(await screen.findByText('Chỉnh Sửa Câu Hỏi')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Lưu Thay Đổi/ }));
+    await waitFor(() => expect(mockedFetch.mock.calls.some(([, i]) => i?.method === 'PUT')).toBe(true));
+    const [, init] = mockedFetch.mock.calls.find(([, i]) => i?.method === 'PUT')!;
+    return JSON.parse(init.body);
+  };
+
+  it('matching question opens with its pairs and saves them unchanged', async () => {
+    const body = await saveFirstPut(0);
+    expect(body.matchingPrompts).toEqual(['Cung', 'Cầu']);
+    expect(body.choices.map((c: any) => [c.id, c.correctSlot])).toEqual([['b-1', 1], ['b-2', 2], ['b-3', null]]);
+  });
+
+  it('rubric essay opens with its ý list and saves it', async () => {
+    const body = await saveFirstPut(1);
+    expect(body.rubricItems).toEqual([{ content: 'Ý một', points: 1 }, { content: 'Ý hai', points: 0.5 }]);
+  });
+});
