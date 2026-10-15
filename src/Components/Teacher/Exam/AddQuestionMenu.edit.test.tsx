@@ -69,7 +69,8 @@ describe('AddQuestionMenu edit mode', () => {
     expect(formatSelect()).not.toBeDisabled();
   });
 
-  it('prefills essay fields and rejects non-quarter max points', async () => {
+  // Round 8: a legacy essay (sample answer + max points) becomes one ý worth the old max points.
+  it('prefills a legacy essay as one ý and rejects non-quarter ý points', async () => {
     const onUpdate = jest.fn();
     render(
       <AddQuestionMenu
@@ -81,10 +82,32 @@ describe('AddQuestionMenu edit mode', () => {
     expect(screen.getByDisplayValue('Ý chính')).toBeInTheDocument();
     expect(screen.getByDisplayValue('2.5')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/Điểm tối đa/), { target: { value: '1.3' } });
+    expect(screen.getByTestId('rubric-total')).toHaveTextContent('Điểm tối đa: 2.5');
+    fireEvent.change(screen.getByLabelText('điểm ý 1'), { target: { value: '1.3' } });
     fireEvent.click(screen.getByRole('button', { name: /Lưu Thay Đổi/i }));
     expect(await screen.findByText(/bội số của 0\.25/)).toBeInTheDocument();
     expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('edits an essay rubric and its shared situation, keeping the group key', async () => {
+    const onUpdate = jest.fn();
+    render(
+      <AddQuestionMenu
+        initialQuestion={{ id: 'e-2', content: 'Câu a', questionFormat: 'Essay', competencyType: 'BehaviorAdjustment', difficultyLevel: 'Medium', maxPoints: 1.5, rubricItems: [{ content: 'Ý 1', points: 1 }, { content: 'Ý 2', points: 0.5 }], passageText: 'Tình huống', passageGroupKey: 'g-1', choices: [] }}
+        onUpdateQuestion={onUpdate}
+      />
+    );
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Điều chỉnh hành vi' })).toBeInTheDocument());
+    expect(screen.getByText(/áp dụng cho tất cả câu tự luận dùng chung/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Tình huống chung (tùy chọn)'), { target: { value: 'Tình huống mới' } });
+    fireEvent.change(screen.getByLabelText('điểm ý 2'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Lưu Thay Đổi/i }));
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+    const q = onUpdate.mock.calls[0][0];
+    expect(q.rubricItems).toEqual([{ content: 'Ý 1', points: 1 }, { content: 'Ý 2', points: 1 }]);
+    expect(q.maxPoints).toBe(2);
+    expect(q.passageText).toBe('Tình huống mới');
+    expect(q.passageGroupKey).toBe('g-1');
   });
 
   it('shows the API error passed by the parent', async () => {

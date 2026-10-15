@@ -95,3 +95,44 @@ describe('buildUpdateQuestionPayload', () => {
     expect(p.sampleAnswer).toBe('mẫu');
   });
 });
+
+// Round 8: rubric essays, fill-in-the-blank and matching payloads.
+describe('question payload – round 8 formats', () => {
+  const base = { id: 'q', competencyType: 'SelfDevelopment', difficultyLevel: 'Medium' as const };
+
+  it('sends the rubric (not sampleAnswer/maxPoints) for rubric essays', () => {
+    const payload: any = buildCreateQuestionPayload({
+      ...base, content: 'E', questionFormat: 'Essay', choices: [], maxPoints: 1.5,
+      rubricItems: [{ content: ' Ý 1 ', points: 1 }, { content: 'Ý 2', points: 0.5 }],
+    });
+    expect(payload.rubricItems).toEqual([{ content: 'Ý 1', points: 1 }, { content: 'Ý 2', points: 0.5 }]);
+    expect(payload.sampleAnswer).toBeUndefined();
+    expect(payload.maxPoints).toBeUndefined();
+  });
+
+  it('sends correctSlot / matchingPrompts and keeps choice ids on update', () => {
+    const question = {
+      ...base, content: 'Nối', questionFormat: 'Matching' as const, matchingPrompts: [' Cung ', 'Cầu'],
+      choices: [
+        { id: 'c1', optionLabel: 'A', content: 'Bán', correctSlot: 1 },
+        { optionLabel: 'B', content: 'Mua', correctSlot: 2 },
+        { optionLabel: 'C', content: 'Dư', correctSlot: null },
+      ],
+    };
+    const created: any = buildCreateQuestionPayload(question);
+    expect(created.matchingPrompts).toEqual(['Cung', 'Cầu']);
+    expect(created.choices).toEqual([
+      { optionLabel: 'A', content: 'Bán', isCorrect: true, correctSlot: 1 },
+      { optionLabel: 'B', content: 'Mua', isCorrect: true, correctSlot: 2 },
+      { optionLabel: 'C', content: 'Dư', isCorrect: false, correctSlot: null },
+    ]);
+    const updated: any = buildUpdateQuestionPayload(question);
+    expect(updated.choices.map((c: any) => c.id)).toEqual(['c1', null, null]);
+  });
+
+  it('update of an essay without situation sends explicit nulls to clear the group', () => {
+    const updated: any = buildUpdateQuestionPayload({ ...base, content: 'E', questionFormat: 'Essay', choices: [], rubricItems: [{ content: 'Ý', points: 1 }] });
+    expect(updated.passageText).toBeNull();
+    expect(updated.passageGroupKey).toBeNull();
+  });
+});

@@ -1,19 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, X, ChevronDown, Info } from 'lucide-react';
-import { Question, CompetencyOption, DifficultyLevel, QuestionFormat } from '../../../types';
+import { Question, CompetencyOption, DifficultyLevel, QuestionFormat, Choice } from '../../../types';
 import { fetchClient } from '../../../api/fetchClient';
 import {
-  ESSAY_DEFAULT_MAX_POINTS,
-  ESSAY_SAMPLE_ANSWER_MAX_LENGTH,
   formatPoints,
-  parseEssayNumber,
   QUESTION_CONTENT_MAX_LENGTH,
   QUESTION_CONTENT_TOO_LONG_MESSAGE,
   QUESTION_PASSAGE_MAX_LENGTH,
   QUESTION_PASSAGE_TOO_LONG_MESSAGE,
-  validateEssayMaxPoints,
-  validateEssaySampleAnswer,
+  RubricItemInput,
+  rubricInputsForQuestion,
+  rubricTotal,
+  toRubricPayload,
+  validateRubric,
 } from '../../../utils/essay';
+import { choiceLabelFor, isStructuredFormat, validateStructuredQuestion } from '../../../utils/structuredQuestion';
+import RubricEditor from '../Question/RubricEditor';
+import StructuredChoicesEditor from '../Question/StructuredChoicesEditor';
+
+const emptyStructuredChoices = (): Choice[] =>
+  [0, 1, 2].map((index) => ({ optionLabel: choiceLabelFor(index), content: '', isCorrect: false, correctSlot: null }));
+
+const FORMAT_LABELS: Record<string, string> = {
+  SingleChoice: 'Một đáp án',
+  TrueFalse: 'Đúng / Sai',
+  FillInBlank: 'Điền khuyết',
+  Matching: 'Ghép đôi',
+};
 
 interface AddQuestionMenuProps {
   onAddQuestion?: (question: Question) => void;
@@ -35,7 +48,9 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
   externalError,
 }) => {
   const isEditMode = !!initialQuestion;
-  const initialChoices = initialQuestion && initialQuestion.questionFormat !== 'Essay' ? initialQuestion.choices || [] : [];
+  const initialIsStructured = isStructuredFormat(initialQuestion?.questionFormat);
+  const initialChoices =
+    initialQuestion && initialQuestion.questionFormat !== 'Essay' && !initialIsStructured ? initialQuestion.choices || [] : [];
   const [content, setContent] = useState(initialQuestion?.content || '');
   const [choices, setChoices] = useState<string[]>(
     initialChoices.length > 0 ? initialChoices.map((choice) => choice.content) : ['', '', '', '']
@@ -50,12 +65,29 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
   const [selectedQuestionFormat, setSelectedQuestionFormat] = useState<QuestionFormat>(initialQuestion?.questionFormat || 'SingleChoice');
   const [selectedDifficultyLevel, setSelectedDifficultyLevel] = useState<DifficultyLevel>(initialQuestion?.difficultyLevel || 'Medium');
   const [sourceEvidence, setSourceEvidence] = useState(initialQuestion?.sourceEvidence || '');
-  const [sampleAnswer, setSampleAnswer] = useState(initialQuestion?.sampleAnswer || '');
-  const [maxPointsInput, setMaxPointsInput] = useState(String(initialQuestion?.maxPoints ?? ESSAY_DEFAULT_MAX_POINTS));
+  const [rubricInputs, setRubricInputs] = useState<RubricItemInput[]>(() =>
+    initialQuestion?.questionFormat === 'Essay' ? rubricInputsForQuestion(initialQuestion) : [{ content: '', points: '1' }]
+  );
+  const [structuredChoices, setStructuredChoices] = useState<Choice[]>(() =>
+    initialIsStructured && initialQuestion?.choices?.length ? initialQuestion.choices.map((choice) => ({ ...choice })) : emptyStructuredChoices()
+  );
+  const [matchingPrompts, setMatchingPrompts] = useState<string[]>(() =>
+    initialQuestion?.matchingPrompts?.length ? [...initialQuestion.matchingPrompts] : ['', '']
+  );
+  // Essay shared situation (F): consecutive essays added with the same situation share one group key.
+  const [essaySituation, setEssaySituation] = useState(
+    initialQuestion?.questionFormat === 'Essay' ? initialQuestion.passageText || '' : ''
+  );
+  const situationGroup = useRef<{ text: string; key: string } | null>(
+    initialQuestion?.questionFormat === 'Essay' && initialQuestion.passageGroupKey
+      ? { text: (initialQuestion.passageText || '').trim(), key: initialQuestion.passageGroupKey }
+      : null
+  );
   const [isSaving, setIsSaving] = useState(false);
   const isFormatLocked = isEditMode && initialQuestion?.hasStudentAnswers === true;
   const skipInitialFormatEffect = useRef(isEditMode);
   const isEssay = selectedQuestionFormat === 'Essay';
+  const isStructured = isStructuredFormat(selectedQuestionFormat);
   const [competencyLoading, setCompetencyLoading] = useState(true);
 
   useEffect(() => {
@@ -86,7 +118,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
     // Format changed: choices become new ones (no ids).
     setChoiceIds([]);
 
-    if (selectedQuestionFormat === 'Essay') {
+    if (selectedQuestionFormat === 'Essay' || isStructuredFormat(selectedQuestionFormat)) {
       return;
     }
 
@@ -142,21 +174,27 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
       return;
     }
 
-    if ((initialQuestion?.passageText || '').trim().length > QUESTION_PASSAGE_MAX_LENGTH) {
+    const passageToCheck = isEssay ? essaySituation : initialQuestion?.passageText || '';
+    if (passageToCheck.trim().length > QUESTION_PASSAGE_MAX_LENGTH) {
       setError(QUESTION_PASSAGE_TOO_LONG_MESSAGE);
       return;
     }
 
     if (isEssay) {
-      const sampleAnswerError = validateEssaySampleAnswer(sampleAnswer);
-      if (sampleAnswerError) {
-        setError(sampleAnswerError);
+      const rubricError = validateRubric(rubricInputs);
+      if (rubricError) {
+        setError(rubricError);
         return;
       }
-
-      const maxPointsError = validateEssayMaxPoints(maxPointsInput);
-      if (maxPointsError) {
-        setError(maxPointsError);
+    } else if (isStructured) {
+      const structuredError = validateStructuredQuestion({
+        questionFormat: selectedQuestionFormat,
+        content,
+        matchingPrompts,
+        choices: structuredChoices,
+      });
+      if (structuredError) {
+        setError(structuredError);
         return;
       }
     } else if (choices.some(choice => !choice.trim())) {
@@ -179,28 +217,40 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
       sourceEvidence: sourceEvidence.trim() || undefined,
       choices: isEssay
         ? []
-        : choices.map((choice, index) => ({
+        : isStructured
+          ? structuredChoices.map((choice, index) => ({
+              ...choice,
+              optionLabel: choiceLabelFor(index),
+              content: choice.content.trim(),
+              isCorrect: choice.correctSlot != null,
+            }))
+          : choices.map((choice, index) => ({
             ...(choiceIds[index] ? { id: choiceIds[index] } : {}),
             optionLabel: optionLabels[index] || String(index),
             content: choice.trim(),
             isCorrect: index === correctChoice
           })),
+      ...(selectedQuestionFormat === 'Matching' ? { matchingPrompts: matchingPrompts.map((prompt) => prompt.trim()) } : {}),
       ...(isEssay
         ? {
-            sampleAnswer: sampleAnswer.trim(),
-            maxPoints: parseEssayNumber(maxPointsInput) ?? ESSAY_DEFAULT_MAX_POINTS,
+            rubricItems: toRubricPayload(rubricInputs),
+            maxPoints: rubricTotal(rubricInputs),
+            sampleAnswer: null,
+            ...essaySituationFields(),
           }
         : {}),
     };
 
     if (isEditMode) {
-      // Keep fields the form does not edit (passage data of true/false statements).
-      const updatedQuestion: Question = {
-        ...newQuestion,
-        passageText: initialQuestion?.passageText,
-        passageGroupKey: initialQuestion?.passageGroupKey,
-        statementOrder: initialQuestion?.statementOrder,
-      };
+      // Keep fields the form does not edit (passage data of true/false statements); essays edit their situation.
+      const updatedQuestion: Question = isEssay
+        ? newQuestion
+        : {
+            ...newQuestion,
+            passageText: initialQuestion?.passageText,
+            passageGroupKey: initialQuestion?.passageGroupKey,
+            statementOrder: initialQuestion?.statementOrder,
+          };
       setIsSaving(true);
       try {
         await onUpdateQuestion?.(updatedQuestion);
@@ -224,8 +274,25 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
     setChoices(selectedQuestionFormat === 'TrueFalse' ? ['Đúng', 'Sai'] : ['', '', '', '']);
     setCorrectChoice(0);
     setSourceEvidence('');
-    setSampleAnswer('');
+    setRubricInputs([{ content: '', points: '1' }]);
+    setStructuredChoices(emptyStructuredChoices());
+    setMatchingPrompts(['', '']);
+    // The essay situation is kept so the next essay can share it.
   };
+
+  /** Passage fields of an essay: same situation text => same group key; blank => no group. */
+  function essaySituationFields(): Pick<Question, 'passageText' | 'passageGroupKey'> {
+    const text = essaySituation.trim();
+    if (!text) {
+      situationGroup.current = null;
+      return { passageText: null, passageGroupKey: null };
+    }
+    if (!situationGroup.current || (!isEditMode && situationGroup.current.text !== text)) {
+      situationGroup.current = { text, key: `essay-${Date.now()}` };
+    }
+    situationGroup.current.text = text;
+    return { passageText: text, passageGroupKey: situationGroup.current.key };
+  }
 
   const handleRemoveQuestion = (index: number) => {
     const newQuestions = questions.filter((_, i) => i !== index);
@@ -319,6 +386,8 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
                   <option value="SingleChoice">Trắc nghiệm một đáp án</option>
                   <option value="TrueFalse">Đúng / Sai</option>
                   <option value="Essay">Tự luận</option>
+                  <option value="FillInBlank">Điền khuyết (ngân hàng từ)</option>
+                  <option value="Matching">Ghép đôi (nối cột)</option>
                 </select>
                 {isFormatLocked && (
                   <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
@@ -344,13 +413,20 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nội Dung Câu Hỏi
+              <label htmlFor="question-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {selectedQuestionFormat === 'FillInBlank' ? 'Đoạn văn (chỗ trống ghi là [[1]], [[2]], ...)' : 'Nội Dung Câu Hỏi'}
               </label>
               <textarea
+                id="question-content"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Nhập câu hỏi của bạn..."
+                placeholder={
+                  selectedQuestionFormat === 'FillInBlank'
+                    ? 'Ví dụ: Khi giá tăng thì [[1]] giảm, còn [[2]] tăng.'
+                    : selectedQuestionFormat === 'Matching'
+                      ? 'Ví dụ: Hãy nối mỗi khái niệm ở cột A với ý phù hợp ở cột B.'
+                      : 'Nhập câu hỏi của bạn...'
+                }
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={3}
               />
@@ -372,41 +448,39 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
             {isEssay ? (
               <div className="space-y-4 rounded-lg border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
                 <div>
-                  <label htmlFor="essay-sample-answer" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Đáp án mẫu / tiêu chí chấm <span className="text-red-500">*</span>
+                  <label htmlFor="essay-situation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tình huống chung (tùy chọn)
                   </label>
                   <textarea
-                    id="essay-sample-answer"
-                    value={sampleAnswer}
-                    onChange={(e) => setSampleAnswer(e.target.value)}
-                    maxLength={ESSAY_SAMPLE_ANSWER_MAX_LENGTH}
-                    placeholder="Ví dụ: Ý 1 (0.5đ): ... ; Ý 2 (0.5đ): ..."
+                    id="essay-situation"
+                    value={essaySituation}
+                    onChange={(e) => setEssaySituation(e.target.value)}
+                    placeholder="Dùng khi nhiều câu tự luận hỏi về cùng một tình huống. Các câu thêm liên tiếp với cùng tình huống sẽ được hiển thị chung."
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
-                    rows={5}
+                    rows={3}
                   />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    AI sẽ dựa vào nội dung này để chấm điểm và nhận xét bài làm của học sinh. Học sinh không nhìn thấy nội dung này.
-                  </p>
+                  {isEditMode && initialQuestion?.passageGroupKey && (
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                      Sửa tình huống sẽ áp dụng cho tất cả câu tự luận dùng chung tình huống này.
+                    </p>
+                  )}
                 </div>
-                <div>
-                  <label htmlFor="essay-max-points" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Điểm tối đa <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="essay-max-points"
-                    type="number"
-                    min={0.25}
-                    max={40}
-                    step={0.25}
-                    value={maxPointsInput}
-                    onChange={(e) => setMaxPointsInput(e.target.value)}
-                    className="w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Từ 0.25 đến 40 điểm, theo bước 0.25. Mỗi câu trắc nghiệm / nhóm Đúng-Sai được tính 1 điểm khi quy đổi thang 10.
-                  </p>
-                </div>
+                <RubricEditor items={rubricInputs} onChange={setRubricInputs} />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  AI chấm từng ý theo danh sách này; học sinh chỉ thấy tổng điểm và nhận xét, không thấy danh sách ý.
+                </p>
               </div>
+            ) : isStructured ? (
+              <StructuredChoicesEditor
+                format={selectedQuestionFormat as 'FillInBlank' | 'Matching'}
+                content={content}
+                matchingPrompts={matchingPrompts}
+                choices={structuredChoices}
+                onChange={(patch) => {
+                  if (patch.matchingPrompts) setMatchingPrompts(patch.matchingPrompts);
+                  if (patch.choices) setStructuredChoices(patch.choices);
+                }}
+              />
             ) : (
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -503,7 +577,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
                           )}
                           {question.questionFormat && (
                             <span className="text-xs text-violet-600 dark:text-violet-400">
-                              Dạng: {question.questionFormat === 'TrueFalse' ? 'Đúng / Sai' : question.questionFormat === 'Essay' ? `Tự luận (${formatPoints(question.maxPoints ?? 1)} điểm)` : 'Một đáp án'}
+                              Dạng: {question.questionFormat === 'Essay' ? `Tự luận (${formatPoints(question.maxPoints ?? 1)} điểm)` : FORMAT_LABELS[question.questionFormat] || 'Một đáp án'}
                             </span>
                           )}
                           {question.difficultyLevel && (
@@ -512,9 +586,21 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
                             </span>
                           )}
                         </div>
-                        {question.questionFormat === 'Essay' && question.sampleAnswer && (
-                          <p className="text-xs text-green-700 dark:text-green-400 mb-2 whitespace-pre-line">
-                            Đáp án mẫu / tiêu chí chấm: {question.sampleAnswer}
+                        {question.questionFormat === 'Essay' && question.passageText && (
+                          <p className="text-xs text-teal-700 dark:text-teal-300 mb-2 whitespace-pre-line">
+                            Tình huống chung: {question.passageText}
+                          </p>
+                        )}
+                        {question.questionFormat === 'Essay' && (question.rubricItems || []).length > 0 && (
+                          <ol className="text-xs text-green-700 dark:text-green-400 mb-2 list-decimal pl-5">
+                            {(question.rubricItems || []).map((item, itemIndex) => (
+                              <li key={itemIndex}>{item.content} ({formatPoints(item.points ?? 0)} điểm)</li>
+                            ))}
+                          </ol>
+                        )}
+                        {question.questionFormat === 'Matching' && (question.matchingPrompts || []).length > 0 && (
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            Cột A: {(question.matchingPrompts || []).map((prompt, i) => `${i + 1}. ${prompt}`).join('; ')}
                           </p>
                         )}
                         {question.sourceEvidence && (
@@ -527,7 +613,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
                             <div key={cIdx} className="flex items-center gap-2">
                               <span
                                 className={`inline-block w-4 h-4 rounded-full border ${
-                                  choice.isCorrect
+                                  choice.isCorrect || choice.correctSlot != null
                                     ? 'bg-green-500 border-green-600'
                                     : 'border-gray-300 dark:border-gray-600'
                                 }`}
@@ -536,6 +622,11 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
                                 {choice.optionLabel}:
                               </span>
                               <span>{choice.content}</span>
+                              {choice.correctSlot != null && (
+                                <span className="text-green-700 dark:text-green-400">
+                                  → {question.questionFormat === 'FillInBlank' ? `[[${choice.correctSlot}]]` : `${choice.correctSlot}`}
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>

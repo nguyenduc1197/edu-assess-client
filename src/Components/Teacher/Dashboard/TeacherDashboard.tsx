@@ -11,6 +11,7 @@ import {
   Question,
   ScoreDistributionItem,
   SubjectLabel,
+  TrueFalseScoringMode,
   User,
 } from '../../../types';
 import Sidebar from '../../Common/Sidebar/Sidebar';
@@ -78,7 +79,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [isDeletedAssignmentsLoading, setIsDeletedAssignmentsLoading] = useState(false);
   const [deletedAssignmentsError, setDeletedAssignmentsError] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; durationMinutes?: number; questionIds: string[]; schoolClassId: string; antiCheatEnabled?: boolean } | null>(null);
+  const [editingExam, setEditingExam] = useState<{ id: string; name: string; start: string; end: string; durationMinutes?: number; questionIds: string[]; schoolClassId: string; antiCheatEnabled?: boolean; trueFalseScoringMode?: TrueFalseScoringMode } | null>(null);
   const [selectedExam, setSelectedExam] = useState<Assignment | null>(null);
   const [examStudents, setExamStudents] = useState<ExamStudentStatusItem[]>([]);
   const [isStudentListLoading, setIsStudentListLoading] = useState(false);
@@ -720,6 +721,7 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
         questionIds: questionItems.map((q: any) => q.id),
         schoolClassId: examData.schoolClassId || '',
         antiCheatEnabled: examData.antiCheatEnabled ?? assignment.antiCheatEnabled ?? false,
+        trueFalseScoringMode: examData.trueFalseScoringMode === 'PerStatement' ? 'PerStatement' : examData.trueFalseScoringMode === 'Tiered' ? 'Tiered' : undefined,
       });
     } catch (err) {
       console.error('Failed to load exam for editing', err);
