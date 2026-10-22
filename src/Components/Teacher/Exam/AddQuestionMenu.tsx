@@ -465,7 +465,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
                     </p>
                   )}
                 </div>
-                <RubricEditor items={rubricInputs} onChange={setRubricInputs} />
+                <RubricEditor items={rubricInputs} onChange={setRubricInputs} competencyOptions={competencyOptions} />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   AI chấm từng ý theo danh sách này; học sinh chỉ thấy tổng điểm và nhận xét, không thấy danh sách ý.
                 </p>

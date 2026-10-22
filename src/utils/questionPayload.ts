@@ -28,7 +28,11 @@ export const buildCreateQuestionPayload = (question: Question) => ({
     ? question.rubricItems && question.rubricItems.length > 0
       ? {
           // Rubric ("danh sách ý"): max points = sum of ý points (computed by the backend).
-          rubricItems: question.rubricItems.map((item) => ({ content: item.content.trim(), points: item.points ?? null })),
+          rubricItems: question.rubricItems.map((item) => ({
+            content: item.content.trim(),
+            points: item.points ?? null,
+            ...(item.competencyType ? { competencyType: item.competencyType } : {}),
+          })),
         }
       : {
           maxPoints: question.maxPoints ?? 1,

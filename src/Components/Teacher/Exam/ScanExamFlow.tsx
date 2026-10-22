@@ -287,6 +287,7 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
               onChange={(items) => updateQuestion(question.key, (q) => ({ ...q, rubricInputs: items }))}
               labelPrefix={`Câu ${index + 1}`}
               inputClassName={inputClass}
+              competencyOptions={competencyOptions}
             />
             {question.statedPoints !== null && question.statedPoints !== undefined && (
               <p className="text-xs text-gray-500 dark:text-gray-400">Đề gốc ghi: {question.statedPoints} điểm.</p>

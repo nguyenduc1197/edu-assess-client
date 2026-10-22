@@ -72,10 +72,16 @@ export const ESSAY_RUBRIC_ITEM_MAX_LENGTH = 2000;
 export interface RubricItemInput {
   content: string;
   points: string;
+  /** Competency of this ý; '' / undefined = same as the question. */
+  competencyType?: string;
 }
 
 export const toRubricInputs = (items: EssayRubricItem[] | null | undefined): RubricItemInput[] =>
-  (items || []).map((item) => ({ content: item.content, points: item.points != null ? String(item.points) : '' }));
+  (items || []).map((item) => ({
+    content: item.content,
+    points: item.points != null ? String(item.points) : '',
+    competencyType: item.competencyType || '',
+  }));
 
 /**
  * Rubric of an existing essay for editing; a legacy essay without rubric becomes one ý
@@ -110,7 +116,11 @@ export const validateRubric = (items: RubricItemInput[]): string | null => {
 };
 
 export const toRubricPayload = (items: RubricItemInput[]): EssayRubricItem[] =>
-  items.map((item) => ({ content: item.content.trim(), points: parseDecimal(item.points) }));
+  items.map((item) => ({
+    content: item.content.trim(),
+    points: parseDecimal(item.points),
+    ...(item.competencyType ? { competencyType: item.competencyType } : {}),
+  }));
 
 /** Validates the sample answer / grading criteria. Returns an error message or null. */
 export const validateEssaySampleAnswer = (value: string | null | undefined): string | null => {

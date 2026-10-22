@@ -16,6 +16,8 @@ export interface Choice {
 export interface EssayRubricItem {
   content: string;
   points?: number | null;
+  /** Competency of this ý; null/undefined = same as the question. */
+  competencyType?: string | null;
 }
 
 /** AI points for one ý of an essay answer (teachers only). */

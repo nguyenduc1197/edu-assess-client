@@ -78,7 +78,7 @@ describe('AddQuestionMenu edit mode', () => {
         onUpdateQuestion={onUpdate}
       />
     );
-    await waitFor(() => expect(screen.getByRole('option', { name: 'Điều chỉnh hành vi' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByRole('option', { name: 'Điều chỉnh hành vi' }).length).toBeGreaterThan(0));
     expect(screen.getByDisplayValue('Ý chính')).toBeInTheDocument();
     expect(screen.getByDisplayValue('2.5')).toBeInTheDocument();
 
@@ -97,7 +97,7 @@ describe('AddQuestionMenu edit mode', () => {
         onUpdateQuestion={onUpdate}
       />
     );
-    await waitFor(() => expect(screen.getByRole('option', { name: 'Điều chỉnh hành vi' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByRole('option', { name: 'Điều chỉnh hành vi' }).length).toBeGreaterThan(0));
     expect(screen.getByText(/áp dụng cho tất cả câu tự luận dùng chung/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Tình huống chung (tùy chọn)'), { target: { value: 'Tình huống mới' } });
     fireEvent.change(screen.getByLabelText('điểm ý 2'), { target: { value: '1' } });

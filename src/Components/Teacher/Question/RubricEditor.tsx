@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus, X } from 'lucide-react';
+import { CompetencyOption } from '../../../types';
 import { ESSAY_RUBRIC_MAX_ITEMS, formatPoints, RubricItemInput, rubricTotal } from '../../../utils/essay';
 
 interface RubricEditorProps {
@@ -8,13 +9,21 @@ interface RubricEditorProps {
   /** Prefix for aria-labels, e.g. "Câu 3". */
   labelPrefix?: string;
   inputClassName?: string;
+  /** When given, each ý gets its own competency select ("Theo câu" = same as the question). */
+  competencyOptions?: CompetencyOption[];
 }
 
 const defaultInputClass =
   'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white';
 
 /** Essay rubric ("danh sách ý"): content + points per ý; max points = sum. */
-const RubricEditor: React.FC<RubricEditorProps> = ({ items, onChange, labelPrefix = '', inputClassName = defaultInputClass }) => {
+const RubricEditor: React.FC<RubricEditorProps> = ({
+  items,
+  onChange,
+  labelPrefix = '',
+  inputClassName = defaultInputClass,
+  competencyOptions,
+}) => {
   const prefix = labelPrefix ? `${labelPrefix} ` : '';
   const update = (index: number, patch: Partial<RubricItemInput>) =>
     onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
@@ -44,6 +53,22 @@ const RubricEditor: React.FC<RubricEditorProps> = ({ items, onChange, labelPrefi
             onChange={(e) => update(index, { points: e.target.value })}
             className={`w-24 shrink-0 ${inputClassName}`}
           />
+          {competencyOptions && competencyOptions.length > 0 && (
+            <select
+              aria-label={`${prefix}năng lực ý ${index + 1}`}
+              title="Năng lực của ý"
+              value={item.competencyType || ''}
+              onChange={(e) => update(index, { competencyType: e.target.value })}
+              className={`w-40 shrink-0 ${inputClassName}`}
+            >
+              <option value="">Năng lực: theo câu</option>
+              {competencyOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          )}
           {items.length > 1 && (
             <button
               type="button"
@@ -60,7 +85,7 @@ const RubricEditor: React.FC<RubricEditorProps> = ({ items, onChange, labelPrefi
         {items.length < ESSAY_RUBRIC_MAX_ITEMS ? (
           <button
             type="button"
-            onClick={() => onChange([...items, { content: '', points: '' }])}
+            onClick={() => onChange([...items, { content: '', points: '', competencyType: '' }])}
             className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
           >
             <Plus size={14} /> Thêm ý
