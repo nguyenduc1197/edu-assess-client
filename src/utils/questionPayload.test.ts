@@ -136,3 +136,21 @@ describe('question payload – round 8 formats', () => {
     expect(updated.passageGroupKey).toBeNull();
   });
 });
+
+describe('round 11: source feedback round-trip', () => {
+  it('keeps option feedback and explanation when a question is edited (update + create payloads)', () => {
+    const q: any = {
+      id: 'q1', content: 'Câu', competencyType: 'BehaviorAdjustment', questionFormat: 'SingleChoice', difficultyLevel: 'Easy',
+      explanation: '  Giải thích gốc  ',
+      choices: [
+        { id: 'c1', optionLabel: 'A', content: 'a', isCorrect: true, feedback: 'Chính xác!' },
+        { id: 'c2', optionLabel: 'B', content: 'b', isCorrect: false, feedback: ' Chưa đúng ' },
+      ],
+    };
+    const update: any = buildUpdateQuestionPayload(q);
+    expect(update.explanation).toBe('Giải thích gốc');
+    expect(update.choices.map((c: any) => c.feedback)).toEqual(['Chính xác!', 'Chưa đúng']);
+    const create: any = buildCreateQuestionPayload(q);
+    expect(create.choices.map((c: any) => c.feedback)).toEqual(['Chính xác!', 'Chưa đúng']);
+  });
+});
