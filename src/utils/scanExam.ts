@@ -1,4 +1,4 @@
-import { ExamScanResult, ScannedChoice, ScannedQuestion, TrueFalseScoringMode } from '../types';
+import { CompetencyComment, ExamScanResult, ScannedChoice, ScannedQuestion, TrueFalseScoringMode } from '../types';
 import {
   QUESTION_CONTENT_MAX_LENGTH,
   QUESTION_PASSAGE_MAX_LENGTH,
@@ -17,6 +17,8 @@ export const SCAN_MAX_IMAGES = 20;
 export const SCAN_CONTENT_MAX_LENGTH = QUESTION_CONTENT_MAX_LENGTH;
 export const SCAN_PASSAGE_MAX_LENGTH = QUESTION_PASSAGE_MAX_LENGTH;
 export const SCAN_CHOICE_MAX_LENGTH = 500;
+export const SCAN_EXPLANATION_MAX_LENGTH = 4000;
+export const SCAN_FEEDBACK_MAX_LENGTH = 2000;
 export const SCAN_ACCEPT = '.pdf,.docx,.jpg,.jpeg,.png,.webp,.heic,.heif';
 
 export type ScanFileKind = 'pdf' | 'images' | 'docx';
@@ -95,6 +97,12 @@ export const validateReviewQuestion = (question: ReviewQuestion, number: number)
   if ((question.passageText || '').trim().length > SCAN_PASSAGE_MAX_LENGTH) {
     errors.push(`${prefix}: đoạn tư liệu không được vượt quá 8000 ký tự.`);
   }
+  if ((question.explanation || '').trim().length > SCAN_EXPLANATION_MAX_LENGTH) {
+    errors.push(`${prefix}: giải thích không được vượt quá 4000 ký tự.`);
+  }
+  if ((question.choices || []).some((choice) => (choice.feedback || '').trim().length > SCAN_FEEDBACK_MAX_LENGTH)) {
+    errors.push(`${prefix}: phản hồi của phương án không được vượt quá 2000 ký tự.`);
+  }
 
   if (question.questionFormat === 'Essay') {
     const rubricError = validateRubric(question.rubricInputs);
@@ -157,10 +165,19 @@ export const collectScanReviewErrors = (questions: ReviewQuestion[], fields: Sca
 ];
 
 const toChoicePayload = (choices: ScannedChoice[]) =>
-  choices.map((choice) => ({ optionLabel: choice.optionLabel, content: choice.content.trim(), isCorrect: !!choice.isCorrect }));
+  choices.map((choice) => ({
+    optionLabel: choice.optionLabel,
+    content: choice.content.trim(),
+    isCorrect: !!choice.isCorrect,
+    feedback: choice.feedback?.trim() || null,
+  }));
 
 /** Body of POST /exams/from-scan (questions keep the reviewed order). */
-export const buildCreateFromScanPayload = (questions: ReviewQuestion[], fields: ScanExamFields) => ({
+export const buildCreateFromScanPayload = (
+  questions: ReviewQuestion[],
+  fields: ScanExamFields,
+  competencyComments: CompetencyComment[] = [],
+) => ({
   name: fields.name.trim(),
   start: new Date(fields.start).toISOString(),
   end: new Date(fields.end).toISOString(),
@@ -168,6 +185,9 @@ export const buildCreateFromScanPayload = (questions: ReviewQuestion[], fields: 
   antiCheatEnabled: fields.antiCheatEnabled,
   trueFalseScoringMode: fields.trueFalseScoringMode,
   schoolClassId: fields.schoolClassId,
+  competencyComments: competencyComments
+    .map((item) => ({ competencyType: item.competencyType, comment: item.comment.trim() }))
+    .filter((item) => item.comment),
   questions: questions.map((question) => ({
     questionFormat: question.questionFormat,
     content: question.content.trim(),
@@ -177,6 +197,7 @@ export const buildCreateFromScanPayload = (questions: ReviewQuestion[], fields: 
     passageGroupKey: question.passageGroupKey || null,
     statementOrder: question.statementOrder ?? null,
     sourceEvidence: null,
+    explanation: question.explanation?.trim() || null,
     choices:
       question.questionFormat === 'Essay'
         ? []

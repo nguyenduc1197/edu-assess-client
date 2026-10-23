@@ -22,6 +22,7 @@ import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 import { EXAM_DATA_CHANGED_EVENT } from '../../../utils/examDataEvents';
 import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
 import StructuredAnswerReviewList from '../../Common/StructuredAnswers/StructuredAnswerReviewList';
+import CompetencyCommentList from '../../Common/CompetencyComments/CompetencyCommentList';
 
 const EssayStatusHint: React.FC<{ pending?: number; awaitingTeacher?: number }> = ({ pending = 0, awaitingTeacher = 0 }) => {
   if (pending <= 0 && awaitingTeacher <= 0) return null;
@@ -811,6 +812,8 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
                       </ul>
                     </div>
                   )}
+
+                  <CompetencyCommentList comments={selectedResult.competencyComments} />
 
                   <div className="space-y-3">
                     {selectedResult.behaviorAdjustmentScore !== null && (

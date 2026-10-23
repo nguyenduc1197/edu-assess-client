@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Download, Search, PlusCircle, Copy, Edit2, BarChart2, RotateCw, Trash2, AlertTriangle } from 'lucide-react';
+import { Download, Search, PlusCircle, Copy, Edit2, BarChart2, RotateCw, Trash2, AlertTriangle, FileUp } from 'lucide-react';
+import SourceFeedbackUpdateModal from '../Exam/SourceFeedbackUpdateModal';
 import {
   AssessmentResult,
   Assignment,
@@ -26,6 +27,7 @@ import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 import { emitExamDataChangedEvent } from '../../../utils/examDataEvents';
 import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
 import StructuredAnswerReviewList from '../../Common/StructuredAnswers/StructuredAnswerReviewList';
+import CompetencyCommentList from '../../Common/CompetencyComments/CompetencyCommentList';
 import AddQuestionMenu from '../Exam/AddQuestionMenu';
 import { buildUpdateQuestionPayload } from '../../../utils/questionPayload';
 
@@ -90,6 +92,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
   const [reactivateCandidate, setReactivateCandidate] = useState<ExamStudentStatusItem | null>(null);
   const [toast, setToast] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentResult | null>(null);
+  const [isSourceFeedbackOpen, setIsSourceFeedbackOpen] = useState(false);
+  const [sourceFeedbackMessage, setSourceFeedbackMessage] = useState('');
   const [isAssessmentLoading, setIsAssessmentLoading] = useState(false);
   const [selectedStudentName, setSelectedStudentName] = useState('');
   const [examAnalytics, setExamAnalytics] = useState<ExamAnalytics | null>(null);
@@ -1445,6 +1449,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     setRemoveQuestionCandidate(null);
                     setRemovingQuestionId(null);
                     setRestoringQuestionId(null);
+                    setIsSourceFeedbackOpen(false);
+                    setSourceFeedbackMessage('');
                   }}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
@@ -1819,6 +1825,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                             </div>
                           )}
 
+                          <CompetencyCommentList comments={selectedAssessment.competencyComments} />
+
                           {(selectedAssessment.behaviorAdjustmentFeedback || selectedAssessment.selfDevelopmentFeedback || selectedAssessment.economicSocialParticipationFeedback) && (
                             <div className="space-y-3">
                               {selectedAssessment.behaviorAdjustmentFeedback && (
@@ -2126,6 +2134,40 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
                     <span>Thay đổi hoặc xóa câu hỏi sẽ tự động tính lại điểm cho các học sinh đã nộp bài.</span>
                   </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Có file đề gốc kèm phản hồi từng phương án / giải thích? Cập nhật để học sinh thấy phản hồi đó thay cho giải thích của AI.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSourceFeedbackMessage('');
+                        setIsSourceFeedbackOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-300 dark:hover:bg-violet-900/20"
+                    >
+                      <FileUp size={14} /> Cập nhật phản hồi từ file gốc
+                    </button>
+                  </div>
+
+                  {sourceFeedbackMessage && (
+                    <div role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+                      {sourceFeedbackMessage}
+                    </div>
+                  )}
+
+                  {isSourceFeedbackOpen && selectedExam && (
+                    <SourceFeedbackUpdateModal
+                      examId={selectedExam.id}
+                      examTitle={selectedExam.title}
+                      onClose={() => setIsSourceFeedbackOpen(false)}
+                      onSaved={(message) => {
+                        setSourceFeedbackMessage(message);
+                        fetchExamQuestions(selectedExam.id);
+                      }}
+                    />
+                  )}
 
                   {examQuestionsError && (
                     <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">

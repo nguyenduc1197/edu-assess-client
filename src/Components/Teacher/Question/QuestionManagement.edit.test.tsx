@@ -70,9 +70,9 @@ describe('QuestionManagement edit question', () => {
     expect(body.content).toBe('Câu hỏi ngân hàng');
     expect(body.questionFormat).toBe('SingleChoice');
     expect(body.choices).toEqual([
-      { id: 'c-a', optionLabel: 'A', content: 'Một sửa', isCorrect: false },
-      { id: 'c-b', optionLabel: 'B', content: 'Hai', isCorrect: true },
-      { id: 'c-c', optionLabel: 'C', content: 'Ba', isCorrect: false },
+      { id: 'c-a', optionLabel: 'A', content: 'Một sửa', isCorrect: false, feedback: null },
+      { id: 'c-b', optionLabel: 'B', content: 'Hai', isCorrect: true, feedback: null },
+      { id: 'c-c', optionLabel: 'C', content: 'Ba', isCorrect: false, feedback: null },
     ]);
 
     expect(await screen.findByText(/Cập nhật câu hỏi thành công/)).toBeInTheDocument();

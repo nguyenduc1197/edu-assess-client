@@ -71,6 +71,13 @@ const StructuredAnswerReviewList: React.FC<StructuredAnswerReviewListProps> = ({
                 </li>
               ))}
             </ul>
+
+            {item.explanation && (
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-100">
+                <span className="font-semibold">Giải thích:</span>{' '}
+                <span className="whitespace-pre-line">{item.explanation}</span>
+              </div>
+            )}
           </div>
         );
       })}

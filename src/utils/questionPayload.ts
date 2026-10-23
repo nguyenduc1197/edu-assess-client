@@ -9,6 +9,8 @@ const choicesPayload = (question: Question, keepIds: boolean) => {
     optionLabel: choice.optionLabel,
     content: choice.content.trim(),
     isCorrect: !!choice.isCorrect,
+    // Feedback from the source file: always sent back so editing a question never drops it.
+    feedback: choice.feedback?.trim() || null,
   }));
 };
 
@@ -22,6 +24,7 @@ export const buildCreateQuestionPayload = (question: Question) => ({
   passageGroupKey: question.passageGroupKey?.trim() || undefined,
   statementOrder: question.statementOrder ?? undefined,
   sourceEvidence: question.sourceEvidence?.trim() || undefined,
+  explanation: question.explanation?.trim() || null,
   choices: choicesPayload(question, false),
   ...(question.questionFormat === 'Matching' ? { matchingPrompts: (question.matchingPrompts || []).map((p) => p.trim()) } : {}),
   ...(question.questionFormat === 'Essay'

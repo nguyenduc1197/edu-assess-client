@@ -10,6 +10,14 @@ export interface Choice {
   isCorrect?: boolean;
   /** Fill-in-the-blank: blank number this word fills; matching: column A number. Null = distractor. Never sent to students. */
   correctSlot?: number | null;
+  /** Single choice: feedback shown when a student picks this option (from the source file). Never sent to students. */
+  feedback?: string | null;
+}
+
+/** "Nhận xét theo bài" of one competency (from the source file), shown when the ratio is below 80%. */
+export interface CompetencyComment {
+  competencyType: string;
+  comment: string;
 }
 
 /** One "ý" of an essay rubric: content + points (multiple of 0.25). */
@@ -64,6 +72,8 @@ export interface Question {
   matchingPrompts?: string[];
   /** Essay: rubric ("danh sách ý"); teachers only. maxPoints = sum of points. */
   rubricItems?: EssayRubricItem[];
+  /** Explanation shown for wrong answers (from the source file); teachers only. */
+  explanation?: string | null;
 }
 
 export interface AIQuestionGenerateResponse {
@@ -349,6 +359,8 @@ export interface WrongAnswerReview {
   errorExplanation?: string | null;
   highlightText?: string | null;
   guidanceNote?: string | null;
+  /** "file" = feedback from the source file, "ai" = written by AI, "auto" = built-in text. */
+  feedbackSource?: 'file' | 'ai' | 'auto';
 }
 
 export interface CompetencyAccumulation {
@@ -482,6 +494,8 @@ export interface AssessmentResult {
   essayAnswers?: EssayAnswerReview[];
   /** Fill-in-the-blank / matching answers with per-slot correctness (submitted attempts only). */
   structuredAnswers?: StructuredAnswerReview[];
+  /** "Nhận xét theo bài" of the competencies below 80%. */
+  competencyComments?: CompetencyComment[];
   pendingEssayCount?: number;
   awaitingTeacherEssayCount?: number;
   assessmentError: string | null;
@@ -551,6 +565,8 @@ export interface StructuredAnswerReview {
   correctCount: number;
   slotCount: number;
   slots: StructuredSlotReview[];
+  /** Explanation from the source file, only when a slot is wrong. */
+  explanation?: string | null;
 }
 
 export interface EssayGradeResult {
@@ -571,6 +587,8 @@ export interface ScannedChoice {
   isCorrect: boolean;
   /** Fill-in-the-blank: blank number; matching: column A number; null = distractor / not set. */
   correctSlot?: number | null;
+  /** Single choice: feedback from the file, shown when a student picks this option. */
+  feedback?: string | null;
 }
 
 /** One question extracted from an exam file (true/false groups are flattened: one item per statement). */
@@ -599,6 +617,8 @@ export interface ScannedQuestion {
   missingCorrectAnswer?: boolean;
   missingSampleAnswer?: boolean;
   missingMaxPoints?: boolean;
+  /** Explanation from the file (question / part / true-false ý). */
+  explanation?: string | null;
 }
 
 export interface SkippedScanQuestion {
@@ -618,4 +638,6 @@ export interface ExamScanResult {
   questions: ScannedQuestion[];
   skippedQuestions: SkippedScanQuestion[];
   warnings: string[];
+  /** "Nhận xét theo bài" per competency found in the file. */
+  competencyComments?: CompetencyComment[];
 }

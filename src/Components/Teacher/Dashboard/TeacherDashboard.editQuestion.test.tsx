@@ -89,8 +89,8 @@ describe('TeacherDashboard exam-detail question edit', () => {
     expect(body.content).toBe('Câu hỏi đã sửa');
     expect(body.questionFormat).toBe('SingleChoice');
     expect(body.choices).toEqual([
-      { id: 'c-a', optionLabel: 'A', content: 'Phương án A', isCorrect: false },
-      { id: 'c-b', optionLabel: 'B', content: 'Phương án B', isCorrect: true },
+      { id: 'c-a', optionLabel: 'A', content: 'Phương án A', isCorrect: false, feedback: null },
+      { id: 'c-b', optionLabel: 'B', content: 'Phương án B', isCorrect: true, feedback: null },
     ]);
 
     await waitFor(() => expect(examQuestionCalls).toBeGreaterThan(before));

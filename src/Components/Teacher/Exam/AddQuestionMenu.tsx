@@ -57,6 +57,9 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
   );
   // Ids of existing choices (edit mode) kept parallel to `choices` so the backend updates them in place.
   const [choiceIds, setChoiceIds] = useState<(string | undefined)[]>(initialChoices.map((choice) => choice.id));
+  // Feedback per option (single choice, from the source file), parallel to `choices`.
+  const [choiceFeedbacks, setChoiceFeedbacks] = useState<string[]>(initialChoices.map((choice) => choice.feedback || ''));
+  const [explanation, setExplanation] = useState(initialQuestion?.explanation || '');
   const [correctChoice, setCorrectChoice] = useState(Math.max(0, initialChoices.findIndex((choice) => choice.isCorrect)));
   const [error, setError] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -115,8 +118,9 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
       return;
     }
 
-    // Format changed: choices become new ones (no ids).
+    // Format changed: choices become new ones (no ids, no feedback).
     setChoiceIds([]);
+    setChoiceFeedbacks([]);
 
     if (selectedQuestionFormat === 'Essay' || isStructuredFormat(selectedQuestionFormat)) {
       return;
@@ -142,6 +146,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
     if (selectedQuestionFormat === 'TrueFalse') return;
     setChoices([...choices, '']);
     setChoiceIds([...choiceIds, undefined]);
+    setChoiceFeedbacks([...choiceFeedbacks, '']);
   };
 
   const handleRemoveChoice = (index: number) => {
@@ -150,6 +155,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
       const newChoices = choices.filter((_, i) => i !== index);
       setChoices(newChoices);
       setChoiceIds(choiceIds.filter((_, i) => i !== index));
+      setChoiceFeedbacks(choiceFeedbacks.filter((_, i) => i !== index));
       if (correctChoice === index) setCorrectChoice(0);
       else if (correctChoice > index) setCorrectChoice(correctChoice - 1);
     }
@@ -228,8 +234,10 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
             ...(choiceIds[index] ? { id: choiceIds[index] } : {}),
             optionLabel: optionLabels[index] || String(index),
             content: choice.trim(),
-            isCorrect: index === correctChoice
+            isCorrect: index === correctChoice,
+            feedback: selectedQuestionFormat === 'SingleChoice' ? choiceFeedbacks[index]?.trim() || null : null,
           })),
+      explanation: isEssay ? null : explanation.trim() || null,
       ...(selectedQuestionFormat === 'Matching' ? { matchingPrompts: matchingPrompts.map((prompt) => prompt.trim()) } : {}),
       ...(isEssay
         ? {
@@ -490,33 +498,49 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
               {choices.map((choice, index) => {
                 const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
                 return (
-                  <div key={index} className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="correct"
-                      checked={correctChoice === index}
-                      onChange={() => setCorrectChoice(index)}
-                      className="w-4 h-4 text-green-600 cursor-pointer"
-                      title="Đáp án đúng"
-                    />
-                    <span className="w-8 h-8 flex items-center justify-center bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-semibold rounded text-sm">
-                      {optionLabels[index] || index}
-                    </span>
-                    <input
-                      type="text"
-                      value={choice}
-                      onChange={(e) => handleChoiceChange(index, e.target.value)}
-                      placeholder={`Nội dung đáp án`}
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    {choices.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveChoice(index)}
-                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                  <div key={index} className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="correct"
+                        checked={correctChoice === index}
+                        onChange={() => setCorrectChoice(index)}
+                        className="w-4 h-4 text-green-600 cursor-pointer"
+                        title="Đáp án đúng"
+                      />
+                      <span className="w-8 h-8 flex items-center justify-center bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-semibold rounded text-sm">
+                        {optionLabels[index] || index}
+                      </span>
+                      <input
+                        type="text"
+                        value={choice}
+                        onChange={(e) => handleChoiceChange(index, e.target.value)}
+                        placeholder={`Nội dung đáp án`}
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {choices.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveChoice(index)}
+                          className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                    {selectedQuestionFormat === 'SingleChoice' && (
+                      <input
+                        type="text"
+                        aria-label={`Phản hồi khi chọn ${optionLabels[index] || index}`}
+                        value={choiceFeedbacks[index] || ''}
+                        onChange={(e) => {
+                          const next = [...choiceFeedbacks];
+                          next[index] = e.target.value;
+                          setChoiceFeedbacks(next);
+                        }}
+                        placeholder="Phản hồi khi học sinh chọn phương án này (tùy chọn)"
+                        className="ml-[4.25rem] w-[calc(100%-4.25rem)] px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                     )}
                   </div>
                 );
@@ -538,6 +562,22 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
                 </button>
               )}
             </div>
+            )}
+
+            {!isEssay && (
+              <div>
+                <label htmlFor="question-explanation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Giải thích khi học sinh làm sai (tùy chọn)
+                </label>
+                <textarea
+                  id="question-explanation"
+                  value={explanation}
+                  onChange={(e) => setExplanation(e.target.value)}
+                  placeholder="Để trống thì AI sẽ giải thích (trắc nghiệm, Đúng/Sai)."
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+                  rows={2}
+                />
+              </div>
             )}
 
             <button

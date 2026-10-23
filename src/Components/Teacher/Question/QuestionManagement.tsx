@@ -113,9 +113,11 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
           content: choice.content,
           isCorrect: choice.isCorrect || false,
           correctSlot: choice.correctSlot ?? null,
+          feedback: choice.feedback ?? null,
         })),
         matchingPrompts: item.matchingPrompts || [],
         rubricItems: item.rubricItems || [],
+        explanation: item.explanation ?? null,
         dateCreated: item.dateCreated ? new Date(item.dateCreated).toLocaleDateString('vi-VN') : '',
       }));
 

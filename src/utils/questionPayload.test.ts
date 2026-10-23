@@ -20,8 +20,8 @@ describe('buildCreateQuestionPayload', () => {
     expect(p.content).toBe('Nội dung');
     expect(p.questionFormat).toBe('SingleChoice');
     expect(p.choices).toEqual([
-      { optionLabel: 'A', content: 'a', isCorrect: true },
-      { optionLabel: 'B', content: 'b', isCorrect: false },
+      { optionLabel: 'A', content: 'a', isCorrect: true, feedback: null },
+      { optionLabel: 'B', content: 'b', isCorrect: false, feedback: null },
     ]);
     expect('maxPoints' in p).toBe(false);
     expect('sampleAnswer' in p).toBe(false);
@@ -83,8 +83,8 @@ describe('buildUpdateQuestionPayload', () => {
       ],
     });
     expect(p.choices).toEqual([
-      { id: 'c1', optionLabel: 'A', content: 'a', isCorrect: true },
-      { id: null, optionLabel: 'B', content: 'b', isCorrect: false },
+      { id: 'c1', optionLabel: 'A', content: 'a', isCorrect: true, feedback: null },
+      { id: null, optionLabel: 'B', content: 'b', isCorrect: false, feedback: null },
     ]);
   });
 

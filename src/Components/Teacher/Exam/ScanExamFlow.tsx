@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowDown, ArrowUp, FileText, Loader2, Plus, Trash2, UploadCloud, X } from 'lucide-react';
-import { Class, CompetencyOption, DifficultyLevel, ExamScanResult, SubjectLabel } from '../../../types';
+import { Class, CompetencyComment, CompetencyOption, DifficultyLevel, ExamScanResult, SubjectLabel } from '../../../types';
+import CompetencyCommentsEditor from './CompetencyCommentsEditor';
 import { fetchClient } from '../../../api/fetchClient';
 import {
   buildCreateFromScanPayload,
@@ -65,6 +66,7 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ExamScanResult | null>(null);
   const [questions, setQuestions] = useState<ReviewQuestion[]>([]);
+  const [competencyComments, setCompetencyComments] = useState<CompetencyComment[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [competencyOptions, setCompetencyOptions] = useState<CompetencyOption[]>([]);
   const [fields, setFields] = useState<ScanExamFields>(() => ({
@@ -141,6 +143,7 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
       const data: ExamScanResult = await response.json();
       setResult(data);
       setQuestions(toReviewQuestions(data));
+      setCompetencyComments((data.competencyComments || []).map((item) => ({ ...item })));
       // File suggestions only fill fields the teacher has not entered.
       setFields((current) => ({
         ...current,
@@ -175,7 +178,7 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
       const response = await fetchClient('/exams/from-scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildCreateFromScanPayload(questions, fields)),
+        body: JSON.stringify(buildCreateFromScanPayload(questions, fields, competencyComments)),
       });
       if (!response.ok) {
         setError(await readApiMessage(response, 'Tạo đề thi thất bại. Vui lòng thử lại.'));
@@ -332,43 +335,59 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
         ) : (
           <div className="space-y-2">
             {question.choices.map((choice, choiceIndex) => (
-              <div key={choiceIndex} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name={`correct-${question.key}`}
-                  checked={choice.isCorrect}
-                  onChange={() => updateQuestion(question.key, (q) => setCorrectChoice(q, choiceIndex))}
-                  aria-label={`Câu ${index + 1}: đáp án đúng là ${choice.optionLabel}`}
-                />
-                <span className="w-6 text-sm font-bold text-primary">{choice.optionLabel}.</span>
-                <input
-                  aria-label={`Câu ${index + 1} phương án ${choice.optionLabel}`}
-                  value={choice.content}
-                  onChange={(e) =>
-                    updateQuestion(question.key, (q) => ({
-                      ...q,
-                      choices: q.choices.map((c, i) => (i === choiceIndex ? { ...c, content: e.target.value } : c)),
-                    }))
-                  }
-                  className={inputClass}
-                />
-                {question.choices.length > 2 && (
-                  <button
-                    type="button"
-                    onClick={() =>
+              <div key={choiceIndex} className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name={`correct-${question.key}`}
+                    checked={choice.isCorrect}
+                    onChange={() => updateQuestion(question.key, (q) => setCorrectChoice(q, choiceIndex))}
+                    aria-label={`Câu ${index + 1}: đáp án đúng là ${choice.optionLabel}`}
+                  />
+                  <span className="w-6 text-sm font-bold text-primary">{choice.optionLabel}.</span>
+                  <input
+                    aria-label={`Câu ${index + 1} phương án ${choice.optionLabel}`}
+                    value={choice.content}
+                    onChange={(e) =>
                       updateQuestion(question.key, (q) => ({
                         ...q,
-                        choices: q.choices
-                          .filter((_, i) => i !== choiceIndex)
-                          .map((c, i) => ({ ...c, optionLabel: OPTION_LABELS[i] || c.optionLabel })),
+                        choices: q.choices.map((c, i) => (i === choiceIndex ? { ...c, content: e.target.value } : c)),
                       }))
                     }
-                    className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    aria-label={`Xóa phương án ${choice.optionLabel} câu ${index + 1}`}
-                  >
-                    <X size={14} />
-                  </button>
-                )}
+                    className={inputClass}
+                  />
+                  {question.choices.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateQuestion(question.key, (q) => ({
+                          ...q,
+                          choices: q.choices
+                            .filter((_, i) => i !== choiceIndex)
+                            .map((c, i) => ({ ...c, optionLabel: OPTION_LABELS[i] || c.optionLabel })),
+                        }))
+                      }
+                      className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      aria-label={`Xóa phương án ${choice.optionLabel} câu ${index + 1}`}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <div className="pl-8">
+                  <input
+                    aria-label={`Câu ${index + 1} phản hồi khi chọn ${choice.optionLabel}`}
+                    placeholder="Phản hồi khi học sinh chọn phương án này (để trống nếu đề gốc không có)"
+                    value={choice.feedback || ''}
+                    onChange={(e) =>
+                      updateQuestion(question.key, (q) => ({
+                        ...q,
+                        choices: q.choices.map((c, i) => (i === choiceIndex ? { ...c, feedback: e.target.value } : c)),
+                      }))
+                    }
+                    className={inputClass}
+                  />
+                </div>
               </div>
             ))}
             {question.choices.length < OPTION_LABELS.length && (
@@ -386,6 +405,20 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
               </button>
             )}
           </div>
+        )}
+
+        {!isEssay && (
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300">
+            Giải thích khi học sinh làm sai (từ đề gốc)
+            <textarea
+              aria-label={`Giải thích câu ${index + 1}`}
+              placeholder="Để trống nếu đề gốc không có – khi đó AI sẽ giải thích"
+              value={question.explanation || ''}
+              onChange={(e) => updateQuestion(question.key, (q) => ({ ...q, explanation: e.target.value }))}
+              rows={2}
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
         )}
 
         {!isEssay && question.isAnswerAiGuessed && (
@@ -523,6 +556,8 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
               )}
 
               <div className="space-y-3">{renderQuestions()}</div>
+
+              <CompetencyCommentsEditor comments={competencyComments} onChange={setCompetencyComments} inputClassName={inputClass} />
 
               <div className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white">Thông tin bài thi</h3>

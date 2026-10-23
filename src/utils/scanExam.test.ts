@@ -112,8 +112,8 @@ describe('scan review validation', () => {
     expect(payload.schoolClassId).toBe('c1');
     expect(payload.questions.map((q) => q.questionFormat)).toEqual(['SingleChoice', 'TrueFalse', 'Essay']);
     expect(payload.questions[0].choices).toEqual([
-      { optionLabel: 'A', content: 'a', isCorrect: false },
-      { optionLabel: 'B', content: 'b', isCorrect: true },
+      { optionLabel: 'A', content: 'a', isCorrect: false, feedback: null },
+      { optionLabel: 'B', content: 'b', isCorrect: true, feedback: null },
     ]);
     expect(payload.questions[1]).toMatchObject({ passageGroupKey: 'scan-g1', statementOrder: 1, passageText: 'Đoạn' });
     expect(payload.questions[2]).toMatchObject({ sampleAnswer: null, maxPoints: 8, choices: [] });

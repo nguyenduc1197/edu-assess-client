@@ -48,7 +48,7 @@ describe('AddQuestionMenu edit choices', () => {
     fireEvent.click(removeButtonFor('Một'));
     expect(screen.queryByDisplayValue('Một')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Thêm đáp án/i }));
-    const inputs = screen.getAllByRole('textbox').filter((el) => (el as HTMLInputElement).value === '' && el.tagName === 'INPUT');
+    const inputs = screen.getAllByRole('textbox').filter((el) => (el as HTMLInputElement).value === '' && el.getAttribute('placeholder') === 'Nội dung đáp án');
     fireEvent.change(inputs[inputs.length - 1], { target: { value: 'Bốn' } });
     fireEvent.click(screen.getByRole('button', { name: /Lưu Thay Đổi/ }));
     await waitFor(() => expect(onUpdate).toHaveBeenCalled());

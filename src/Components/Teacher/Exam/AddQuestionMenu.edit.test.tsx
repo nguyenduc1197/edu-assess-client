@@ -58,8 +58,8 @@ describe('AddQuestionMenu edit mode', () => {
     expect(q.competencyType).toBe('SelfDevelopment');
     expect(q.difficultyLevel).toBe('Hard');
     expect(q.choices).toEqual([
-      { id: 'c-a', optionLabel: 'A', content: 'Đáp án A sửa', isCorrect: false },
-      { id: 'c-b', optionLabel: 'B', content: 'Đáp án B', isCorrect: true },
+      { id: 'c-a', optionLabel: 'A', content: 'Đáp án A sửa', isCorrect: false, feedback: null },
+      { id: 'c-b', optionLabel: 'B', content: 'Đáp án B', isCorrect: true, feedback: null },
     ]);
   });
 

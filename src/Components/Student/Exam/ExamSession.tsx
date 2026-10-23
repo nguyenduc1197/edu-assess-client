@@ -9,6 +9,7 @@ import { buildWrongAnswerSections } from '../../../utils/wrongAnswerGrouping';
 import { buildAnswerPayload, DraftAnswer, restoreDraftAnswers } from '../../../utils/essay';
 import EssayAnswerList from '../../Common/EssayAnswers/EssayAnswerList';
 import StructuredAnswerReviewList from '../../Common/StructuredAnswers/StructuredAnswerReviewList';
+import CompetencyCommentList from '../../Common/CompetencyComments/CompetencyCommentList';
 
 
 interface ExamSessionProps {
@@ -605,6 +606,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                   </ul>
                 </div>
               )}
+
+              <CompetencyCommentList comments={assessmentResult.competencyComments} />
 
               {competencies.length > 0 && (
                 <div className="mobile-premium-enter mobile-premium-delay-3 space-y-3">
