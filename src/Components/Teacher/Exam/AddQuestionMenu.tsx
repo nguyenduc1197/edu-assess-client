@@ -237,7 +237,7 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
             isCorrect: index === correctChoice,
             feedback: selectedQuestionFormat === 'SingleChoice' ? choiceFeedbacks[index]?.trim() || null : null,
           })),
-      explanation: isEssay ? null : explanation.trim() || null,
+      explanation: explanation.trim() || null,
       ...(selectedQuestionFormat === 'Matching' ? { matchingPrompts: matchingPrompts.map((prompt) => prompt.trim()) } : {}),
       ...(isEssay
         ? {
@@ -564,21 +564,23 @@ const AddQuestionMenu: React.FC<AddQuestionMenuProps> = ({
             </div>
             )}
 
-            {!isEssay && (
-              <div>
-                <label htmlFor="question-explanation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Giải thích khi học sinh làm sai (tùy chọn)
-                </label>
-                <textarea
-                  id="question-explanation"
-                  value={explanation}
-                  onChange={(e) => setExplanation(e.target.value)}
-                  placeholder="Để trống thì AI sẽ giải thích (trắc nghiệm, Đúng/Sai)."
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
-                  rows={2}
-                />
-              </div>
-            )}
+            <div>
+              <label htmlFor="question-explanation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Giải thích khi học sinh làm sai (tùy chọn)
+              </label>
+              <textarea
+                id="question-explanation"
+                value={explanation}
+                onChange={(e) => setExplanation(e.target.value)}
+                placeholder={
+                  isEssay
+                    ? 'Hiện cho học sinh khi câu tự luận bị mất điểm.'
+                    : 'Để trống thì AI sẽ giải thích (trắc nghiệm, Đúng/Sai).'
+                }
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+                rows={2}
+              />
+            </div>
 
             <button
               type="submit"

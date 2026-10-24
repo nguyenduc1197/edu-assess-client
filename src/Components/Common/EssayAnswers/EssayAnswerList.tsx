@@ -385,6 +385,14 @@ const EssayAnswerList: React.FC<EssayAnswerListProps> = ({ items, mode, studentE
               </div>
             )}
             <EssayAnswerCard item={item} index={index} mode={mode} studentExamId={studentExamId} onGraded={onGraded} />
+            {/* Explanation from the source file (sent only for ý that lost points). Several ý of one question share it:
+                show it once, after the last ý that carries it. */}
+            {item.explanation && !items.slice(index + 1).some((next) => next.explanation === item.explanation) && (
+              <div data-testid="essay-explanation" className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-100">
+                <span className="font-semibold">Giải thích:</span>{' '}
+                <span className="whitespace-pre-line">{item.explanation}</span>
+              </div>
+            )}
           </React.Fragment>
         );
       })}

@@ -407,19 +407,17 @@ const ScanExamFlow: React.FC<ScanExamFlowProps> = ({ onClose, onCreated, initial
           </div>
         )}
 
-        {!isEssay && (
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300">
-            Giải thích khi học sinh làm sai (từ đề gốc)
-            <textarea
-              aria-label={`Giải thích câu ${index + 1}`}
-              placeholder="Để trống nếu đề gốc không có – khi đó AI sẽ giải thích"
-              value={question.explanation || ''}
-              onChange={(e) => updateQuestion(question.key, (q) => ({ ...q, explanation: e.target.value }))}
-              rows={2}
-              className={`mt-1 ${inputClass}`}
-            />
-          </label>
-        )}
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300">
+          {isEssay ? 'Giải thích khi học sinh bị mất điểm (từ đề gốc)' : 'Giải thích khi học sinh làm sai (từ đề gốc)'}
+          <textarea
+            aria-label={`Giải thích câu ${index + 1}`}
+            placeholder={isEssay ? 'Để trống nếu đề gốc không có' : 'Để trống nếu đề gốc không có – khi đó AI sẽ giải thích'}
+            value={question.explanation || ''}
+            onChange={(e) => updateQuestion(question.key, (q) => ({ ...q, explanation: e.target.value }))}
+            rows={2}
+            className={`mt-1 ${inputClass}`}
+          />
+        </label>
 
         {!isEssay && question.isAnswerAiGuessed && (
           <label className="flex items-center gap-2 text-xs font-medium text-amber-800 dark:text-amber-300">

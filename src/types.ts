@@ -539,6 +539,8 @@ export interface EssayAnswerReview {
   /** Shared situation of an essay group (displayed once above the group). */
   passageText?: string | null;
   passageGroupKey?: string | null;
+  /** Explanation from the source file; only once graded and when the answer lost points. */
+  explanation?: string | null;
 }
 
 export interface StructuredSlotReview {
