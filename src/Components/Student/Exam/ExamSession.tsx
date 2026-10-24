@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { AnswerState, Assignment, AssessmentResult, Question, SlotAnswer, WrongAnswerReview } from '../../../types';
+import { AnswerState, Assignment, AssessmentResult, CompetencyAccumulation, Question, SlotAnswer, WrongAnswerReview } from '../../../types';
 import ExamReview from './ExamReview';
 import ExamTaking from './ExamTaking';
 import { fetchClient } from '../../../api/fetchClient';
@@ -28,6 +28,13 @@ const getFeedbackItems = (feedback?: string | null) =>
     .filter(Boolean);
 
 const getExplanationText = (item: WrongAnswerReview) => item.errorExplanation || item.highlightText;
+
+/** Competency percent; null (competency not in the exam / no attempt yet) shows "--". */
+const formatPercent = (value: number | null | undefined) => (value == null ? '--' : `${value.toFixed(0)}%`);
+
+/** Accumulation card only for competencies that have data (Bài 1–4 have no NL II, Bài 2 has no NL I). */
+const hasAccumulation = (item: CompetencyAccumulation | null | undefined): item is CompetencyAccumulation =>
+  !!item && (item.latestScore != null || item.averageScore != null);
 
 const extractApiMessage = async (response: Response) => {
   const errorData = await response.json().catch(() => null);
@@ -652,114 +659,114 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
                 <div className="mobile-premium-enter mobile-premium-delay-4 space-y-4">
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tiến độ năng lực qua các bài kiểm tra</h3>
                   
-                  {assessmentResult.behaviorAdjustmentAccumulation && (
+                  {hasAccumulation(assessmentResult.behaviorAdjustmentAccumulation) && (
                     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
                       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Năng lực điều chỉnh hành vi</p>
                       <div className="grid grid-cols-3 gap-3">
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
                           <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {assessmentResult.behaviorAdjustmentAccumulation.latestScore.toFixed(0)}%
+                            {formatPercent(assessmentResult.behaviorAdjustmentAccumulation!.latestScore)}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trung bình</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {assessmentResult.behaviorAdjustmentAccumulation.averageScore.toFixed(0)}%
+                            {formatPercent(assessmentResult.behaviorAdjustmentAccumulation!.averageScore)}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">So với trước</p>
                           <p className={`text-lg font-bold ${
-                            assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt === null
+                            assessmentResult.behaviorAdjustmentAccumulation!.gainVsPreviousAttempt === null
                               ? 'text-gray-400 dark:text-gray-500'
-                              : assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt > 0
+                              : assessmentResult.behaviorAdjustmentAccumulation!.gainVsPreviousAttempt > 0
                               ? 'text-green-600 dark:text-green-400'
-                              : assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt < 0
+                              : assessmentResult.behaviorAdjustmentAccumulation!.gainVsPreviousAttempt < 0
                               ? 'text-red-600 dark:text-red-400'
                               : 'text-gray-600 dark:text-gray-400'
                           }`}>
-                            {assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt === null
+                            {assessmentResult.behaviorAdjustmentAccumulation!.gainVsPreviousAttempt === null
                               ? '--'
-                              : assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt > 0
-                              ? `+${assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt.toFixed(0)}%`
-                              : `${assessmentResult.behaviorAdjustmentAccumulation.gainVsPreviousAttempt.toFixed(0)}%`}
+                              : assessmentResult.behaviorAdjustmentAccumulation!.gainVsPreviousAttempt > 0
+                              ? `+${assessmentResult.behaviorAdjustmentAccumulation!.gainVsPreviousAttempt.toFixed(0)}%`
+                              : `${assessmentResult.behaviorAdjustmentAccumulation!.gainVsPreviousAttempt.toFixed(0)}%`}
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {assessmentResult.selfDevelopmentAccumulation && (
+                  {hasAccumulation(assessmentResult.selfDevelopmentAccumulation) && (
                     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
                       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Năng lực phát triển bản thân</p>
                       <div className="grid grid-cols-3 gap-3">
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
                           <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {assessmentResult.selfDevelopmentAccumulation.latestScore.toFixed(0)}%
+                            {formatPercent(assessmentResult.selfDevelopmentAccumulation!.latestScore)}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trung bình</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {assessmentResult.selfDevelopmentAccumulation.averageScore.toFixed(0)}%
+                            {formatPercent(assessmentResult.selfDevelopmentAccumulation!.averageScore)}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">So với trước</p>
                           <p className={`text-lg font-bold ${
-                            assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt === null
+                            assessmentResult.selfDevelopmentAccumulation!.gainVsPreviousAttempt === null
                               ? 'text-gray-400 dark:text-gray-500'
-                              : assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt > 0
+                              : assessmentResult.selfDevelopmentAccumulation!.gainVsPreviousAttempt > 0
                               ? 'text-green-600 dark:text-green-400'
-                              : assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt < 0
+                              : assessmentResult.selfDevelopmentAccumulation!.gainVsPreviousAttempt < 0
                               ? 'text-red-600 dark:text-red-400'
                               : 'text-gray-600 dark:text-gray-400'
                           }`}>
-                            {assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt === null
+                            {assessmentResult.selfDevelopmentAccumulation!.gainVsPreviousAttempt === null
                               ? '--'
-                              : assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt > 0
-                              ? `+${assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt.toFixed(0)}%`
-                              : `${assessmentResult.selfDevelopmentAccumulation.gainVsPreviousAttempt.toFixed(0)}%`}
+                              : assessmentResult.selfDevelopmentAccumulation!.gainVsPreviousAttempt > 0
+                              ? `+${assessmentResult.selfDevelopmentAccumulation!.gainVsPreviousAttempt.toFixed(0)}%`
+                              : `${assessmentResult.selfDevelopmentAccumulation!.gainVsPreviousAttempt.toFixed(0)}%`}
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {assessmentResult.economicSocialParticipationAccumulation && (
+                  {hasAccumulation(assessmentResult.economicSocialParticipationAccumulation) && (
                     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:rounded-lg sm:shadow-none">
                       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Năng lực Tìm hiểu Tham gia KT-XH</p>
                       <div className="grid grid-cols-3 gap-3">
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Lần này</p>
                           <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {assessmentResult.economicSocialParticipationAccumulation.latestScore.toFixed(0)}%
+                            {formatPercent(assessmentResult.economicSocialParticipationAccumulation!.latestScore)}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trung bình</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                            {assessmentResult.economicSocialParticipationAccumulation.averageScore.toFixed(0)}%
+                            {formatPercent(assessmentResult.economicSocialParticipationAccumulation!.averageScore)}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">So với trước</p>
                           <p className={`text-lg font-bold ${
-                            assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt === null
+                            assessmentResult.economicSocialParticipationAccumulation!.gainVsPreviousAttempt === null
                               ? 'text-gray-400 dark:text-gray-500'
-                              : assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt > 0
+                              : assessmentResult.economicSocialParticipationAccumulation!.gainVsPreviousAttempt > 0
                               ? 'text-green-600 dark:text-green-400'
-                              : assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt < 0
+                              : assessmentResult.economicSocialParticipationAccumulation!.gainVsPreviousAttempt < 0
                               ? 'text-red-600 dark:text-red-400'
                               : 'text-gray-600 dark:text-gray-400'
                           }`}>
-                            {assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt === null
+                            {assessmentResult.economicSocialParticipationAccumulation!.gainVsPreviousAttempt === null
                               ? '--'
-                              : assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt > 0
-                              ? `+${assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt.toFixed(0)}%`
-                              : `${assessmentResult.economicSocialParticipationAccumulation.gainVsPreviousAttempt.toFixed(0)}%`}
+                              : assessmentResult.economicSocialParticipationAccumulation!.gainVsPreviousAttempt > 0
+                              ? `+${assessmentResult.economicSocialParticipationAccumulation!.gainVsPreviousAttempt.toFixed(0)}%`
+                              : `${assessmentResult.economicSocialParticipationAccumulation!.gainVsPreviousAttempt.toFixed(0)}%`}
                           </p>
                         </div>
                       </div>
