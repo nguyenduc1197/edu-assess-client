@@ -402,7 +402,7 @@ export interface AnalyticsProgressItem {
   studentExamId: string;
   examName: string;
   finishedAt: string;
-  score: number;
+  score: number | null;
   behaviorAdjustmentScore: number | null;
   selfDevelopmentScore: number | null;
   economicSocialParticipationScore: number | null;

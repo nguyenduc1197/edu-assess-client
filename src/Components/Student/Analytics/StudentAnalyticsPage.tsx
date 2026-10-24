@@ -47,7 +47,7 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
     return `M ${points.join(' L ')}`;
   };
 
-  const overallPath = buildPath((item) => item.score * 10);
+  const overallPath = buildPath((item) => (item.score == null ? null : item.score * 10));
   const behaviorPath = buildPath((item) => item.behaviorAdjustmentScore);
   const selfDevPath = buildPath((item) => item.selfDevelopmentScore);
   const econPath = buildPath((item) => item.economicSocialParticipationScore);
@@ -121,7 +121,7 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
           const x = xScale(idx);
           return (
             <g key={`dots-${item.studentExamId}`}>
-              {yScale(item.score * 10) !== null && (
+              {item.score != null && (
                 <circle cx={x} cy={yScale(item.score * 10)!} r="3" fill="#3b82f6" />
               )}
               {item.behaviorAdjustmentScore !== null && yScale(item.behaviorAdjustmentScore) !== null && (
@@ -342,7 +342,7 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
                       >
                         <div className="flex items-start justify-between gap-3">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.examName}</p>
-                          <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{item.score.toFixed(1)}</span>
+                          <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{item.score == null ? '—' : item.score.toFixed(1)}</span>
                         </div>
                         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                           {new Date(item.finishedAt).toLocaleDateString('vi-VN')}
@@ -387,7 +387,7 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
                               {new Date(item.finishedAt).toLocaleDateString('vi-VN')}
                             </td>
                             <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">
-                              {item.score.toFixed(1)}
+                              {item.score == null ? '—' : item.score.toFixed(1)}
                             </td>
                             <td className="px-4 py-3 text-sm text-right text-violet-600 dark:text-violet-400">
                               {fmtCompetency(item.behaviorAdjustmentScore)}
