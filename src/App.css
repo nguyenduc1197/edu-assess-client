@@ -117,3 +117,16 @@ body {
     animation-delay: 200ms;
   }
 }
+
+@keyframes resultDrawerEnter {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.result-drawer {
+  animation: resultDrawerEnter 0.22s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-drawer { animation: none; }
+}

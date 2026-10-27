@@ -645,6 +645,34 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
     });
   }, [examStudents, studentSortBy, studentSortDirection]);
 
+  const isResultDrawerOpen = isAssessmentLoading || selectedAssessment !== null;
+  const viewableExamStudents = useMemo(
+    () => sortedExamStudents.filter((item) => item.canViewResult && item.studentExamId),
+    [sortedExamStudents]
+  );
+  const resultDrawerIndex = viewableExamStudents.findIndex(
+    (item) => item.studentExamId === selectedAssessment?.studentExamId
+  );
+  const previousResultStudent = resultDrawerIndex > 0 ? viewableExamStudents[resultDrawerIndex - 1] : null;
+  const nextResultStudent = resultDrawerIndex >= 0 ? viewableExamStudents[resultDrawerIndex + 1] ?? null : null;
+
+  const closeResultDrawer = useCallback(() => {
+    setSelectedAssessment(null);
+    setSelectedStudentName('');
+  }, []);
+
+  useEffect(() => {
+    if (!isResultDrawerOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        closeResultDrawer();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [closeResultDrawer, isResultDrawerOpen]);
+
   const handleDeleteExam = async (examId: string) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa bài tập này không?")) {
       return;
@@ -1758,15 +1786,54 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                     </div>
                   </div>
 
-                  {(isAssessmentLoading || selectedAssessment) && (
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900/50 space-y-4">
-                      <div>
-                        <h4 className="text-base font-bold text-gray-900 dark:text-white">Kết quả bài làm</h4>
-                        {selectedStudentName && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{selectedStudentName}</p>
-                        )}
+                  {isResultDrawerOpen && (
+                    <div className="fixed inset-0 z-[60] flex justify-end bg-black/30" onClick={closeResultDrawer}>
+                    <aside
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Kết quả bài làm"
+                      className="result-drawer flex h-full w-full flex-col bg-white shadow-2xl dark:bg-gray-900 sm:max-w-xl sm:border-l sm:border-gray-200 sm:dark:border-gray-700"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <div className="flex items-start justify-between gap-3 border-b border-gray-200 px-4 py-4 dark:border-gray-700 sm:px-6">
+                        <div className="min-w-0">
+                          <h4 className="text-base font-bold text-gray-900 dark:text-white">Kết quả bài làm</h4>
+                          {selectedStudentName && (
+                            <p className="truncate text-sm text-gray-500 dark:text-gray-400">{selectedStudentName}</p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={!previousResultStudent || isAssessmentLoading}
+                            onClick={() => previousResultStudent && handleViewStudentResult(previousResultStudent)}
+                            className="rounded-lg px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent dark:text-gray-300 dark:hover:bg-gray-800"
+                          >
+                            ‹ Trước
+                          </button>
+                          {resultDrawerIndex >= 0 && (
+                            <span className="text-xs text-gray-400">{resultDrawerIndex + 1}/{viewableExamStudents.length}</span>
+                          )}
+                          <button
+                            type="button"
+                            disabled={!nextResultStudent || isAssessmentLoading}
+                            onClick={() => nextResultStudent && handleViewStudentResult(nextResultStudent)}
+                            className="rounded-lg px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent dark:text-gray-300 dark:hover:bg-gray-800"
+                          >
+                            Sau ›
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Đóng"
+                            onClick={closeResultDrawer}
+                            className="ml-1 rounded-lg px-2 py-1.5 text-lg leading-none text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
 
+                    <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
                       {isAssessmentLoading ? (
                         <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải chi tiết kết quả...</p>
                       ) : selectedAssessment && (
@@ -2040,6 +2107,8 @@ const TeacherDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                           </div>
                         </>
                       )}
+                    </div>
+                    </aside>
                     </div>
                   )}
                 </>
