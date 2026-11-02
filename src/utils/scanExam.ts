@@ -1,3 +1,4 @@
+import { vietnamInputToIso } from './apiDateTime';
 import { CompetencyComment, ExamScanResult, ScannedChoice, ScannedQuestion, TrueFalseScoringMode } from '../types';
 import {
   QUESTION_CONTENT_MAX_LENGTH,
@@ -179,8 +180,8 @@ export const buildCreateFromScanPayload = (
   competencyComments: CompetencyComment[] = [],
 ) => ({
   name: fields.name.trim(),
-  start: new Date(fields.start).toISOString(),
-  end: new Date(fields.end).toISOString(),
+  start: vietnamInputToIso(fields.start),
+  end: vietnamInputToIso(fields.end),
   durationMinutes: Number(fields.durationMinutes),
   antiCheatEnabled: fields.antiCheatEnabled,
   trueFalseScoringMode: fields.trueFalseScoringMode,

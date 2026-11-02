@@ -7,6 +7,7 @@ import AddQuestionMenu from './AddQuestionMenu';
 import { buildCreateQuestionPayload } from '../../../utils/questionPayload';
 import { formatPoints } from '../../../utils/essay';
 import TrueFalseScoringModePicker from './TrueFalseScoringModePicker';
+import { toVietnamInputValue, vietnamInputToIso, VIETNAM_TIME_ZONE } from '../../../utils/apiDateTime';
 
 interface ExamToEdit {
   id: string;
@@ -34,12 +35,7 @@ export const SCAN_EXACT_CREATED_MESSAGE = 'Đã tạo bài thi từ file đề.'
 const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, examToEdit }) => {
   const isEditing = !!examToEdit;
   const [name, setName] = useState(examToEdit?.name || '');
-  const toLocalDatetime = (iso: string) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
+  const toLocalDatetime = (iso: string) => toVietnamInputValue(iso);
   const getInitialDurationMinutes = () => {
     if (!examToEdit || typeof examToEdit.durationMinutes !== 'number' || examToEdit.durationMinutes <= 0) {
       return String(DEFAULT_DURATION_MINUTES);
@@ -51,7 +47,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
   const formatPreviewDatetime = (value: string) => {
     if (!value) return '--';
 
-    return new Date(value).toLocaleString('vi-VN', {
+    return new Date(vietnamInputToIso(value)).toLocaleString('vi-VN', {
+      timeZone: VIETNAM_TIME_ZONE,
       hour: '2-digit',
       minute: '2-digit',
       day: '2-digit',
@@ -240,8 +237,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose, onSuccess, e
 
     const payload = {
       name,
-      start: new Date(start).toISOString(),
-      end: new Date(end).toISOString(),
+      start: vietnamInputToIso(start),
+      end: vietnamInputToIso(end),
       durationMinutes: parsedDurationMinutes,
       questionIds: selectedQuestionIds,
       schoolClassId: selectedClassId,

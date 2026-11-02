@@ -118,7 +118,7 @@ const QuestionManagement: React.FC<QuestionManagementProps> = ({ onLogout }) => 
         matchingPrompts: item.matchingPrompts || [],
         rubricItems: item.rubricItems || [],
         explanation: item.explanation ?? null,
-        dateCreated: item.dateCreated ? new Date(item.dateCreated).toLocaleDateString('vi-VN') : '',
+        dateCreated: item.dateCreated ? new Date(item.dateCreated).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '',
       }));
 
       setQuestions(mappedQuestions);

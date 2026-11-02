@@ -538,7 +538,7 @@ const TeacherResults: React.FC<TeacherResultsProps> = ({ onLogout }) => {
 
   const formatDateTime = (value?: string | null) => {
     if (!value) return '—';
-    return new Date(value).toLocaleString('vi-VN');
+    return new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
   };
 
   return (

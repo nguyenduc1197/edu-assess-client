@@ -51,7 +51,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ onLogout }) => {
           email: item.email || '',
           subject: item.subject || '',
           username: item.username,
-          dateCreated: item.dateCreated ? new Date(item.dateCreated).toLocaleDateString('vi-VN') : '',
+          dateCreated: item.dateCreated ? new Date(item.dateCreated).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '',
         }));
         setTeachers(mapped);
       } else {
@@ -217,7 +217,7 @@ const TeacherManagement: React.FC<TeacherManagementProps> = ({ onLogout }) => {
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{teacher.email}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{teacher.subject}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {teacher.dateOfBirth ? new Date(teacher.dateOfBirth).toLocaleDateString('vi-VN') : '—'}
+                        {teacher.dateOfBirth ? new Date(teacher.dateOfBirth).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">

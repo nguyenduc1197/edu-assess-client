@@ -39,3 +39,29 @@ export const resolveAttemptDeadlineUtc = (
 
   return null;
 };
+export const VIETNAM_TIME_ZONE = 'Asia/Ho_Chi_Minh';
+
+/** API instant -> "YYYY-MM-DDTHH:mm" in Vietnam time, for <input type="datetime-local">. */
+export const toVietnamInputValue = (value?: string | null) => {
+  const parsedDate = parseApiDateTime(value);
+  if (!parsedDate) return '';
+
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: VIETNAM_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(parsedDate)
+      .map((part) => [part.type, part.value])
+  );
+
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+};
+
+/** "YYYY-MM-DDTHH:mm" typed as Vietnam time -> ISO string with explicit offset, regardless of device time zone. */
+export const vietnamInputToIso = (value: string) => `${value.length === 16 ? `${value}:00` : value}+07:00`;

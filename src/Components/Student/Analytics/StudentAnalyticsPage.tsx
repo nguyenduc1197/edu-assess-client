@@ -85,6 +85,7 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
         {data.map((item, idx) => {
           const x = xScale(idx);
           const label = new Date(item.finishedAt).toLocaleDateString('vi-VN', {
+            timeZone: 'Asia/Ho_Chi_Minh',
             month: 'short',
             day: 'numeric',
           });
@@ -345,7 +346,7 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
                           <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{item.score == null ? '—' : item.score.toFixed(1)}</span>
                         </div>
                         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(item.finishedAt).toLocaleDateString('vi-VN')}
+                          {new Date(item.finishedAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                         </p>
                         <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
                           <div className="rounded-xl bg-violet-50 px-2 py-2 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
@@ -384,7 +385,7 @@ const StudentAnalyticsPage: React.FC<StudentAnalyticsPageProps> = ({ onLogout })
                               {item.examName}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                              {new Date(item.finishedAt).toLocaleDateString('vi-VN')}
+                              {new Date(item.finishedAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                             </td>
                             <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">
                               {item.score == null ? '—' : item.score.toFixed(1)}

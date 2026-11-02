@@ -559,7 +559,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                           </span>
                         </div>
                         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                          Nộp ngày {new Date(ce.finishedAt).toLocaleDateString('vi-VN')}
+                          Nộp ngày {new Date(ce.finishedAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                         </p>
                         <div className="mt-3 flex flex-col gap-3">
                           <span className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
@@ -614,7 +614,7 @@ const StudentDashboard: React.FC<LoginProps> = ({ onLogout }) => {
                               {ce.examName}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                              {new Date(ce.finishedAt).toLocaleDateString('vi-VN')}
+                              {new Date(ce.finishedAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                             </td>
                             <td className="px-4 py-3 text-sm text-right font-bold text-blue-600 dark:text-blue-400">
                               {ce.score !== null ? ce.score.toFixed(1) : '—'}
