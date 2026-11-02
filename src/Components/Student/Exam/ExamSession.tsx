@@ -126,6 +126,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveDraftIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answersRef = useRef(answers);
+  const isSavingDraftRef = useRef(false);
 
   useEffect(() => {
     answersRef.current = answers;
@@ -153,7 +154,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   });
 
   const saveDraft = async () => {
-    if (isAttemptLocked) return;
+    // Skip while the previous save is still in flight: overlapping saves race on the same answer rows.
+    if (isAttemptLocked || isSavingDraftRef.current) return;
 
     const resolvedAttemptDeadlineDate = parseApiDateTime(resolvedAttemptDeadlineUtc);
     if (resolvedAttemptDeadlineDate && resolvedAttemptDeadlineDate.getTime() <= Date.now()) {
@@ -167,6 +169,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
         answers: buildAnswerPayload(answersRef.current),
       };
 
+      isSavingDraftRef.current = true;
       const response = await fetchClient(`/exams/${examId}/save-draft`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -182,6 +185,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       }
     } catch {
       // keep autosave silent for transient network errors
+    } finally {
+      isSavingDraftRef.current = false;
     }
   };
 
