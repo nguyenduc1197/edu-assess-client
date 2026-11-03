@@ -47,6 +47,11 @@ const extractApiMessage = async (response: Response) => {
   return 'Đã có lỗi xảy ra. Vui lòng thử lại.';
 };
 
+const AUTO_SUBMIT_MESSAGE = 'Đã hết giờ, bài của em đang được tự động nộp.';
+const AUTO_SUBMIT_FALLBACK_MESSAGE = 'Đã hết giờ. Hệ thống sẽ tự nộp phần bài em đã lưu trong ít phút.';
+// Stay below the server's 2-minute submit grace period so client clock skew cannot push us past it.
+const AUTO_SUBMIT_CLIENT_WINDOW_MS = 60 * 1000;
+
 const looksLikeAttemptExpiredMessage = (message: string) =>
   /(hết giờ|quá hạn|expired|deadline|timeout)/i.test(message);
 
@@ -127,6 +132,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   const saveDraftIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answersRef = useRef(answers);
   const isSavingDraftRef = useRef(false);
+  const hasAutoSubmittedRef = useRef(false);
 
   useEffect(() => {
     answersRef.current = answers;
@@ -390,15 +396,23 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     }));
   };
 
-  const handleSubmit = async () => {
-    if (isAttemptLocked) {
+  const handleSubmit = () => submitAnswers(false);
+
+  const submitAnswers = async (isAutoSubmit: boolean) => {
+    // Auto-submit runs exactly when time is up, so it must bypass the time-up lock.
+    if (isAttemptLocked && !isAutoSubmit) {
       setAttemptActionMessage('Đã hết thời gian làm bài của lượt này. Em không thể nộp thêm.');
       return;
     }
 
+    if (isAutoSubmit) {
+      setIsAttemptLocked(true);
+      setAttemptActionMessage(AUTO_SUBMIT_MESSAGE);
+    }
+
     try {
       const payload = {
-        answers: buildAnswerPayload(answers),
+        answers: buildAnswerPayload(answersRef.current),
       };
 
       const response = await fetchClient(`/exams/${examId}/submit`, {
@@ -418,6 +432,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
         startPolling(studentExamId);
       } else {
         const message = await extractApiMessage(response);
+        if (isAutoSubmit) {
+          // The server sweep submits the saved draft shortly after the deadline anyway.
+          setAttemptActionMessage(AUTO_SUBMIT_FALLBACK_MESSAGE);
+          return;
+        }
         setAttemptActionMessage(message);
         alert(message);
 
@@ -428,9 +447,32 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       }
     } catch (error) {
       console.error('Error submitting exam:', error);
-      setAttemptActionMessage('Đã xảy ra lỗi khi nộp bài. Vui lòng thử lại.');
+      setAttemptActionMessage(isAutoSubmit ? AUTO_SUBMIT_FALLBACK_MESSAGE : 'Đã xảy ra lỗi khi nộp bài. Vui lòng thử lại.');
     }
   };
+
+  const submitAnswersRef = useRef(submitAnswers);
+  submitAnswersRef.current = submitAnswers;
+
+  // Time up = papers collected: submit whatever the student has when the countdown reaches 0.
+  useEffect(() => {
+    if ((step !== 'taking' && step !== 'review') || isLoading || hasAutoSubmittedRef.current) return;
+
+    const deadline = parseApiDateTime(resolvedAttemptDeadlineUtc);
+    if (!deadline) return;
+
+    const delay = deadline.getTime() - Date.now();
+    // Long past the deadline the server has (or soon will have) submitted the saved draft.
+    if (delay < -AUTO_SUBMIT_CLIENT_WINDOW_MS) return;
+
+    const timeoutId = window.setTimeout(() => {
+      if (hasAutoSubmittedRef.current) return;
+      hasAutoSubmittedRef.current = true;
+      void submitAnswersRef.current(true);
+    }, Math.max(0, delay));
+
+    return () => window.clearTimeout(timeoutId);
+  }, [step, isLoading, resolvedAttemptDeadlineUtc]);
 
   // Clean up all intervals on unmount
   useEffect(() => {
