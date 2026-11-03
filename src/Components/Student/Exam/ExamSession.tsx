@@ -133,6 +133,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   const answersRef = useRef(answers);
   const isSavingDraftRef = useRef(false);
   const hasAutoSubmittedRef = useRef(false);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     answersRef.current = answers;
@@ -405,6 +406,11 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
       return;
     }
 
+    // One POST at a time: a manual submit in flight must not be doubled by the time-up timer.
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    let submitted = false;
+
     if (isAutoSubmit) {
       setIsAttemptLocked(true);
       setAttemptActionMessage(AUTO_SUBMIT_MESSAGE);
@@ -426,6 +432,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
         const studentExamId: string = submitData.studentExamId;
         await antiCheatMonitoring.flushPendingEvents(studentExamId);
         await antiCheatMonitoring.waitForPendingSends();
+        submitted = true;
         onSubmitted?.();
         setCurrentStudentExamId(studentExamId);
         setStep('assessing');
@@ -448,6 +455,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     } catch (error) {
       console.error('Error submitting exam:', error);
       setAttemptActionMessage(isAutoSubmit ? AUTO_SUBMIT_FALLBACK_MESSAGE : 'Đã xảy ra lỗi khi nộp bài. Vui lòng thử lại.');
+    } finally {
+      if (!submitted) isSubmittingRef.current = false;
     }
   };
 
@@ -457,6 +466,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
   // Time up = papers collected: submit whatever the student has when the countdown reaches 0.
   useEffect(() => {
     if ((step !== 'taking' && step !== 'review') || isLoading || hasAutoSubmittedRef.current) return;
+    // Exam failed to load: an empty submit is pointless, the server sweep submits the saved draft.
+    if (attemptEntryError || questions.length === 0) return;
 
     const deadline = parseApiDateTime(resolvedAttemptDeadlineUtc);
     if (!deadline) return;
@@ -472,7 +483,7 @@ const ExamSession: React.FC<ExamSessionProps> = ({ assignment, examId, onExit, o
     }, Math.max(0, delay));
 
     return () => window.clearTimeout(timeoutId);
-  }, [step, isLoading, resolvedAttemptDeadlineUtc]);
+  }, [step, isLoading, resolvedAttemptDeadlineUtc, attemptEntryError, questions.length]);
 
   // Clean up all intervals on unmount
   useEffect(() => {
